@@ -1,0 +1,112 @@
+import { useState, useEffect } from 'react';
+import { AuthProvider, useAuth } from './auth';
+import { ToastProvider } from './components/ui';
+import Shell from './components/Shell';
+import Dashboard from './pages/Dashboard';
+import Claims from './pages/Claims';
+import Denials from './pages/Denials';
+import Team from './pages/Team';
+import MyWork from './pages/MyWork';
+import FilingRules from './pages/FilingRules';
+import Reports from './pages/Reports';
+import Playbook from './pages/Playbook';
+import Digest from './pages/Digest';
+import Authorizations from './pages/Authorizations';
+import Eligibility from './pages/Eligibility';
+import AuditLog from './pages/AuditLog';
+import LetterTemplates from './pages/LetterTemplates';
+import { Login, Signup, ForgotPassword, ResetPassword } from './pages/AuthPages';
+import { api } from './api';
+
+function AuthGate({ children }) {
+  const { user, loading } = useAuth();
+  const [mode, setMode] = useState(() => {
+    // Support /app/reset-password?token=... links from email
+    const p = window.location.pathname;
+    if (p.endsWith('/reset-password')) return 'reset';
+    return 'login';
+  });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0b1220]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-500 flex items-center justify-center font-extrabold text-[#0b1220] text-xl animate-pulse">P</div>
+          <div className="text-slate-400 text-sm">Loading Pulse RCM…</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    if (mode === 'reset') return <ResetPassword goLogin={() => { setMode('login'); window.history.replaceState({}, '', '/app/'); }} />;
+    if (mode === 'forgot') return <ForgotPassword goLogin={() => setMode('login')} />;
+    return mode === 'login'
+      ? <Login goSignup={() => setMode('signup')} goForgot={() => setMode('forgot')} />
+      : <Signup goLogin={() => setMode('login')} />;
+  }
+
+  return children;
+}
+
+function Workspace() {
+  const [page, setPage] = useState('work');
+  const [dueCount, setDueCount] = useState(0);
+  const [authzAlertCount, setAuthzAlertCount] = useState(0);
+  // Cross-page deep links: { page, appealId, claimId, startAppealClaimId }
+  const [deepLink, setDeepLink] = useState(null);
+
+  useEffect(() => {
+    const refresh = () => {
+      api.dueFollowups().then((d) => setDueCount(d.length)).catch(() => {});
+      api.authzStats().then((s) => setAuthzAlertCount((s.expiringSoon || 0) + (s.expiredUnhandled || 0) + (s.byStatus?.pending_info || 0))).catch(() => {});
+    };
+    refresh();
+    const t = setInterval(refresh, 60000);
+    return () => clearInterval(t);
+  }, [page]);
+
+  const go = (p, link = null) => { setDeepLink(link); setPage(p); };
+
+  return (
+    <Shell page={page} setPage={(p) => go(p)} dueCount={dueCount} authzAlertCount={authzAlertCount}>
+      {page === 'work' && (
+        <MyWork
+          onOpenAppeal={(appealId) => go('denials', { appealId })}
+          onOpenClaim={(claimId) => go('claims', { claimId })}
+          onStartAppeal={(claimId) => go('denials', { startAppealClaimId: claimId })}
+        />
+      )}
+      {page === 'digest' && <Digest />}
+      {page === 'dashboard' && <Dashboard goDenials={() => go('denials')} />}
+      {page === 'claims' && <Claims initialClaimId={deepLink?.claimId} onConsumed={() => setDeepLink(null)} />}
+      {page === 'reports' && <Reports />}
+      {page === 'playbook' && <Playbook />}
+      {page === 'authz' && <Authorizations />}
+      {page === 'elig' && <Eligibility />}
+      {page === 'audit' && <AuditLog />}
+      {page === 'letters' && <LetterTemplates />}
+      {page === 'denials' && (
+        <Denials
+          initialAppealId={deepLink?.appealId}
+          initialStartAppealClaimId={deepLink?.startAppealClaimId}
+          onConsumed={() => setDeepLink(null)}
+        />
+      )}
+      {page === 'filing' && <FilingRules />}
+      {page === 'team' && <Team />}
+    </Shell>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <ToastProvider>
+        <AuthGate>
+          <Workspace />
+        </AuthGate>
+      </ToastProvider>
+    </AuthProvider>
+  );
+}

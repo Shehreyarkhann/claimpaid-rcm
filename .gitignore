@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.db
+*.db-wal
+*.db-shm
+.DS_Store
+.env
+# dev screenshots (not part of the app)
+/*.png

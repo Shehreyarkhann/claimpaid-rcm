@@ -1,0 +1,14 @@
+services:
+  rcm-dashboard:
+    build: .
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+    volumes:
+      - rcm-data:/app/server
+    restart: unless-stopped
+
+volumes:
+  rcm-data:
