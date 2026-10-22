@@ -76,6 +76,23 @@ export const api = {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contacted }),
     }).then(handle),
+  myOrgs: () => get('/api/auth/orgs'),
+  createOrg: (name) =>
+    authFetch('/api/auth/orgs', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    }).then(handle),
+  switchOrg: (org_id) =>
+    authFetch('/api/auth/switch', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ org_id }),
+    }).then(handle),
+  renameOrg: (name) =>
+    authFetch('/api/org', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    }).then(handle),
+  orgProfile: () => get('/api/org'),
   billingPortal: () =>
     authFetch('/api/billing/portal', { method: 'POST' }).then(handle),
 };

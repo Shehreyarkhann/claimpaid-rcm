@@ -265,6 +265,22 @@ function initSchema() {
   db.exec('CREATE INDEX IF NOT EXISTS idx_claims_org ON claims(org_id)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_payers_org ON payers(org_id)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_appeals_org ON appeals(org_id)');
+
+  // Multi-workspace memberships: one login, many orgs
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_orgs (
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      org_id INTEGER NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+      role TEXT NOT NULL DEFAULT 'biller',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (user_id, org_id)
+    );
+  `);
+  // Backfill: every existing user is a member of their own org
+  db.exec(`
+    INSERT OR IGNORE INTO user_orgs (user_id, org_id, role)
+    SELECT id, org_id, role FROM users
+  `);
 }
 
 // Thin wrapper so route code keeps working with .prepare().get()/.all()/.run()

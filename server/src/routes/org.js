@@ -5,6 +5,25 @@ const { authRequired, roleRequired } = require('../auth');
 const router = express.Router();
 router.use(authRequired);
 
+// --- Organization profile ---
+router.get('/', (req, res) => {
+  const org = db.prepare('SELECT id, name, created_at FROM orgs WHERE id = ?').get(req.orgId);
+  if (!org) return res.status(404).json({ error: 'Workspace not found' });
+  const counts = {
+    users: db.prepare('SELECT COUNT(*) c FROM user_orgs WHERE org_id = ?').get(req.orgId).c,
+    claims: db.prepare('SELECT COUNT(*) c FROM claims WHERE org_id = ?').get(req.orgId).c,
+    appeals: db.prepare('SELECT COUNT(*) c FROM appeals WHERE org_id = ?').get(req.orgId).c,
+  };
+  res.json({ ...org, ...counts });
+});
+
+router.put('/', roleRequired('owner'), (req, res) => {
+  const { name } = req.body || {};
+  if (!name || !name.trim()) return res.status(400).json({ error: 'Workspace name is required' });
+  db.prepare('UPDATE orgs SET name = ? WHERE id = ?').run(name.trim(), req.orgId);
+  res.json(db.prepare('SELECT id, name, created_at FROM orgs WHERE id = ?').get(req.orgId));
+});
+
 const FIELDS = ['billing_npi', 'billing_tax_id', 'billing_address', 'billing_city', 'billing_state', 'billing_zip', 'billing_phone', 'billing_email'];
 
 // --- Get org EDI settings ---

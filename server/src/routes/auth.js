@@ -27,6 +27,8 @@ router.post('/signup', (req, res) => {
     db.prepare('INSERT INTO users (org_id, email, password_hash, name, role) VALUES (?, ?, ?, ?, ?)')
       .run(orgId, email.trim().toLowerCase(), hash, name.trim(), 'owner').lastInsertRowid
   );
+  db.prepare('INSERT OR IGNORE INTO user_orgs (user_id, org_id, role) VALUES (?, ?, ?)')
+    .run(userId, orgId, 'owner');
 
   // Seed default payers + filing rules for the new org
   const defaultPayers = [
@@ -139,49 +141,124 @@ router.post('/password/reset', (req, res) => {
 });
 
 // --- Team management (owner only) ---
+// Team = members of the current workspace (roles are per-workspace via user_orgs)
 router.get('/team', authRequired, (req, res) => {
   const users = db.prepare(
-    'SELECT id, email, name, role, created_at FROM users WHERE org_id = ? ORDER BY created_at'
+    `SELECT u.id, u.email, u.name, m.role, u.created_at
+     FROM user_orgs m JOIN users u ON u.id = m.user_id
+     WHERE m.org_id = ? ORDER BY u.created_at`
   ).all(req.orgId);
   res.json(users);
 });
 
 router.post('/team', authRequired, roleRequired('owner'), (req, res) => {
   const { name, email, password, role } = req.body || {};
-  if (!name || !email || !password) return res.status(400).json({ error: 'Name, email and password are required' });
-  if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  if (!email) return res.status(400).json({ error: 'Email is required' });
   if (!['owner', 'biller', 'viewer'].includes(role)) return res.status(400).json({ error: 'Invalid role' });
 
-  const existing = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(email.trim());
-  if (existing) return res.status(409).json({ error: 'An account with this email already exists' });
+  const existing = db.prepare('SELECT id, name FROM users WHERE LOWER(email) = LOWER(?)').get(email.trim());
+  if (existing) {
+    // Existing ClaimPaid user: just add them to this workspace (no new password needed)
+    const already = db.prepare('SELECT 1 FROM user_orgs WHERE user_id = ? AND org_id = ?').get(existing.id, req.orgId);
+    if (already) return res.status(409).json({ error: 'This person is already in this workspace' });
+    db.prepare('INSERT INTO user_orgs (user_id, org_id, role) VALUES (?, ?, ?)')
+      .run(existing.id, req.orgId, role);
+    return res.status(201).json({ id: existing.id, email: email.trim().toLowerCase(), name: existing.name, role, addedToWorkspace: true });
+  }
+
+  if (!name || !password) return res.status(400).json({ error: 'Name and password are required for a new user' });
+  if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
 
   const hash = bcrypt.hashSync(password, 10);
   const id = Number(
     db.prepare('INSERT INTO users (org_id, email, password_hash, name, role) VALUES (?, ?, ?, ?, ?)')
       .run(req.orgId, email.trim().toLowerCase(), hash, name.trim(), role).lastInsertRowid
   );
+  db.prepare('INSERT OR IGNORE INTO user_orgs (user_id, org_id, role) VALUES (?, ?, ?)')
+    .run(id, req.orgId, role);
   res.status(201).json(db.prepare('SELECT id, email, name, role, created_at FROM users WHERE id = ?').get(id));
 });
 
 router.put('/team/:id', authRequired, roleRequired('owner'), (req, res) => {
-  const target = db.prepare('SELECT * FROM users WHERE id = ? AND org_id = ?').get(req.params.id, req.orgId);
-  if (!target) return res.status(404).json({ error: 'User not found' });
-  if (target.id === req.user.id) return res.status(400).json({ error: 'You cannot change your own role' });
+  const member = db.prepare('SELECT * FROM user_orgs WHERE user_id = ? AND org_id = ?').get(req.params.id, req.orgId);
+  if (!member) return res.status(404).json({ error: 'User not found in this workspace' });
+  if (member.user_id === req.user.id) return res.status(400).json({ error: 'You cannot change your own role' });
   if (!['owner', 'biller', 'viewer'].includes(req.body.role)) return res.status(400).json({ error: 'Invalid role' });
 
-  db.prepare('UPDATE users SET role = ? WHERE id = ?').run(req.body.role, target.id);
-  res.json(db.prepare('SELECT id, email, name, role, created_at FROM users WHERE id = ?').get(target.id));
+  db.prepare('UPDATE user_orgs SET role = ? WHERE user_id = ? AND org_id = ?')
+    .run(req.body.role, member.user_id, req.orgId);
+  // Keep home-org role in sync
+  db.prepare('UPDATE users SET role = ? WHERE id = ? AND org_id = ?')
+    .run(req.body.role, member.user_id, req.orgId);
+  res.json(db.prepare(
+    `SELECT u.id, u.email, u.name, m.role, u.created_at
+     FROM user_orgs m JOIN users u ON u.id = m.user_id
+     WHERE m.user_id = ? AND m.org_id = ?`, ).get(member.user_id, req.orgId));
 });
 
 router.delete('/team/:id', authRequired, roleRequired('owner'), (req, res) => {
-  const target = db.prepare('SELECT * FROM users WHERE id = ? AND org_id = ?').get(req.params.id, req.orgId);
-  if (!target) return res.status(404).json({ error: 'User not found' });
-  if (target.id === req.user.id) return res.status(400).json({ error: 'You cannot remove yourself' });
+  const member = db.prepare('SELECT * FROM user_orgs WHERE user_id = ? AND org_id = ?').get(req.params.id, req.orgId);
+  if (!member) return res.status(404).json({ error: 'User not found in this workspace' });
+  if (member.user_id === req.user.id) return res.status(400).json({ error: 'You cannot remove yourself' });
 
-  // Unassign their appeals
-  db.prepare('UPDATE appeals SET assigned_to = NULL WHERE assigned_to = ?').run(target.id);
-  db.prepare('DELETE FROM users WHERE id = ?').run(target.id);
+  // Unassign their appeals in this workspace
+  db.prepare('UPDATE appeals SET assigned_to = NULL WHERE assigned_to = ? AND org_id = ?').run(member.user_id, req.orgId);
+  db.prepare('DELETE FROM user_orgs WHERE user_id = ? AND org_id = ?').run(member.user_id, req.orgId);
+  // If they belong to no workspaces left, remove the login entirely
+  const remaining = db.prepare('SELECT COUNT(*) c FROM user_orgs WHERE user_id = ?').get(member.user_id).c;
+  if (remaining === 0) db.prepare('DELETE FROM users WHERE id = ?').run(member.user_id);
   res.json({ deleted: true });
+});
+
+// --- Workspaces (multi-tenant switching) ---
+// List workspaces the current user belongs to
+router.get('/orgs', authRequired, (req, res) => {
+  const orgs = db.prepare(
+    `SELECT o.id, o.name, m.role, o.created_at
+     FROM user_orgs m JOIN orgs o ON o.id = m.org_id
+     WHERE m.user_id = ? ORDER BY o.name`
+  ).all(req.user.id);
+  res.json(orgs);
+});
+
+// Create a new workspace (seeds default payers + filing rules)
+router.post('/orgs', authRequired, (req, res) => {
+  const { name } = req.body || {};
+  if (!name || !name.trim()) return res.status(400).json({ error: 'Workspace name is required' });
+
+  const orgId = Number(db.prepare('INSERT INTO orgs (name) VALUES (?)').run(name.trim()).lastInsertRowid);
+  db.prepare('INSERT INTO user_orgs (user_id, org_id, role) VALUES (?, ?, ?)')
+    .run(req.user.id, orgId, 'owner');
+
+  const defaultPayers = [
+    ['Aetna', 'Commercial', 120], ['Cigna', 'Commercial', 180], ['UnitedHealthcare', 'Commercial', 90],
+    ['Anthem BCBS', 'Commercial', 180], ['Medicare', 'Government', 365], ['Medicaid', 'Government', 90],
+    ['Humana', 'Commercial', 180], ['Self-Pay', 'Patient', 365],
+  ];
+  const ins = db.prepare('INSERT INTO payers (org_id, name, type) VALUES (?, ?, ?)');
+  const insRule = db.prepare('INSERT INTO payer_filing_rules (org_id, payer_id, filing_days) VALUES (?, ?, ?)');
+  for (const [n, t, days] of defaultPayers) {
+    const pid = Number(ins.run(orgId, n, t).lastInsertRowid);
+    insRule.run(orgId, pid, days);
+  }
+
+  res.status(201).json({ id: orgId, name: name.trim(), role: 'owner' });
+});
+
+// Switch active workspace — returns a fresh token scoped to that workspace
+router.post('/switch', authRequired, (req, res) => {
+  const orgId = Number(req.body && req.body.org_id);
+  if (!orgId) return res.status(400).json({ error: 'org_id is required' });
+  const member = db.prepare(
+    `SELECT m.role, u.id, u.email, u.name
+     FROM user_orgs m JOIN users u ON u.id = m.user_id
+     WHERE m.user_id = ? AND m.org_id = ?`
+  ).get(req.user.id, orgId);
+  if (!member) return res.status(403).json({ error: 'You do not belong to that workspace' });
+
+  const token = signToken({ id: member.id, org_id: orgId, role: member.role, email: member.email, name: member.name });
+  const org = db.prepare('SELECT name FROM orgs WHERE id = ?').get(orgId);
+  res.json({ token, orgName: org.name, role: member.role });
 });
 
 module.exports = router;

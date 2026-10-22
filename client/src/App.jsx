@@ -19,6 +19,7 @@ import LetterTemplates from './pages/LetterTemplates';
 import AIAssistant from './pages/AIAssistant';
 import Billing from './pages/Billing';
 import DemoRequests from './pages/DemoRequests';
+import Organization from './pages/Organization';
 import { Login, Signup, ForgotPassword, ResetPassword } from './pages/AuthPages';
 import { api } from './api';
 
@@ -115,6 +116,7 @@ function Workspace() {
       {page === 'audit' && <AuditLog />}
       {page === 'billing' && <Billing defaultTrial={trialIntent} />}
       {page === 'leads' && <DemoRequests />}
+      {page === 'org' && <Organization />}
       {page === 'letters' && <LetterTemplates />}
       {page === 'denials' && (
         <Denials

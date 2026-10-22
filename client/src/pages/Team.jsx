@@ -25,8 +25,9 @@ function InviteModal({ onClose, onAdded }) {
       const res = await authFetch('/api/auth/team', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
       });
-      if (!res.ok) throw new Error((await res.json()).error);
-      toast.success(`${form.name} added to your team`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success(data.addedToWorkspace ? `${data.name} added to this workspace (they keep their existing login)` : `${form.name} added to your team`);
       onAdded();
     } catch (e) { setError(e.message); }
     finally { setBusy(false); }
@@ -36,12 +37,12 @@ function InviteModal({ onClose, onAdded }) {
     <Modal onClose={onClose}>
       <div className="p-7">
         <h3 className="text-xl font-bold tracking-tight mb-1">Invite team member</h3>
-        <p className="text-sm text-slate-500 mb-5">They'll sign in with this email and password.</p>
+        <p className="text-sm text-slate-500 mb-5">New users sign in with this email and password. If they already have a ClaimPaid login, they're added to this workspace with their existing password.</p>
         {error && <div className="mb-4 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}
         <div className="space-y-4">
-          <div><label className="label">Full name</label><input className="input" value={form.name} onChange={set('name')} placeholder="Alex Rivera" /></div>
+          <div><label className="label">Full name <span className="text-slate-400 font-normal">(skip if they already have a login)</span></label><input className="input" value={form.name} onChange={set('name')} placeholder="Alex Rivera" /></div>
           <div><label className="label">Email</label><input type="email" className="input" value={form.email} onChange={set('email')} placeholder="alex@company.com" /></div>
-          <div><label className="label">Temporary password</label><input type="text" className="input" value={form.password} onChange={set('password')} placeholder="Min. 8 characters" /></div>
+          <div><label className="label">Temporary password <span className="text-slate-400 font-normal">(new users only)</span></label><input type="text" className="input" value={form.password} onChange={set('password')} placeholder="Min. 8 characters" /></div>
           <div><label className="label">Role</label>
             <select className="input" value={form.role} onChange={set('role')}>
               <option value="biller">Biller — can manage claims and appeals</option>
@@ -101,12 +102,42 @@ export default function Team() {
       {user?.role === 'owner' && <EdiSettings />}
 
       <div className="card p-5 mb-5 bg-gradient-to-r from-violet-50 to-sky-50 !border-violet-100">
-        <div className="text-sm font-semibold text-slate-800 mb-2">How roles work</div>
-        <div className="grid sm:grid-cols-3 gap-3 text-xs text-slate-600">
-          <div><span className="badge badge-violet mb-1">Owner</span><p>Full access — team, settings, all data.</p></div>
-          <div><span className="badge badge-blue mb-1">Biller</span><p>Manage claims, appeals, uploads. No team changes.</p></div>
-          <div><span className="badge badge-slate mb-1">Viewer</span><p>Read-only dashboards and reports.</p></div>
+        <div className="text-sm font-semibold text-slate-800 mb-3">Roles & permissions</div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-left text-slate-500">
+                <th className="pb-2 pr-3 font-medium">Capability</th>
+                <th className="pb-2 pr-3 font-medium text-center"><span className="badge badge-violet">Owner</span></th>
+                <th className="pb-2 pr-3 font-medium text-center"><span className="badge badge-blue">Biller</span></th>
+                <th className="pb-2 font-medium text-center"><span className="badge badge-slate">Viewer</span></th>
+              </tr>
+            </thead>
+            <tbody className="text-slate-600">
+              {[
+                ['View dashboards, claims, reports', true, true, true],
+                ['Create & edit claims, appeals, auths', true, true, false],
+                ['Upload 835 ERA files', true, true, false],
+                ['Manage filing rules & letter templates', true, true, false],
+                ['Invite team & change roles', true, false, false],
+                ['Billing, plan & audit log', true, false, false],
+                ['Rename workspace', true, false, false],
+              ].map(([label, o, b, v]) => (
+                <tr key={label} className="border-t border-violet-100/60">
+                  <td className="py-2 pr-3">{label}</td>
+                  {[o, b, v].map((has, i) => (
+                    <td key={i} className="py-2 text-center">
+                      {has
+                        ? <span className="text-emerald-600 font-bold">✓</span>
+                        : <span className="text-slate-300">—</span>}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
+        <p className="text-[11px] text-slate-400 mt-3">Roles are per-workspace — the same person can be an owner in one workspace and a viewer in another.</p>
       </div>
 
       {!team ? (

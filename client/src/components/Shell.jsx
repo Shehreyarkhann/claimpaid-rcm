@@ -1,4 +1,5 @@
 import { useAuth } from '../auth';
+import WorkspaceSwitcher from './WorkspaceSwitcher';
 
 const ICONS = {
   work: (
@@ -82,6 +83,11 @@ const ICONS = {
       <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/>
     </svg>
   ),
+  org: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-4h6v4"/>
+    </svg>
+  ),
 };
 
 export default function Shell({ page, setPage, children, dueCount, authzAlertCount, demoCount }) {
@@ -109,6 +115,7 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
     { id: 'ai', label: 'AI Assistant', icon: ICONS.ai },
   ];
   const settingsTabs = [
+    { id: 'org', label: 'Organization', icon: ICONS.org },
     { id: 'filing', label: 'Filing Rules', icon: ICONS.filing },
     ...(['owner', 'biller'].includes(user?.role) ? [{ id: 'letters', label: 'Letter Templates', icon: ICONS.letter }] : []),
     ...(user?.role === 'owner' ? [{ id: 'team', label: 'Team', icon: ICONS.team }] : []),
@@ -126,12 +133,7 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
         <div className={`${collapsed ? 'px-4' : 'px-5'} pt-6 pb-2`}>
           <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'}`}>
             <img src="/app/claimpaid-icon.webp" alt="ClaimPaid" className="w-10 h-10 rounded-xl shadow-[0_4px_16px_rgba(16,185,129,0.4)] shrink-0" />
-            {!collapsed && (
-              <div className="min-w-0">
-                <div className="font-bold leading-tight tracking-tight">ClaimPaid RCM</div>
-                <div className="text-[11px] text-slate-400 truncate max-w-[150px]">{user?.orgName}</div>
-              </div>
-            )}
+            {!collapsed && <WorkspaceSwitcher collapsed={collapsed} />}
           </div>
         </div>
 
