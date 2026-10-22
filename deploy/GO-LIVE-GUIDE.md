@@ -127,7 +127,7 @@ The deploy script pulls code from GitHub, so both repos need to be there.
 
 ## 5. Phase 4 — Create the VPS
 
-**Recommended: DigitalOcean, Basic $18/mo** (2 vCPU / 4 GB RAM) in the NYC region.
+**Recommended: DigitalOcean, Basic $24/mo** (2 vCPU / 4 GB RAM) in the NYC region.
 Why: Hetzner raised prices 2–3x in 2026 and their cheap CX line is EU-only and
 frequently out of stock; in the US you'd pay ~$38/mo for 4 GB. DO's $18 plan is
 the sweet spot — 4 GB RAM comfortably fits both Node apps plus the AI embeddings
@@ -144,7 +144,9 @@ Avoid: anything with 2 GB RAM or less (the AI embeddings model will OOM).
 2. **Create → Droplets:**
    - Region: **New York**
    - Image: **Ubuntu 24.04**
-   - Size: **Basic, $18/mo** (2 vCPU / 4 GB RAM / 50 GB)
+   - Size: **Basic, $24/mo** (2 vCPU / 4 GB RAM / 80 GB)
+   - Networking: **IPv4** (required — the DNS A record and Let's Encrypt need it;
+     IPv6-only would lock out IPv4-only visitors. DO includes one IPv4 free.)
    - SSH key: add your public key (`~/.ssh/id_ed25519.pub` on this machine —
      ask me and I'll print it), or use password auth
    - Hostname: `claimpaid-prod`
@@ -287,8 +289,8 @@ ls /var/backups/claimpaid/         # backups
   add a Groq key for generative answers: in Stripe terms it's optional, set
   `LLM_PROVIDER=groq` + `LLM_API_KEY=gsk_...` in `/opt/claimpaid-ai/server/.env`
   and `systemctl restart claimpaid-ai`. (Groq has a free tier.)
-- **Costs:** VPS ~$18/mo · domain ~$35/yr · Resend free tier ·
-  Stripe 2.9% + 30¢ per transaction. Total fixed: **~$21/mo**.
+- **Costs:** VPS ~$24/mo · domain ~$35/yr · Resend free tier ·
+  Stripe 2.9% + 30¢ per transaction. Total fixed: **~$27/mo**.
 
 ---
 
@@ -297,7 +299,7 @@ ls /var/backups/claimpaid/         # backups
 - [ ] Phase 1: Stripe account → send me `sk_test_` key
 - [ ] Phase 2: Buy claimpaid.io
 - [ ] Phase 3: Create 2 GitHub repos → push both
-- [ ] Phase 4: Create VPS (DO $18/mo NYC, or Hetzner CX23 EU if in stock) → note IP
+- [ ] Phase 4: Create VPS (DO Basic $24/mo NYC, IPv4) → note IP
 - [ ] Phase 5: DNS A record `@` → VPS IP → verify with `dig`
 - [ ] Phase 6: Resend API key (+ verify domain)
 - [ ] Phase 7: Run deploy script on VPS
