@@ -19,11 +19,17 @@ function authRequired(req, res, next) {
 
   try {
     const payload = jwt.verify(token, JWT_SECRET);
-    // Confirm user still exists
-    const user = db.prepare('SELECT id, org_id, email, name, role FROM users WHERE id = ?').get(payload.sub);
-    if (!user) return res.status(401).json({ error: 'User no longer exists' });
-    req.user = user;
-    req.orgId = user.org_id;
+    // Confirm the user still exists AND still belongs to the token's workspace.
+    // The workspace comes from the token (set at login/switch), not the home org —
+    // this is what makes workspace switching work.
+    const member = db.prepare(
+      `SELECT u.id, u.email, u.name, m.org_id, m.role
+       FROM user_orgs m JOIN users u ON u.id = m.user_id
+       WHERE m.user_id = ? AND m.org_id = ?`
+    ).get(payload.sub, payload.org);
+    if (!member) return res.status(401).json({ error: 'User no longer exists' });
+    req.user = { id: member.id, email: member.email, name: member.name, role: member.role, org_id: member.org_id };
+    req.orgId = member.org_id;
     next();
   } catch (e) {
     return res.status(401).json({ error: 'Invalid or expired token' });

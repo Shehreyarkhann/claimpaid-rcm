@@ -170,7 +170,7 @@ router.post('/', canWrite, (req, res) => {
 
   if (priority && !VALID_PRIORITY.includes(priority)) return res.status(400).json({ error: 'Invalid priority' });
   if (assigned_to) {
-    const u = db.prepare('SELECT id FROM users WHERE id = ? AND org_id = ?').get(assigned_to, req.orgId);
+    const u = db.prepare('SELECT user_id AS id FROM user_orgs WHERE user_id = ? AND org_id = ?').get(assigned_to, req.orgId);
     if (!u) return res.status(400).json({ error: 'Assignee is not on your team' });
   }
 
@@ -217,7 +217,7 @@ router.put('/:id', canWrite, (req, res) => {
   }
   if (assigned_to !== undefined) {
     if (assigned_to !== null) {
-      const u = db.prepare('SELECT id FROM users WHERE id = ? AND org_id = ?').get(assigned_to, req.orgId);
+      const u = db.prepare('SELECT user_id AS id FROM user_orgs WHERE user_id = ? AND org_id = ?').get(assigned_to, req.orgId);
       if (!u) return res.status(400).json({ error: 'Assignee is not on your team' });
     }
     updates.push('assigned_to = ?'); params.push(assigned_to);

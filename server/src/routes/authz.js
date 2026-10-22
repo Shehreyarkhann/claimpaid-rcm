@@ -189,7 +189,7 @@ router.post('/', canWrite, (req, res) => {
     if (!p) return res.status(400).json({ error: 'Payer not found' });
   }
   if (b.assigned_to) {
-    const u = db.prepare('SELECT id FROM users WHERE id = ? AND org_id = ?').get(b.assigned_to, req.orgId);
+    const u = db.prepare('SELECT user_id AS id FROM user_orgs WHERE user_id = ? AND org_id = ?').get(b.assigned_to, req.orgId);
     if (!u) return res.status(400).json({ error: 'Assignee not found' });
   }
   if (b.status && !STATUSES.includes(b.status)) return res.status(400).json({ error: 'Invalid status' });
@@ -252,7 +252,7 @@ router.put('/:id', canWrite, (req, res) => {
   }
   if (b.assigned_to !== undefined) {
     if (b.assigned_to !== null) {
-      const u = db.prepare('SELECT id FROM users WHERE id = ? AND org_id = ?').get(b.assigned_to, req.orgId);
+      const u = db.prepare('SELECT user_id AS id FROM user_orgs WHERE user_id = ? AND org_id = ?').get(b.assigned_to, req.orgId);
       if (!u) return res.status(400).json({ error: 'Assignee not found' });
     }
     updates.push('assigned_to = ?'); params.push(b.assigned_to);
