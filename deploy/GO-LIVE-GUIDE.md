@@ -125,16 +125,29 @@ The deploy script pulls code from GitHub, so both repos need to be there.
 
 ---
 
-## 5. Phase 4 — Create the VPS (Hetzner)
+## 5. Phase 4 — Create the VPS
 
-1. Go to **https://hetzner.com/cloud** → sign up.
-2. **Create a server:**
-   - Location: Ashburn, VA (closest to you)
+**Recommended: DigitalOcean, Basic $18/mo** (2 vCPU / 4 GB RAM) in the NYC region.
+Why: Hetzner raised prices 2–3x in 2026 and their cheap CX line is EU-only and
+frequently out of stock; in the US you'd pay ~$38/mo for 4 GB. DO's $18 plan is
+the sweet spot — 4 GB RAM comfortably fits both Node apps plus the AI embeddings
+model, NYC is minutes from you latency-wise, and the deploy script runs unchanged
+(any Ubuntu 24.04 root server works).
+
+Cheaper alternative if you don't mind EU latency (~100ms, fine for a dashboard):
+**Hetzner CX23** (2 vCPU / 4 GB, ~€5.49/mo) in Falkenstein/Nuremberg — *only if it
+shows as available*; Hetzner marks it out of stock often.
+
+Avoid: anything with 2 GB RAM or less (the AI embeddings model will OOM).
+
+1. Go to **https://cloud.digitalocean.com** → sign up.
+2. **Create → Droplets:**
+   - Region: **New York**
    - Image: **Ubuntu 24.04**
-   - Type: **CX22** (2 vCPU, 4 GB RAM — ~$4.50/mo)
+   - Size: **Basic, $18/mo** (2 vCPU / 4 GB RAM / 50 GB)
    - SSH key: add your public key (`~/.ssh/id_ed25519.pub` on this machine —
      ask me and I'll print it), or use password auth
-   - Name: `claimpaid-prod`
+   - Hostname: `claimpaid-prod`
 3. Note the **IP address** (e.g. `1.2.3.4`).
 4. SSH in once to confirm: `ssh root@1.2.3.4`
 
@@ -179,7 +192,6 @@ safe to re-run any time to update.
 ```bash
 curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/claimpaid-rcm/main/deploy/vps-setup.sh -o vps-setup.sh
 chmod +x vps-setup.sh
-
 DOMAIN=claimpaid.io \
 REPO_URL=https://github.com/YOUR_USERNAME/claimpaid-rcm.git \
 AI_REPO_URL=https://github.com/YOUR_USERNAME/claimpaid-ai.git \
@@ -275,8 +287,8 @@ ls /var/backups/claimpaid/         # backups
   add a Groq key for generative answers: in Stripe terms it's optional, set
   `LLM_PROVIDER=groq` + `LLM_API_KEY=gsk_...` in `/opt/claimpaid-ai/server/.env`
   and `systemctl restart claimpaid-ai`. (Groq has a free tier.)
-- **Costs:** Hetzner ~$4.50/mo · domain ~$35/yr · Resend free tier ·
-  Stripe 2.9% + 30¢ per transaction. Total fixed: **under $10/mo**.
+- **Costs:** VPS ~$18/mo · domain ~$35/yr · Resend free tier ·
+  Stripe 2.9% + 30¢ per transaction. Total fixed: **~$21/mo**.
 
 ---
 
@@ -285,7 +297,7 @@ ls /var/backups/claimpaid/         # backups
 - [ ] Phase 1: Stripe account → send me `sk_test_` key
 - [ ] Phase 2: Buy claimpaid.io
 - [ ] Phase 3: Create 2 GitHub repos → push both
-- [ ] Phase 4: Create Hetzner CX22 VPS → note IP
+- [ ] Phase 4: Create VPS (DO $18/mo NYC, or Hetzner CX23 EU if in stock) → note IP
 - [ ] Phase 5: DNS A record `@` → VPS IP → verify with `dig`
 - [ ] Phase 6: Resend API key (+ verify domain)
 - [ ] Phase 7: Run deploy script on VPS
