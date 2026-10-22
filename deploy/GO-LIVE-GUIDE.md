@@ -129,7 +129,7 @@ The deploy script pulls code from GitHub, so both repos need to be there.
 
 **Recommended: DigitalOcean, Basic $24/mo** (2 vCPU / 4 GB RAM) in the NYC region.
 Why: Hetzner raised prices 2–3x in 2026 and their cheap CX line is EU-only and
-frequently out of stock; in the US you'd pay ~$38/mo for 4 GB. DO's $18 plan is
+frequently out of stock; in the US you'd pay ~$38/mo for 4 GB. DO's $24 plan is
 the sweet spot — 4 GB RAM comfortably fits both Node apps plus the AI embeddings
 model, NYC is minutes from you latency-wise, and the deploy script runs unchanged
 (any Ubuntu 24.04 root server works).
