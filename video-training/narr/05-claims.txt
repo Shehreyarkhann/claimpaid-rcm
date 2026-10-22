@@ -1,0 +1,1 @@
+The Claims module is your system of record. Every claim shows its status, payer, billed amount, and filing countdown. See these badges? Amber means the filing deadline is within thirty days. Red means fourteen or fewer — and expired means that money is gone unless someone acts today. Select claims in bulk to mark them worked, scrub them, or export them.

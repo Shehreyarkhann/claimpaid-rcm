@@ -1,0 +1,1 @@
+Clean claims become 837 P files — the standard electronic format every clearinghouse accepts — with one click. Your billing N P I, taxonomy, and provider details are baked in from your organization settings. Download the file, upload it to your clearinghouse, done. No more retyping claims into a portal.

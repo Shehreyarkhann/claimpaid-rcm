@@ -100,7 +100,7 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center font-extrabold text-[#0b1220] text-lg shadow-[0_4px_16px_rgba(16,185,129,0.4)]">P</div>
             <div>
-              <div className="font-bold leading-tight tracking-tight">Pulse RCM</div>
+              <div className="font-bold leading-tight tracking-tight">ClaimPilot RCM</div>
               <div className="text-[11px] text-slate-400 truncate max-w-[150px]">{user?.orgName}</div>
             </div>
           </div>
@@ -152,8 +152,9 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
         <main className="flex-1 px-8 py-7 max-w-[1400px] w-full mx-auto">
           {children}
         </main>
-        <footer className="px-8 pb-6 text-xs text-slate-400 max-w-[1400px] w-full mx-auto">
-          Pulse RCM · Your data is isolated to your organization
+        <footer className="px-8 pb-6 text-xs text-slate-400 max-w-[1400px] w-full mx-auto flex justify-between items-center">
+          <span>ClaimPilot RCM · Your data is isolated to your organization</span>
+          <span>Part of <a href="https://claimpilot.io" target="_blank" rel="noreferrer" className="text-emerald-600 font-semibold hover:underline">ClaimPilot</a> · <a href="#" onClick={(e) => e.preventDefault()} title="Ask your payer policies anything" className="text-violet-600 font-semibold hover:underline">🤖 ClaimPilot AI</a></span>
         </footer>
       </div>
     </div>

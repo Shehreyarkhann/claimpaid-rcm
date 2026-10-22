@@ -1,0 +1,1 @@
+Before a claim ever reaches the payer, run the scrubber. Thirteen checks — procedure and diagnosis code validity, N P I format, billed amounts, filing deadlines, duplicates. Here I'm scrubbing a batch of claims. And there's a result: this claim is missing diagnosis codes. Fix it now, or the payer rejects it in two weeks and it comes back as a denial. Your choice.

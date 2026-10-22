@@ -9,7 +9,7 @@ function BrandPanel() {
       <div className="relative flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center font-extrabold text-[#0b1220] text-lg">P</div>
         <div>
-          <div className="font-bold text-lg leading-tight">Pulse RCM</div>
+          <div className="font-bold text-lg leading-tight">ClaimPilot RCM</div>
           <div className="text-xs text-slate-400">Revenue Cycle Analytics</div>
         </div>
       </div>
@@ -211,7 +211,7 @@ export function Login({ goSignup, goForgot }) {
           </div>
           <button className="btn btn-primary w-full !py-3" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
           <p className="text-sm text-slate-500 text-center">
-            New to Pulse? <button type="button" onClick={goSignup} className="text-emerald-600 font-semibold hover:underline">Create an account</button>
+            New to ClaimPilot? <button type="button" onClick={goSignup} className="text-emerald-600 font-semibold hover:underline">Create an account</button>
           </p>
           <p className="text-xs text-slate-400 text-center bg-slate-50 rounded-xl px-4 py-3">
             Demo login is pre-filled — just hit <strong>Sign in</strong> to explore.

@@ -1,0 +1,1 @@
+The Reports Center gives managers five views: A R aging by payer, denial root-cause analysis, team productivity, collections, and filing compliance. Every report exports to C S V. This is how you answer where are we losing money in Monday's meeting — with data, not guesses.
