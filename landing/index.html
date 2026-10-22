@@ -3,8 +3,40 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>ClaimPaid — Get your claims paid.</title>
+<title>ClaimPaid — Revenue Cycle Management Software | Denial Management & Claims Recovery</title>
+<meta name="description" content="ClaimPaid is AI-powered revenue cycle management software for medical billing teams: denial management, automated appeal letters, timely-filing tracking, claim scrubbing, and a private AI assistant that knows every payer's policy. From $199/mo."/>
+<meta name="keywords" content="revenue cycle management software, RCM software, denial management software, medical billing software, claims denial appeals, automated appeal letters, timely filing tracker, claim scrubber, payer policy AI, medical billing for small practices, billing company software"/>
+<link rel="canonical" href="https://claimpaid.io/"/>
+<meta name="robots" content="index, follow, max-image-preview:large"/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="ClaimPaid"/>
+<meta property="og:title" content="ClaimPaid — Get your claims paid."/>
+<meta property="og:description" content="AI-powered revenue cycle management: denial workflows, auto appeal letters, timely-filing tracking, and a private AI that knows every payer's policy. From $199/mo."/>
+<meta property="og:url" content="https://claimpaid.io/"/>
+<meta property="og:image" content="https://claimpaid.io/claimpaid-icon.webp"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="ClaimPaid — Revenue Cycle Management Software"/>
+<meta name="twitter:description" content="Denial management, automated appeals, timely-filing tracking + private payer-policy AI. From $199/mo."/>
+<meta name="twitter:image" content="https://claimpaid.io/claimpaid-icon.webp"/>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"What is ClaimPaid?","acceptedAnswer":{"@type":"Answer","text":"ClaimPaid is revenue cycle management (RCM) software for medical billing teams. It tracks denied claims through a structured appeal pipeline, auto-generates payer-specific appeal letters, monitors timely-filing deadlines, scrubs claims before submission, and includes a private AI assistant that answers payer-policy questions with citations."}},
+{"@type":"Question","name":"How is ClaimPaid different from other RCM software?","acceptedAnswer":{"@type":"Answer","text":"It is built by someone who has worked claim denials; the AI assistant is private (documents never go to third-party APIs); and pricing is flat ($199–$499/mo) with zero per-claim fees."}},
+{"@type":"Question","name":"What does ClaimPaid cost?","acceptedAnswer":{"@type":"Answer","text":"RCM Starter $199/month, RCM Pro + AI $499/month, ClaimPaid AI standalone $99/month, Enterprise custom. Every paid plan starts with a 1-month free trial."}},
+{"@type":"Question","name":"Does ClaimPaid write appeal letters automatically?","acceptedAnswer":{"@type":"Answer","text":"Yes — it drafts payer-specific appeal letters from denial reason codes using 8 built-in templates plus custom per-organization templates."}},
+{"@type":"Question","name":"Which payers does the timely-filing tracker cover?","acceptedAnswer":{"@type":"Answer","text":"Aetna (120 days), Cigna (180), UnitedHealthcare (90), Anthem BCBS (180), Medicare (365), NY Medicaid (90), Humana (180), plus custom payers per organization."}},
+{"@type":"Question","name":"Is my patient data safe with ClaimPaid AI?","acceptedAnswer":{"@type":"Answer","text":"ClaimPaid AI runs its language model on private infrastructure — nothing is sent to OpenAI, Google, or any third-party AI API, and each organization's data is fully isolated."}},
+{"@type":"Question","name":"How long does implementation take?","acceptedAnswer":{"@type":"Answer","text":"Most teams are live within 24 hours — no implementation project required."}},
+{"@type":"Question","name":"Can I use ClaimPaid AI without the RCM platform?","acceptedAnswer":{"@type":"Answer","text":"Yes — ClaimPaid AI standalone is $99/month at claimpaid.io/ai/."}}
+]}
+</script>
 <link rel="icon" type="image/webp" href="claimpaid-icon.webp"/>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Organization","name":"ClaimPaid","url":"https://claimpaid.io/","logo":"https://claimpaid.io/claimpaid-icon.webp","description":"AI-powered revenue cycle management software for medical billing teams.","sameAs":[],"contactPoint":{"@type":"ContactPoint","email":"support@claimpaid.io","contactType":"customer support"}}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"ClaimPaid","applicationCategory":"BusinessApplication","operatingSystem":"Web","url":"https://claimpaid.io/","description":"Revenue cycle management software: denial management workflows, automated appeal letter generation, timely-filing deadline tracking, 13-rule claim scrubber, 835 ERA import, 837P export, prior authorization tracking, and ClaimPaid AI — a private AI assistant grounded in payer policy documents.","offers":[{"@type":"Offer","name":"RCM Starter","price":"199","priceCurrency":"USD","description":"Core RCM: claims, denials, appeals, worklists, reports."},{"@type":"Offer","name":"RCM Pro + AI","price":"499","priceCurrency":"USD","description":"Everything in Starter plus ClaimPaid AI assistant, automation pack, and API."},{"@type":"Offer","name":"ClaimPaid AI","price":"99","priceCurrency":"USD","description":"Private AI assistant over your documents. Standalone plan."}],"provider":{"@type":"Organization","name":"ClaimPaid","url":"https://claimpaid.io/"}}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="three.min.js"></script>
@@ -93,6 +125,13 @@ h1 .w{display:inline-block;opacity:0;animation:wordUp .7s cubic-bezier(.22,1,.36
 /* ---------- sections ---------- */
 section{padding:110px 0;position:relative}
 .sec-tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:2.5px;color:var(--violet-lt);margin-bottom:16px}
+.faq{max-width:800px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.faq details{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.faq summary{cursor:pointer;padding:20px 24px;font-weight:700;font-size:16px;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:16px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:'+';font-size:22px;color:var(--green-lt);flex-shrink:0}
+.faq details[open] summary::after{content:'−'}
+.faq details p{padding:0 24px 22px;color:var(--mut);line-height:1.7;font-size:15px}
 h2{font-size:clamp(32px,4.4vw,52px);font-weight:800;letter-spacing:-1.5px;line-height:1.1;margin-bottom:18px}
 .sec-sub{color:var(--mut);font-size:17px;max-width:620px;line-height:1.65;margin-bottom:56px}
 .reveal{opacity:0;transform:translateY(36px);transition:opacity .8s ease,transform .8s cubic-bezier(.22,1,.36,1)}
@@ -264,7 +303,7 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
   </div>
   <div class="wrap">
     <div class="hero-badge"><span class="dot"></span>AI-powered revenue-cycle management</div>
-    <h1 id="headline"></h1>
+    <h1 id="headline"><span class="w" style="animation-delay:.15s">Get</span> <span class="w" style="animation-delay:.28s">your</span> <span class="w" style="animation-delay:.41s">claims</span> <span class="w" style="animation-delay:.54s"><span class="grad">paid.</span></span></h1>
     <p class="hero-sub">ClaimPaid hunts down every denied dollar — smart worklists, auto-generated appeal letters, and an AI that knows every payer's policy by heart. Built by someone who's worked denials, not a SaaS team guessing at healthcare.</p>
     <div class="hero-ctas">
       <a class="btn btn-green" href="/app/" data-smart-cta>Start recovering revenue →</a>
@@ -418,6 +457,21 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
   </div>
 </div></section>
 
+<section id="faq"><div class="wrap">
+  <div class="sec-tag reveal">FAQ</div>
+  <h2 class="reveal">Questions billing teams<br/><span class="grad">actually ask.</span></h2>
+  <div class="faq">
+    <details class="reveal"><summary>What is ClaimPaid?</summary><p>ClaimPaid is revenue cycle management (RCM) software for medical billing teams. It tracks denied claims through a structured appeal pipeline, auto-generates payer-specific appeal letters, monitors timely-filing deadlines, scrubs claims before submission, and includes a private AI assistant that answers payer-policy questions with citations.</p></details>
+    <details class="reveal"><summary>How is ClaimPaid different from other RCM software?</summary><p>Three things: it's built by someone who has actually worked claim denials (not a generic SaaS team); the AI assistant is private — your documents never go to OpenAI or any third-party API; and pricing is flat ($199–$499/mo) with zero per-claim fees, so it pays for itself with a single won appeal.</p></details>
+    <details class="reveal"><summary>What does ClaimPaid cost?</summary><p>RCM Starter is $199/month, RCM Pro + AI is $499/month, and ClaimPaid AI standalone (just the document AI) is $99/month. Enterprise is custom. Every paid plan starts with a 1-month free trial.</p></details>
+    <details class="reveal"><summary>Does ClaimPaid write appeal letters automatically?</summary><p>Yes. It drafts payer-specific appeal letters from the denial reason code using 8 built-in templates (timely filing, medical necessity, authorization, coding, eligibility, duplicate, bundling, experimental), plus custom templates per organization — so each letter matches your payer contracts and tone.</p></details>
+    <details class="reveal"><summary>Which payers does the timely-filing tracker cover?</summary><p>Major US payers out of the box: Aetna (120 days), Cigna (180), UnitedHealthcare (90), Anthem BCBS (180), Medicare (365), NY Medicaid (90), and Humana (180) — with custom payers and deadlines configurable per organization.</p></details>
+    <details class="reveal"><summary>Is my patient data safe with ClaimPaid AI?</summary><p>ClaimPaid AI runs its language model on private infrastructure. Your documents are chunked, embedded, and queried entirely inside that infrastructure — nothing is sent to OpenAI, Google, or any third-party AI API. Each organization's data is fully isolated.</p></details>
+    <details class="reveal"><summary>How long does implementation take?</summary><p>Most teams are live within 24 hours. There's no implementation project — sign up, invite your billers, import or enter claims, and the worklists start prioritizing by dollar impact and deadline.</p></details>
+    <details class="reveal"><summary>Can I use ClaimPaid AI without the RCM platform?</summary><p>Yes. ClaimPaid AI is available as a standalone $99/month plan at claimpaid.io/ai/ — upload any documents (policies, contracts, manuals), ask questions in plain language, and get cited answers. RCM Pro customers get it included with one shared login.</p></details>
+  </div>
+</div></section>
+
 <section id="cta"><div class="wrap"><div class="box reveal">
   <h2>Your denials are already<br/><span class="grad">someone's revenue.</span><br/>Make it yours.</h2>
   <p>Every week you wait, timely-filing clocks run out and appeal windows close. ClaimPaid is live in a day — start recovering what's yours.</p>
@@ -461,9 +515,10 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
 </div>
 
 <script>
-/* ---------- headline word animation ---------- */
+/* ---------- headline word animation (h1 is static HTML for SEO; JS only re-triggers) ---------- */
 (function(){
   const el = document.getElementById('headline');
+  if (el && el.textContent.trim().length > 0) return; /* static SEO headline already present */
   const words = [['Get',0],['your',1],['claims',2],['<span class="grad">paid.</span>',3]];
   el.innerHTML = words.map(([w,i]) => `<span class="w" style="animation-delay:${.15+i*.13}s">${w}</span>`).join(' ');
 })();

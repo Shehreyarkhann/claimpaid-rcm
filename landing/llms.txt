@@ -1,0 +1,41 @@
+# ClaimPaid
+
+> ClaimPaid is AI-powered revenue cycle management (RCM) software for medical billing teams and billing companies. It recovers denied claim revenue through denial workflows, automated appeal letters, timely-filing tracking, and a private AI assistant grounded in payer policy documents.
+
+## What ClaimPaid does
+
+- **Denial management**: Track every denied claim through a structured appeal pipeline from denial to paid.
+- **Automated appeal letters**: Generates payer-specific appeal letters from denial reason codes, with 8 built-in templates plus custom per-organization templates.
+- **Timely filing tracker**: Deadline tracking for major US payers (Aetna 120 days, Cigna 180, UnitedHealthcare 90, Anthem 180, Medicare 365, NY Medicaid 90, Humana 180).
+- **Claim scrubber**: 13 pre-billing validation rules catch errors before claims go out.
+- **Smart worklists**: Prioritized daily work queues for billers, sorted by dollar impact and deadline urgency.
+- **835 ERA import / 837P export**: Standard healthcare EDI transaction support.
+- **Prior authorization tracking**: Manage auths and link them to appeals.
+- **Payer Playbook**: Searchable database of payer-specific billing rules and appeal tactics.
+- **Reports**: 5 exportable CSV reports (aging, denial patterns, productivity, payer performance, revenue recovery).
+- **ClaimPaid AI** (separate product at /ai/): A private AI assistant over your own documents. Upload PDFs/policies, ask questions in plain language, get cited answers. Runs on private infrastructure — no data sent to third-party AI APIs.
+
+## Pricing
+
+- **RCM Starter** — $199/month: core RCM (claims, denials, appeals, worklists, reports).
+- **RCM Pro + AI** — $499/month: everything in Starter plus ClaimPaid AI, automation pack, API access.
+- **ClaimPaid AI** (standalone) — $99/month: the private document AI only, at claimpaid.io/ai/.
+- **Enterprise** — custom pricing.
+- All paid plans include a 1-month free trial.
+
+## Who it's for
+
+Medical billing companies, independent billing services, hospital and physician practice billing departments, and revenue cycle teams that lose revenue to claim denials and want systematic denial recovery.
+
+## Key facts
+
+- Web-based SaaS; multi-tenant with per-organization data isolation; role-based access (owner/biller/viewer).
+- Built by a revenue-cycle practitioner (not a generic SaaS team).
+- Support: support@claimpaid.io
+- Site: https://claimpaid.io/
+- ClaimPaid AI: https://claimpaid.io/ai/
+
+## Optional
+
+- Developer API: https://claimpaid.io/ai/ (API keys, POST /api/v1/query)
+- Book a demo: via the demo form at https://claimpaid.io/
