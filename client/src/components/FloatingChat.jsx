@@ -1,8 +1,15 @@
 import { useState } from 'react';
 
 // Floating quick-chat: ClaimPaid AI one tap away from anywhere in the RCM app.
-const AI_URL = import.meta.env.VITE_AI_URL || 'http://localhost:4001';
-const AI_SLUG = import.meta.env.VITE_AI_KB_SLUG || 'demo-northwind';
+// ClaimPaid AI endpoint resolution:
+// - VITE_AI_URL env var wins (explicit config)
+// - On a deployed domain, /ai is reverse-proxied to the AI service (same URL, no CORS)
+// - Local dev falls back to the AI dev server
+const AI_URL = import.meta.env.VITE_AI_URL ||
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:4001'
+    : `${window.location.origin}/ai`);
+const AI_SLUG = import.meta.env.VITE_AI_KB_SLUG || 'payer-policy-handbook';
 
 export default function FloatingChat() {
   const [open, setOpen] = useState(false);
