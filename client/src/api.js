@@ -59,6 +59,14 @@ export const api = {
   authzStats: () => get('/api/authz/stats'),
   authzDetail: (id) => get(`/api/authz/${id}`),
   authzFindForClaim: (claimId) => get(`/api/authz/find-for-claim/${claimId}`),
+  billingStatus: () => get('/api/billing/status'),
+  billingCheckout: (plan) =>
+    authFetch('/api/billing/checkout', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan }),
+    }).then(handle),
+  billingPortal: () =>
+    authFetch('/api/billing/portal', { method: 'POST' }).then(handle),
 };
 
 export const csvUrl = (path) => path; // auth via cookie-less; use fetch for authed CSV

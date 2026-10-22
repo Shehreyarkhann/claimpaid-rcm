@@ -187,6 +187,13 @@ function initSchema() {
   if (!columnExists('orgs', 'billing_phone')) db.exec('ALTER TABLE orgs ADD COLUMN billing_phone TEXT');
   if (!columnExists('orgs', 'billing_email')) db.exec('ALTER TABLE orgs ADD COLUMN billing_email TEXT');
 
+  // Stripe billing fields on orgs
+  if (!columnExists('orgs', 'plan')) db.exec("ALTER TABLE orgs ADD COLUMN plan TEXT DEFAULT 'trial'");
+  if (!columnExists('orgs', 'plan_status')) db.exec("ALTER TABLE orgs ADD COLUMN plan_status TEXT DEFAULT 'trialing'");
+  if (!columnExists('orgs', 'stripe_customer_id')) db.exec('ALTER TABLE orgs ADD COLUMN stripe_customer_id TEXT');
+  if (!columnExists('orgs', 'stripe_subscription_id')) db.exec('ALTER TABLE orgs ADD COLUMN stripe_subscription_id TEXT');
+  if (!columnExists('orgs', 'current_period_end')) db.exec('ALTER TABLE orgs ADD COLUMN current_period_end TEXT');
+
   // HIPAA audit log — who accessed what PHI and when
   db.exec(`
     CREATE TABLE IF NOT EXISTS audit_log (

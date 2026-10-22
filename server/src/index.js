@@ -18,11 +18,14 @@ const scrubRoutes = require('./routes/scrub');
 const auditRoutes = require('./routes/audit');
 const eligibilityRoutes = require('./routes/eligibility');
 const orgRoutes = require('./routes/org');
+const { billingRoutes, handleWebhook } = require('./routes/billing');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
 app.use(cors());
+// Stripe webhook needs the RAW body for signature verification — mount before express.json()
+app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), handleWebhook);
 app.use(express.json());
 
 initSchema();
@@ -48,6 +51,7 @@ app.use('/api/scrub', scrubRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/eligibility', eligibilityRoutes);
 app.use('/api/org', orgRoutes);
+app.use('/api/billing', billingRoutes);
 
 // Email-code MFA routes
 const { registerRoutes: registerMfaRoutes } = require('./mfa');

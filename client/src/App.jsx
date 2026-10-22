@@ -17,6 +17,7 @@ import Eligibility from './pages/Eligibility';
 import AuditLog from './pages/AuditLog';
 import LetterTemplates from './pages/LetterTemplates';
 import AIAssistant from './pages/AIAssistant';
+import Billing from './pages/Billing';
 import { Login, Signup, ForgotPassword, ResetPassword } from './pages/AuthPages';
 import { api } from './api';
 
@@ -26,6 +27,8 @@ function AuthGate({ children }) {
     // Support /app/reset-password?token=... links from email
     const p = window.location.pathname;
     if (p.endsWith('/reset-password')) return 'reset';
+    // Pricing CTAs land here: /app/?plan=starter|pro -> start at signup
+    if (new URLSearchParams(window.location.search).get('plan')) return 'signup';
     return 'login';
   });
 
@@ -52,7 +55,15 @@ function AuthGate({ children }) {
 }
 
 function Workspace() {
-  const [page, setPage] = useState('work');
+  const [page, setPage] = useState(() => {
+    // After landing-page pricing CTA signup (?plan=...), drop them on Billing
+    const plan = new URLSearchParams(window.location.search).get('plan');
+    if (plan === 'starter' || plan === 'pro') {
+      window.history.replaceState({}, '', '/app/');
+      return 'billing';
+    }
+    return 'work';
+  });
   const [dueCount, setDueCount] = useState(0);
   const [authzAlertCount, setAuthzAlertCount] = useState(0);
   // Cross-page deep links: { page, appealId, claimId, startAppealClaimId }
@@ -88,6 +99,7 @@ function Workspace() {
       {page === 'authz' && <Authorizations />}
       {page === 'elig' && <Eligibility />}
       {page === 'audit' && <AuditLog />}
+      {page === 'billing' && <Billing />}
       {page === 'letters' && <LetterTemplates />}
       {page === 'denials' && (
         <Denials
