@@ -1,9 +1,9 @@
 const express = require('express');
 const { db } = require('../db');
-const { authRequired, roleRequired } = require('../auth');
+const { authRequired, roleRequired, requireProduct } = require('../auth');
 
 const router = express.Router();
-router.use(authRequired);
+router.use(authRequired, requireProduct('rcm'));
 
 // --- Organization profile ---
 router.get('/', (req, res) => {

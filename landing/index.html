@@ -408,6 +408,13 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
       <ul><li><b>Everything in Pro + AI</b></li><li>Multi-org management + SSO</li><li>Custom KB training on your contracts</li><li>Dedicated success manager</li><li>SLA + priority support</li></ul>
       <a class="btn btn-ghost" style="justify-content:center" href="mailto:inquire@claimpaid.io?subject=ClaimPaid%20Enterprise">Talk to us</a>
     </div>
+    <div class="price reveal">
+      <h3>ClaimPaid AI</h3><div class="pd">Just the AI assistant — private answers from your documents</div>
+      <div class="amt">$99</div><div class="per">per month</div>
+      <ul><li><b>Generative cited answers</b> over your documents</li><li>Unlimited knowledge bases</li><li>Widget + public links + API</li><li><b>Private</b> — data never leaves our servers</li><li>One login for RCM + AI</li></ul>
+      <a class="btn btn-ghost" style="justify-content:center" href="/app/?plan=ai">Choose AI only</a>
+      <div style="text-align:center;margin-top:10px"><a href="/app/?plan=ai&trial=1" style="font-size:13px;color:var(--green-lt);text-decoration:none">or start with a free 1-month trial →</a></div>
+    </div>
   </div>
 </div></section>
 
@@ -563,9 +570,11 @@ document.querySelectorAll('.bcard').forEach(c => c.addEventListener('mousemove',
       var me = await fetch('/api/auth/me', { headers: headers });
       if (!me.ok) { location.href = '/app/?plan=pro'; return; }
       var st = await fetch('/api/billing/status', { headers: headers }).then(function (r) { return r.ok ? r.json() : null; });
-      var hasPlan = st && (st.plan === 'starter' || st.plan === 'pro') &&
-        (st.plan_status === 'active' || st.plan_status === 'trialing');
-      location.href = hasPlan ? '/app/' : '/app/?billing=open';
+      var okStatus = st && (st.plan_status === 'active' || st.plan_status === 'trialing');
+      var prods = (st && st.products) || { rcm: true, ai: true };
+      if (okStatus && prods.rcm) { location.href = '/app/'; return; }
+      if (okStatus && prods.ai) { location.href = '/ai/app/'; return; }
+      location.href = '/app/?billing=open';
     } catch (e) { location.href = '/app/?plan=pro'; }
     finally { btn.innerHTML = orig; }
   }

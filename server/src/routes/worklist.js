@@ -1,11 +1,11 @@
 const express = require('express');
 const { db } = require('../db');
-const { authRequired, roleRequired } = require('../auth');
+const { authRequired, roleRequired, requireProduct } = require('../auth');
 const { FILING_SELECT, FILING_JOIN } = require('./filing');
 const { logActivity } = require('../activity');
 
 const router = express.Router();
-router.use(authRequired);
+router.use(authRequired, requireProduct('rcm'));
 const canWrite = roleRequired('owner', 'biller');
 
 // Priority-scored unified work queue for billers.

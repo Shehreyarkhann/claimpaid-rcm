@@ -1,10 +1,10 @@
 const express = require('express');
 const { db } = require('../db');
-const { authRequired, roleRequired } = require('../auth');
+const { authRequired, roleRequired, requireProduct } = require('../auth');
 const { RULES, scrubClaims } = require('../scrub');
 
 const router = express.Router();
-router.use(authRequired);
+router.use(authRequired, requireProduct('rcm'));
 
 // --- List rules ---
 router.get('/rules', (req, res) => {

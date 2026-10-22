@@ -30,6 +30,16 @@ function authRequired(req, res, next) {
     if (!member) return res.status(401).json({ error: 'User no longer exists' });
     req.user = { id: member.id, email: member.email, name: member.name, role: member.role, org_id: member.org_id };
     req.orgId = member.org_id;
+    // Attach subscription products so routes can gate by plan (ai plan => no RCM, etc.)
+    try {
+      const org = db.prepare('SELECT plan FROM orgs WHERE id = ?').get(member.org_id);
+      const { productsForPlan } = require('./routes/billing');
+      req.plan = org?.plan || null;
+      req.products = productsForPlan(org?.plan);
+    } catch {
+      req.plan = null;
+      req.products = { rcm: true, ai: true };
+    }
     next();
   } catch (e) {
     return res.status(401).json({ error: 'Invalid or expired token' });
@@ -45,4 +55,18 @@ function roleRequired(...roles) {
   };
 }
 
-module.exports = { signToken, authRequired, roleRequired, JWT_SECRET };
+// Block plans that don't include a product (e.g. AI-only plan calling RCM data APIs).
+// Must run after authRequired (which attaches req.products).
+function requireProduct(product) {
+  return (req, res, next) => {
+    if (req.products && req.products[product] === false) {
+      return res.status(403).json({
+        error: `Your ${req.plan === 'ai' ? 'ClaimPaid AI' : 'current'} plan doesn't include this. Upgrade to RCM Pro to unlock everything.`,
+        upgrade: true,
+      });
+    }
+    next();
+  };
+}
+
+module.exports = { signToken, authRequired, roleRequired, requireProduct, JWT_SECRET };

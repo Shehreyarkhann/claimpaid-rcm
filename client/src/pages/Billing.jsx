@@ -7,6 +7,7 @@ const PLAN_META = {
   trial: { label: 'Trial', desc: 'Exploring ClaimPaid' },
   starter: { label: 'RCM Starter', desc: '$199/month — full RCM platform' },
   pro: { label: 'RCM Pro + AI', desc: '$499/month — everything plus ClaimPaid AI' },
+  ai: { label: 'ClaimPaid AI', desc: '$99/month — AI assistant only' },
   enterprise: { label: 'Enterprise', desc: 'Custom annual agreement' },
 };
 
@@ -164,7 +165,7 @@ export default function Billing({ defaultTrial = false }) {
           </span>
         </button>
       )}
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
         {planCard('starter', 'RCM Starter', 'For small billing teams', <><>$199</><span className="text-sm font-normal text-slate-500">/mo</span></>,
           ['Full RCM platform', 'Timely filing radar + 13-rule scrubber', 'Auto appeal letters (8 categories)', '835 import / 837P export', 'Up to 3 team seats'],
           planKey === 'starter' && isActive
@@ -177,6 +178,12 @@ export default function Billing({ defaultTrial = false }) {
             ? <span className="badge badge-green">Current plan</span>
             : <button className="btn btn-primary w-full" disabled={busy === 'pro' || !plans.pro?.available}
                 onClick={() => checkout('pro')}>{busy === 'pro' ? 'Redirecting…' : trial ? 'Start free trial' : 'Choose Pro + AI'}</button>)}
+        {planCard('ai', 'ClaimPaid AI', 'Just the AI assistant', <><>$99</><span className="text-sm font-normal text-slate-500">/mo</span></>,
+          ['Private AI chat over your documents', 'Cited answers, grounded in your KB', 'Unlimited knowledge bases', 'Public share links + embed widget', 'Your data never leaves our servers'],
+          planKey === 'ai' && isActive
+            ? <span className="badge badge-green">Current plan</span>
+            : <button className="btn btn-outline w-full" disabled={busy === 'ai' || !plans.ai?.available}
+                onClick={() => checkout('ai')}>{busy === 'ai' ? 'Redirecting…' : trial ? 'Start free trial' : 'Choose AI only'}</button>)}
         {planCard('enterprise', 'Enterprise', 'For large billing companies & MSOs', 'Custom',
           ['Everything in Pro + AI', 'Multi-org management + SSO', 'Custom KB training on your contracts', 'Dedicated success manager', 'SLA + priority support'],
           <button className="btn btn-ghost w-full"

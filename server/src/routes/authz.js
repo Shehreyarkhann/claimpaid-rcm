@@ -1,11 +1,11 @@
 const express = require('express');
 const { db } = require('../db');
-const { authRequired, roleRequired } = require('../auth');
+const { authRequired, roleRequired, requireProduct } = require('../auth');
 const { logActivity } = require('../activity');
 const { auditLog } = require('../audit');
 
 const router = express.Router();
-router.use(authRequired);
+router.use(authRequired, requireProduct('rcm'));
 const canWrite = roleRequired('owner', 'biller');
 
 const STATUSES = ['draft', 'submitted', 'pending_info', 'approved', 'denied', 'expired', 'cancelled'];

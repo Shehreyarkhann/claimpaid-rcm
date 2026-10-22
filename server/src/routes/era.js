@@ -1,11 +1,11 @@
 const express = require('express');
 const multer = require('multer');
 const { db } = require('../db');
-const { authRequired, roleRequired } = require('../auth');
+const { authRequired, roleRequired, requireProduct } = require('../auth');
 const { logActivity } = require('../activity');
 
 const router = express.Router();
-router.use(authRequired);
+router.use(authRequired, requireProduct('rcm'));
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // --- 835 ERA (Electronic Remittance Advice) parser ---

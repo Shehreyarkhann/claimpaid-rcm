@@ -28,11 +28,30 @@ const PLANS = {
     priceEnv: 'STRIPE_PRICE_PRO',
     get priceId() { return process.env[this.priceEnv]; },
   },
+  ai: {
+    name: 'ClaimPaid AI',
+    amount: 9900,
+    priceEnv: 'STRIPE_PRICE_AI',
+    get priceId() { return process.env[this.priceEnv]; },
+  },
 };
+
+// Which products a plan unlocks. trial / null / unknown => full access (trial evaluates everything,
+// legacy orgs without billing are grandfathered).
+function productsForPlan(plan) {
+  switch (plan) {
+    case 'starter': return { rcm: true, ai: false };
+    case 'pro': return { rcm: true, ai: true };
+    case 'ai': return { rcm: false, ai: true };
+    case 'enterprise': return { rcm: true, ai: true };
+    default: return { rcm: true, ai: true };
+  }
+}
 
 function planFromPriceId(priceId) {
   if (priceId && priceId === process.env.STRIPE_PRICE_STARTER) return 'starter';
   if (priceId && priceId === process.env.STRIPE_PRICE_PRO) return 'pro';
+  if (priceId && priceId === process.env.STRIPE_PRICE_AI) return 'ai';
   return null;
 }
 
@@ -73,9 +92,11 @@ router.get('/status', authRequired, (req, res) => {
     current_period_end: org.current_period_end || null,
     has_customer: !!org.stripe_customer_id,
     stripe_configured: !!process.env.STRIPE_SECRET_KEY,
+    products: productsForPlan(org.plan),
     plans: {
       starter: { name: PLANS.starter.name, amount: PLANS.starter.amount, available: !!PLANS.starter.priceId },
       pro: { name: PLANS.pro.name, amount: PLANS.pro.amount, available: !!PLANS.pro.priceId },
+      ai: { name: PLANS.ai.name, amount: PLANS.ai.amount, available: !!PLANS.ai.priceId },
     },
   });
 });
@@ -86,7 +107,7 @@ router.post('/checkout', authRequired, roleRequired('owner'), async (req, res) =
   const stripe = getStripe();
   const { plan, trial } = req.body || {};
   const planCfg = PLANS[plan];
-  if (!planCfg) return res.status(400).json({ error: 'Unknown plan. Choose starter or pro.' });
+  if (!planCfg) return res.status(400).json({ error: 'Unknown plan. Choose starter, pro, or ai.' });
   if (!planCfg.priceId) {
     return res.status(503).json({ error: `${planCfg.name} is not priced yet. Run scripts/setup-stripe.js first.` });
   }
@@ -100,12 +121,14 @@ router.post('/checkout', authRequired, roleRequired('owner'), async (req, res) =
   try {
     const customer = await getOrCreateCustomer(stripe, org, req.user.email);
     const appUrl = (process.env.APP_URL || 'http://localhost:4000').replace(/\/$/, '');
+    // AI-only buyers land in the AI app, not the RCM dashboard
+    const landingPath = plan === 'ai' ? '/ai/app/' : '/app/';
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customer.id,
       line_items: [{ price: planCfg.priceId, quantity: 1 }],
-      success_url: `${appUrl}/app/?billing=success&plan=${plan}`,
-      cancel_url: `${appUrl}/app/?billing=cancelled`,
+      success_url: `${appUrl}${landingPath}?billing=success&plan=${plan}`,
+      cancel_url: `${appUrl}${landingPath}?billing=cancelled`,
       metadata: { org_id: String(org.id), plan },
       subscription_data: {
         metadata: { org_id: String(org.id), plan },
@@ -211,4 +234,4 @@ async function handleWebhook(req, res) {
   }
 }
 
-module.exports = { billingRoutes: router, handleWebhook, PLANS };
+module.exports = { billingRoutes: router, handleWebhook, PLANS, productsForPlan };

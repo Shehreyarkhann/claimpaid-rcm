@@ -2,14 +2,14 @@ const express = require('express');
 const multer = require('multer');
 const { parse } = require('csv-parse/sync');
 const { db } = require('../db');
-const { authRequired, roleRequired } = require('../auth');
+const { authRequired, roleRequired, requireProduct } = require('../auth');
 const { FILING_SELECT, FILING_JOIN } = require('./filing');
 const { logActivity } = require('../activity');
 const { auditLog } = require('../audit');
 const { generate837P } = require('../edi837');
 
 const router = express.Router();
-router.use(authRequired);
+router.use(authRequired, requireProduct('rcm'));
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 const VALID_STATUSES = ['pending', 'in_ar', 'denied', 'paid'];

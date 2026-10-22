@@ -1,10 +1,10 @@
 const express = require('express');
 const { db } = require('../db');
-const { authRequired, roleRequired } = require('../auth');
+const { authRequired, roleRequired, requireProduct } = require('../auth');
 const { generateLetter, listTemplates, getTemplate, getSignature, CATEGORY_LABELS, PLACEHOLDERS, SIGNATURE_PLACEHOLDERS, DEFAULT_TEMPLATES, DEFAULT_SIGNATURE } = require('../appealLetters');
 
 const router = express.Router();
-router.use(authRequired);
+router.use(authRequired, requireProduct('rcm'));
 
 const VALID_APPEAL_STATUS = ['open', 'in_progress', 'submitted', 'won', 'lost'];
 const VALID_PRIORITY = ['low', 'medium', 'high', 'urgent'];

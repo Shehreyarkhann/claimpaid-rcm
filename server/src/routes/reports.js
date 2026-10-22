@@ -1,9 +1,9 @@
 const express = require('express');
 const { db } = require('../db');
-const { authRequired } = require('../auth');
+const { authRequired, requireProduct } = require('../auth');
 
 const router = express.Router();
-router.use(authRequired);
+router.use(authRequired, requireProduct('rcm'));
 
 const round2 = (n) => Math.round((n || 0) * 100) / 100;
 

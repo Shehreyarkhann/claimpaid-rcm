@@ -28,10 +28,21 @@ function AuthGate({ children }) {
     // Support /app/reset-password?token=... links from email
     const p = window.location.pathname;
     if (p.endsWith('/reset-password')) return 'reset';
-    // Pricing CTAs land here: /app/?plan=starter|pro -> start at signup
+    // Pricing CTAs land here: /app/?plan=starter|pro|ai -> start at signup
     if (new URLSearchParams(window.location.search).get('plan')) return 'signup';
     return 'login';
   });
+  const [products, setProducts] = useState(null);
+
+  useEffect(() => {
+    if (user) {
+      api.billingStatus()
+        .then((s) => setProducts(s.products || { rcm: true, ai: true }))
+        .catch(() => setProducts({ rcm: true, ai: true }));
+    } else {
+      setProducts(null);
+    }
+  }, [user]);
 
   if (loading) {
     return (
@@ -52,6 +63,22 @@ function AuthGate({ children }) {
       : <Signup goLogin={() => setMode('login')} />;
   }
 
+  // AI-only subscribers don't get the RCM dashboard — point them at the AI app
+  if (products && products.rcm === false) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0b1220] px-6">
+        <div className="max-w-md w-full text-center">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-violet-500/15 border border-violet-500/30 flex items-center justify-center text-2xl mb-5">🤖</div>
+          <h1 className="text-2xl font-bold text-white mb-2">You're on ClaimPaid AI</h1>
+          <p className="text-slate-400 text-sm mb-6">
+            Your subscription covers the AI assistant only. The RCM dashboard (claims, denials, appeals) isn't included in your plan.
+          </p>
+          <a href="/ai/app/" className="btn btn-primary w-full !py-3">Open ClaimPaid AI →</a>
+        </div>
+      </div>
+    );
+  }
+
   return children;
 }
 
@@ -62,7 +89,7 @@ function Workspace() {
     // After landing-page pricing CTA signup (?plan=...), drop them on Billing
     const q = new URLSearchParams(window.location.search);
     const plan = q.get('plan');
-    if (plan === 'starter' || plan === 'pro') {
+    if (plan === 'starter' || plan === 'pro' || plan === 'ai') {
       window.history.replaceState({}, '', '/app/');
       return 'billing';
     }

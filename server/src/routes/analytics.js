@@ -1,11 +1,11 @@
 const express = require('express');
 const { db } = require('../db');
-const { authRequired } = require('../auth');
+const { authRequired, requireProduct } = require('../auth');
 
 const router = express.Router();
 const round2 = (n) => Math.round((n || 0) * 100) / 100;
 
-router.use(authRequired);
+router.use(authRequired, requireProduct('rcm'));
 
 // --- KPI summary cards ---
 router.get('/kpis', (req, res) => {

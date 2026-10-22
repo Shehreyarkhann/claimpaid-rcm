@@ -1,9 +1,9 @@
 const express = require('express');
 const { db } = require('../db');
-const { authRequired, roleRequired } = require('../auth');
+const { authRequired, roleRequired, requireProduct } = require('../auth');
 
 const router = express.Router();
-router.use(authRequired, roleRequired('owner'));
+router.use(authRequired, requireProduct('rcm'), roleRequired('owner'));
 
 // --- Audit log viewer ---
 router.get('/', (req, res) => {
