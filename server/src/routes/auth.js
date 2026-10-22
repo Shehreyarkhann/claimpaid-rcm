@@ -245,7 +245,57 @@ router.post('/orgs', authRequired, (req, res) => {
   res.status(201).json({ id: orgId, name: name.trim(), role: 'owner' });
 });
 
-// Switch active workspace — returns a fresh token scoped to that workspace
+// Delete a workspace permanently (owner of that workspace only).
+// Deletes ALL org data: claims, appeals, auths, payers, rules, memberships, etc.
+router.delete('/orgs/:id', authRequired, (req, res) => {
+  const orgId = Number(req.params.id);
+  const member = db.prepare('SELECT role FROM user_orgs WHERE user_id = ? AND org_id = ?')
+    .get(req.user.id, orgId);
+  if (!member) return res.status(404).json({ error: 'Workspace not found' });
+  if (member.role !== 'owner') return res.status(403).json({ error: 'Only workspace owners can delete it' });
+
+  const tables = [
+    'claims', 'claim_activity', 'appeals', 'appeal_notes',
+    'auth_requests', 'auth_notes', 'eligibility_checks',
+    'payers', 'payer_filing_rules', 'payer_playbook',
+    'appeal_letter_templates', 'audit_log',
+  ];
+  // Suspend FK enforcement for the wipe (no-op inside a txn, so set it outside)
+  db.exec('PRAGMA foreign_keys = OFF');
+  db.exec('BEGIN');
+  try {
+    for (const t of tables) {
+      try { db.prepare(`DELETE FROM ${t} WHERE org_id = ?`).run(orgId); } catch {}
+    }
+    // Demo requests are not org-scoped; leave them.
+    db.prepare('DELETE FROM user_orgs WHERE org_id = ?').run(orgId);
+    db.prepare('DELETE FROM orgs WHERE id = ?').run(orgId);
+    db.exec('COMMIT');
+  } catch (e) {
+    db.exec('ROLLBACK');
+    db.exec('PRAGMA foreign_keys = ON');
+    return res.status(500).json({ error: 'Delete failed: ' + e.message });
+  }
+  db.exec('PRAGMA foreign_keys = ON');
+
+  // Remove users left with no workspaces; move the requester elsewhere or log them out
+  const orphaned = db.prepare(
+    `SELECT u.id FROM users u LEFT JOIN user_orgs m ON m.user_id = u.id WHERE m.user_id IS NULL`
+  ).all();
+  for (const o of orphaned) db.prepare('DELETE FROM users WHERE id = ?').run(o.id);
+
+  const remaining = db.prepare(
+    `SELECT o.id, o.name, m.role FROM user_orgs m JOIN orgs o ON o.id = m.org_id WHERE m.user_id = ? ORDER BY o.name`
+  ).all(req.user.id);
+
+  if (remaining.length === 0) {
+    return res.json({ deleted: true, logout: true });
+  }
+  const next = remaining[0];
+  const u = db.prepare('SELECT id, email, name FROM users WHERE id = ?').get(req.user.id);
+  const token = signToken({ id: u.id, org_id: next.id, role: next.role, email: u.email, name: u.name });
+  res.json({ deleted: true, token, orgName: next.name });
+});
 router.post('/switch', authRequired, (req, res) => {
   const orgId = Number(req.body && req.body.org_id);
   if (!orgId) return res.status(400).json({ error: 'org_id is required' });

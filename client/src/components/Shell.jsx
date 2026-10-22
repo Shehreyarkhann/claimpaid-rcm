@@ -79,11 +79,6 @@ const ICONS = {
       <rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 9h.01M15 9h.01M9 13a3 3 0 0 0 3 3 3 3 0 0 0 3-3"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/>
     </svg>
   ),
-  leads: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/>
-    </svg>
-  ),
   org: (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-4h6v4"/>
@@ -91,7 +86,7 @@ const ICONS = {
   ),
 };
 
-export default function Shell({ page, setPage, children, dueCount, authzAlertCount, demoCount }) {
+export default function Shell({ page, setPage, children, dueCount, authzAlertCount }) {
   const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem('cp_sidebar') === 'collapsed'; } catch { return false; }
@@ -122,7 +117,6 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
     ...(user?.role === 'owner' ? [{ id: 'team', label: 'Team', icon: ICONS.team }] : []),
     ...(user?.role === 'owner' ? [{ id: 'audit', label: 'Audit Log', icon: ICONS.audit }] : []),
     ...(user?.role === 'owner' ? [{ id: 'billing', label: 'Billing & Plan', icon: ICONS.billing }] : []),
-    ...(user?.role === 'owner' ? [{ id: 'leads', label: 'Demo Requests', icon: ICONS.leads, badge: demoCount }] : []),
   ];
 
   const initials = (user?.name || '?').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();

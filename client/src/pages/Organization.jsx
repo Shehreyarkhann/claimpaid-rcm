@@ -9,6 +9,9 @@ export default function Organization() {
   const [org, setOrg] = useState(null);
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleting, setDeleting] = useState(false);
   const isOwner = user?.role === 'owner';
 
   useEffect(() => {
@@ -27,6 +30,24 @@ export default function Organization() {
     } catch (e) {
       toast.error(e.message);
       setSaving(false);
+    }
+  };
+
+  const doDelete = async () => {
+    if (deleteConfirm !== org.name || deleting) return;
+    setDeleting(true);
+    try {
+      const r = await api.deleteOrg(org.id);
+      if (r.logout) {
+        localStorage.removeItem('pulse_token');
+        window.location.href = '/app/';
+      } else {
+        localStorage.setItem('pulse_token', r.token);
+        window.location.reload();
+      }
+    } catch (e) {
+      toast.error(e.message);
+      setDeleting(false);
     }
   };
 
@@ -79,6 +100,48 @@ export default function Organization() {
             <p className="text-xs text-slate-400 mt-4">
               All data is isolated to this workspace. Team members only see workspaces they've been added to.
             </p>
+          </div>
+        </div>
+      )}
+
+      {isOwner && org && (
+        <div className="max-w-4xl mt-6">
+          <div className="card p-6 !border-rose-200 bg-rose-50/50">
+            <h3 className="font-bold text-rose-900 mb-1">Danger zone</h3>
+            <p className="text-sm text-rose-700/80 mb-4">
+              Deleting this workspace permanently removes all of its claims, appeals, authorizations,
+              payers, team memberships and settings. This cannot be undone.
+            </p>
+            {!showDelete ? (
+              <button className="btn !bg-rose-600 !text-white hover:!bg-rose-700 !text-sm" onClick={() => setShowDelete(true)}>
+                Delete this workspace…
+              </button>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-rose-900 font-medium">
+                  Type <span className="font-bold">"{org.name}"</span> to confirm permanent deletion:
+                </p>
+                <input
+                  className="input !border-rose-300 max-w-sm"
+                  value={deleteConfirm}
+                  onChange={(e) => setDeleteConfirm(e.target.value)}
+                  placeholder={org.name}
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <button
+                    className="btn !bg-rose-600 !text-white hover:!bg-rose-700 !text-sm disabled:opacity-40"
+                    disabled={deleteConfirm !== org.name || deleting}
+                    onClick={doDelete}
+                  >
+                    {deleting ? 'Deleting…' : 'Delete permanently'}
+                  </button>
+                  <button className="btn btn-ghost !text-sm" onClick={() => { setShowDelete(false); setDeleteConfirm(''); }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

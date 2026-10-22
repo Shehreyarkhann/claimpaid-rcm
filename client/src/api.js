@@ -70,12 +70,6 @@ export const api = {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ plan, trial }),
     }).then(handle),
-  demoRequests: () => get('/api/demo/requests'),
-  markDemoContacted: (id, contacted) =>
-    authFetch(`/api/demo/requests/${id}`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contacted }),
-    }).then(handle),
   myOrgs: () => get('/api/auth/orgs'),
   createOrg: (name) =>
     authFetch('/api/auth/orgs', {
@@ -87,6 +81,8 @@ export const api = {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ org_id }),
     }).then(handle),
+  deleteOrg: (org_id) =>
+    authFetch(`/api/auth/orgs/${org_id}`, { method: 'DELETE' }).then(handle),
   renameOrg: (name) =>
     authFetch('/api/org', {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
