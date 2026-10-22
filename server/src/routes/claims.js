@@ -46,6 +46,44 @@ router.get('/meta/payers', (req, res) => {
   res.json(db.prepare('SELECT id, name, type FROM payers WHERE org_id = ? ORDER BY name').all(req.orgId));
 });
 
+const PAYER_TYPES = ['Commercial', 'Government', 'Patient'];
+
+// --- Create payer (owner only) + its filing rule in one shot ---
+router.post('/meta/payers', roleRequired('owner'), (req, res) => {
+  const { name, type, filing_days } = req.body || {};
+  const cleanName = typeof name === 'string' ? name.trim() : '';
+  if (!cleanName || cleanName.length > 80) {
+    return res.status(400).json({ error: 'Payer name is required (max 80 characters)' });
+  }
+  if (!PAYER_TYPES.includes(type)) {
+    return res.status(400).json({ error: `Type must be one of: ${PAYER_TYPES.join(', ')}` });
+  }
+  const days = filing_days == null || filing_days === '' ? 365 : filing_days;
+  if (!Number.isInteger(days) || days < 1 || days > 730) {
+    return res.status(400).json({ error: 'Filing deadline must be 1–730 days' });
+  }
+  const dup = db.prepare('SELECT id FROM payers WHERE org_id = ? AND LOWER(name) = LOWER(?)')
+    .get(req.orgId, cleanName);
+  if (dup) return res.status(409).json({ error: 'That payer already exists' });
+
+  // node:sqlite has no db.transaction() — explicit BEGIN/COMMIT
+  db.exec('BEGIN');
+  try {
+    const payerId = Number(db.prepare(
+      'INSERT INTO payers (org_id, name, type) VALUES (?, ?, ?)'
+    ).run(req.orgId, cleanName, type).lastInsertRowid);
+    db.prepare(
+      'INSERT INTO payer_filing_rules (org_id, payer_id, filing_days) VALUES (?, ?, ?)'
+    ).run(req.orgId, payerId, days);
+    db.exec('COMMIT');
+    auditLog(req, 'create', 'payer', payerId, `${cleanName} (${type}, ${days}d filing)`);
+    res.status(201).json({ id: payerId, name: cleanName, type, filing_days: days });
+  } catch (e) {
+    db.exec('ROLLBACK');
+    throw e;
+  }
+});
+
 router.get('/template/csv', (req, res) => {
   const header = 'claim_number,patient_name,payer,service_date,billed_amount,paid_amount,status,denial_reason';
   res.setHeader('Content-Type', 'text/csv');

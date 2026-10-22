@@ -24,6 +24,11 @@ export const api = {
   appealStats: () => get('/api/analytics/appeal-stats'),
   claims: (params = {}) => get(`/api/claims?${new URLSearchParams(params)}`),
   payers: () => get('/api/claims/meta/payers'),
+  createPayer: (data) =>
+    authFetch('/api/claims/meta/payers', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).then(handle),
   appeals: (params = {}) => get(`/api/appeals?${new URLSearchParams(params)}`),
   unworkedDenials: () => get('/api/appeals/unworked-denials'),
   dueFollowups: () => get('/api/appeals/due'),

@@ -1,15 +1,66 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../auth';
 import { api } from '../api';
-import { PageHeader, Skeleton } from '../components/ui';
+import { PageHeader, Skeleton, Modal } from '../components/ui';
 import { useToast } from '../components/ui';
+
+const PAYER_TYPES = ['Commercial', 'Government', 'Patient'];
+
+function AddPayerModal({ onClose, onSaved }) {
+  const toast = useToast();
+  const [form, setForm] = useState({ name: '', type: 'Commercial', filing_days: 365 });
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+
+  const save = async () => {
+    setError(null);
+    const days = parseInt(form.filing_days);
+    if (!form.name.trim()) { setError('Payer name is required'); return; }
+    if (!days || days < 1 || days > 730) { setError('Filing deadline must be 1–730 days'); return; }
+    setBusy(true);
+    try {
+      await api.createPayer({ name: form.name.trim(), type: form.type, filing_days: days });
+      toast.success(`Payer "${form.name.trim()}" added`);
+      onSaved();
+    } catch (e) { setError(e.message); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <Modal onClose={onClose}>
+      <div className="p-7">
+        <h3 className="text-xl font-bold tracking-tight mb-1">Add payer</h3>
+        <p className="text-sm text-slate-500 mb-5">The payer will appear in filing rules, claims, and the playbook's payer filter.</p>
+        {error && <div className="mb-4 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}
+        <div className="mb-4"><label className="label">Payer name</label>
+          <input className="input" autoFocus value={form.name} onChange={set('name')}
+            placeholder="e.g. Empire BlueCross" onKeyDown={(e) => e.key === 'Enter' && save()} /></div>
+        <div className="grid sm:grid-cols-2 gap-4 mb-5">
+          <div><label className="label">Type</label>
+            <select className="input" value={form.type} onChange={set('type')}>
+              {PAYER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select></div>
+          <div><label className="label">Filing deadline (days)</label>
+            <input type="number" min="1" max="730" className="input" value={form.filing_days} onChange={set('filing_days')} /></div>
+        </div>
+        <div className="flex justify-end gap-2">
+          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" disabled={busy} onClick={save}>{busy ? 'Adding…' : 'Add payer'}</button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
 
 export default function FilingRules() {
   const { user } = useAuth();
   const toast = useToast();
   const [rules, setRules] = useState(null);
   const [editing, setEditing] = useState({});
+  const [showAdd, setShowAdd] = useState(false);
   const canWrite = ['owner', 'biller'].includes(user?.role);
+  const isOwner = user?.role === 'owner';
 
   const load = () => api.filingRules().then(setRules).catch((e) => toast.error(e.message));
   useEffect(() => { load(); }, []);
@@ -30,7 +81,11 @@ export default function FilingRules() {
       <PageHeader
         title="Timely Filing Rules"
         subtitle="How many days from date of service each payer allows. Deadlines drive the work queue and risk alerts."
+        actions={isOwner && (
+          <button className="btn btn-primary" onClick={() => setShowAdd(true)}>+ Add payer</button>
+        )}
       />
+      {showAdd && <AddPayerModal onClose={() => setShowAdd(false)} onSaved={() => { setShowAdd(false); load(); }} />}
 
       <div className="card p-5 mb-5 bg-gradient-to-r from-sky-50 to-emerald-50 !border-sky-100">
         <div className="text-sm font-semibold text-slate-800 mb-1">Why this matters</div>
