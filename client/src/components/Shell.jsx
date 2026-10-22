@@ -67,6 +67,11 @@ const ICONS = {
       <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/>
     </svg>
   ),
+  ai: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 9h.01M15 9h.01M9 13a3 3 0 0 0 3 3 3 3 0 0 0 3-3"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/>
+    </svg>
+  ),
 };
 
 export default function Shell({ page, setPage, children, dueCount, authzAlertCount }) {
@@ -82,6 +87,7 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
     { id: 'elig', label: 'Eligibility', icon: ICONS.elig },
     { id: 'reports', label: 'Reports', icon: ICONS.reports },
     { id: 'playbook', label: 'Playbook', icon: ICONS.playbook },
+    { id: 'ai', label: 'AI Assistant', icon: ICONS.ai },
   ];
   const settingsTabs = [
     { id: 'filing', label: 'Filing Rules', icon: ICONS.filing },
@@ -98,9 +104,9 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
       <aside className="w-[248px] shrink-0 bg-[#0b1220] text-white flex flex-col fixed inset-y-0 z-40">
         <div className="px-5 pt-6 pb-2">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center font-extrabold text-[#0b1220] text-lg shadow-[0_4px_16px_rgba(16,185,129,0.4)]">P</div>
+            <img src="/app/claimpaid-icon.webp" alt="ClaimPaid" className="w-10 h-10 rounded-xl shadow-[0_4px_16px_rgba(16,185,129,0.4)]" />
             <div>
-              <div className="font-bold leading-tight tracking-tight">ClaimPilot RCM</div>
+              <div className="font-bold leading-tight tracking-tight">ClaimPaid RCM</div>
               <div className="text-[11px] text-slate-400 truncate max-w-[150px]">{user?.orgName}</div>
             </div>
           </div>
@@ -153,8 +159,8 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
           {children}
         </main>
         <footer className="px-8 pb-6 text-xs text-slate-400 max-w-[1400px] w-full mx-auto flex justify-between items-center">
-          <span>ClaimPilot RCM · Your data is isolated to your organization</span>
-          <span>Part of <a href="https://claim-pilot.io" target="_blank" rel="noreferrer" className="text-emerald-600 font-semibold hover:underline">ClaimPilot</a> · <a href="#" onClick={(e) => e.preventDefault()} title="Ask your payer policies anything" className="text-violet-600 font-semibold hover:underline">🤖 ClaimPilot AI</a></span>
+          <span>ClaimPaid RCM · Your data is isolated to your organization</span>
+          <span>Part of <a href="https://claimpaid.io" target="_blank" rel="noreferrer" className="text-emerald-600 font-semibold hover:underline">ClaimPaid</a> · <a href="#" onClick={(e) => e.preventDefault()} title="Ask your payer policies anything" className="text-violet-600 font-semibold hover:underline">🤖 ClaimPaid AI</a></span>
         </footer>
       </div>
     </div>

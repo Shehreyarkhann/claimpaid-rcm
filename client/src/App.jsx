@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './auth';
 import { ToastProvider } from './components/ui';
 import Shell from './components/Shell';
+import FloatingChat from './components/FloatingChat';
 import Dashboard from './pages/Dashboard';
 import Claims from './pages/Claims';
 import Denials from './pages/Denials';
@@ -15,6 +16,7 @@ import Authorizations from './pages/Authorizations';
 import Eligibility from './pages/Eligibility';
 import AuditLog from './pages/AuditLog';
 import LetterTemplates from './pages/LetterTemplates';
+import AIAssistant from './pages/AIAssistant';
 import { Login, Signup, ForgotPassword, ResetPassword } from './pages/AuthPages';
 import { api } from './api';
 
@@ -32,7 +34,7 @@ function AuthGate({ children }) {
       <div className="min-h-screen flex items-center justify-center bg-[#0b1220]">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-emerald-500 flex items-center justify-center font-extrabold text-[#0b1220] text-xl animate-pulse">P</div>
-          <div className="text-slate-400 text-sm">Loading ClaimPilot RCM…</div>
+          <div className="text-slate-400 text-sm">Loading ClaimPaid RCM…</div>
         </div>
       </div>
     );
@@ -69,6 +71,7 @@ function Workspace() {
   const go = (p, link = null) => { setDeepLink(link); setPage(p); };
 
   return (
+    <>
     <Shell page={page} setPage={(p) => go(p)} dueCount={dueCount} authzAlertCount={authzAlertCount}>
       {page === 'work' && (
         <MyWork
@@ -95,7 +98,10 @@ function Workspace() {
       )}
       {page === 'filing' && <FilingRules />}
       {page === 'team' && <Team />}
+      {page === 'ai' && <AIAssistant />}
     </Shell>
+    <FloatingChat />
+    </>
   );
 }
 

@@ -10,7 +10,7 @@ export default function Layout({ page, setPage, children }) {
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-emerald-500 flex items-center justify-center font-bold text-ink">P</div>
             <div>
-              <div className="font-bold text-lg leading-tight">ClaimPilot RCM</div>
+              <div className="font-bold text-lg leading-tight">ClaimPaid RCM</div>
               <div className="text-xs text-slate-400">Revenue Cycle Analytics</div>
             </div>
           </div>
