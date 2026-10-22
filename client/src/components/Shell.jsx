@@ -86,6 +86,15 @@ const ICONS = {
 
 export default function Shell({ page, setPage, children, dueCount, authzAlertCount, demoCount }) {
   const { user, logout } = useAuth();
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem('cp_sidebar') === 'collapsed'; } catch { return false; }
+  });
+  const toggle = () => {
+    setCollapsed((c) => {
+      try { localStorage.setItem('cp_sidebar', c ? 'open' : 'collapsed'); } catch {}
+      return !c;
+    });
+  };
 
   const tabs = [
     { id: 'work', label: 'My Work', icon: ICONS.work, badge: dueCount },
@@ -98,7 +107,6 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
     { id: 'reports', label: 'Reports', icon: ICONS.reports },
     { id: 'playbook', label: 'Playbook', icon: ICONS.playbook },
     { id: 'ai', label: 'AI Assistant', icon: ICONS.ai },
-    ...(user?.role === 'owner' ? [{ id: 'leads', label: 'Demo Requests', icon: ICONS.leads, badge: demoCount }] : []),
   ];
   const settingsTabs = [
     { id: 'filing', label: 'Filing Rules', icon: ICONS.filing },
@@ -106,6 +114,7 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
     ...(user?.role === 'owner' ? [{ id: 'team', label: 'Team', icon: ICONS.team }] : []),
     ...(user?.role === 'owner' ? [{ id: 'audit', label: 'Audit Log', icon: ICONS.audit }] : []),
     ...(user?.role === 'owner' ? [{ id: 'billing', label: 'Billing & Plan', icon: ICONS.billing }] : []),
+    ...(user?.role === 'owner' ? [{ id: 'leads', label: 'Demo Requests', icon: ICONS.leads, badge: demoCount }] : []),
   ];
 
   const initials = (user?.name || '?').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
@@ -113,60 +122,78 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
   return (
     <div className="min-h-screen flex">
       {/* Sidebar */}
-      <aside className="w-[248px] shrink-0 bg-[#0b1220] text-white flex flex-col fixed inset-y-0 z-40">
-        <div className="px-5 pt-6 pb-2">
-          <div className="flex items-center gap-3">
-            <img src="/app/claimpaid-icon.webp" alt="ClaimPaid" className="w-10 h-10 rounded-xl shadow-[0_4px_16px_rgba(16,185,129,0.4)]" />
-            <div>
-              <div className="font-bold leading-tight tracking-tight">ClaimPaid RCM</div>
-              <div className="text-[11px] text-slate-400 truncate max-w-[150px]">{user?.orgName}</div>
-            </div>
+      <aside className={`${collapsed ? 'w-[76px]' : 'w-[248px]'} shrink-0 bg-[#0b1220] text-white flex flex-col fixed inset-y-0 z-40 transition-all duration-200`}>
+        <div className={`${collapsed ? 'px-4' : 'px-5'} pt-6 pb-2`}>
+          <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'}`}>
+            <img src="/app/claimpaid-icon.webp" alt="ClaimPaid" className="w-10 h-10 rounded-xl shadow-[0_4px_16px_rgba(16,185,129,0.4)] shrink-0" />
+            {!collapsed && (
+              <div className="min-w-0">
+                <div className="font-bold leading-tight tracking-tight">ClaimPaid RCM</div>
+                <div className="text-[11px] text-slate-400 truncate max-w-[150px]">{user?.orgName}</div>
+              </div>
+            )}
           </div>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          <div className="px-3.5 pb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">Workspace</div>
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto overflow-x-hidden">
+          {!collapsed && <div className="px-3.5 pb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">Workspace</div>}
           {tabs.map((t) => (
-            <button key={t.id} onClick={() => setPage(t.id)}
-              className={`nav-link w-full ${page === t.id ? 'active' : ''}`}>
+            <button key={t.id} onClick={() => setPage(t.id)} title={collapsed ? t.label : undefined}
+              className={`nav-link w-full relative ${page === t.id ? 'active' : ''} ${collapsed ? '!px-0 justify-center' : ''}`}>
               {t.icon}
-              <span className="flex-1 text-left">{t.label}</span>
+              {!collapsed && <span className="flex-1 text-left">{t.label}</span>}
               {t.badge > 0 && (
-                <span className="bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">{t.badge}</span>
+                <span className={`bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center ${collapsed ? 'absolute ml-7 mb-5 !px-1 !min-w-[16px]' : ''}`}>{t.badge}</span>
               )}
             </button>
           ))}
-          <div className="px-3.5 pt-4 pb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">Settings</div>
+          {!collapsed && <div className="px-3.5 pt-4 pb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">Settings</div>}
+          {collapsed && <div className="mx-2 my-2 border-t border-white/10" />}
           {settingsTabs.map((t) => (
-            <button key={t.id} onClick={() => setPage(t.id)}
-              className={`nav-link w-full ${page === t.id ? 'active' : ''}`}>
+            <button key={t.id} onClick={() => setPage(t.id)} title={collapsed ? t.label : undefined}
+              className={`nav-link w-full relative ${page === t.id ? 'active' : ''} ${collapsed ? '!px-0 justify-center' : ''}`}>
               {t.icon}
-              <span className="flex-1 text-left">{t.label}</span>
+              {!collapsed && <span className="flex-1 text-left">{t.label}</span>}
+              {t.badge > 0 && (
+                <span className={`bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center ${collapsed ? 'absolute ml-7 mb-5 !px-1 !min-w-[16px]' : ''}`}>{t.badge}</span>
+              )}
             </button>
           ))}
         </nav>
 
-        <div className="p-3">
-          <div className="rounded-xl bg-white/5 p-3 flex items-center gap-3">
+        <div className="p-3 space-y-2">
+          <button onClick={toggle} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-white/5 hover:bg-white/10 transition p-2.5 text-slate-400 hover:text-white">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              className={`transition-transform duration-200 ${collapsed ? 'rotate-180' : ''}`}>
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+            {!collapsed && <span className="text-xs font-medium">Collapse</span>}
+          </button>
+          <div className={`rounded-xl bg-white/5 p-3 flex items-center ${collapsed ? 'justify-center' : 'gap-3'}`}>
             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-400 to-sky-500 flex items-center justify-center text-xs font-bold text-white shrink-0">
               {initials}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium truncate">{user?.name}</div>
-              <div className="text-[11px] text-slate-400 capitalize">{user?.role}</div>
-            </div>
-            <button onClick={logout} title="Sign out"
-              className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
-              </svg>
-            </button>
+            {!collapsed && (
+              <>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{user?.name}</div>
+                  <div className="text-[11px] text-slate-400 capitalize">{user?.role}</div>
+                </div>
+                <button onClick={logout} title="Sign out"
+                  className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
+                  </svg>
+                </button>
+              </>
+            )}
           </div>
         </div>
       </aside>
 
       {/* Main */}
-      <div className="flex-1 ml-[248px] min-h-screen flex flex-col">
+      <div className={`flex-1 ${collapsed ? 'ml-[76px]' : 'ml-[248px]'} min-h-screen flex flex-col transition-all duration-200`}>
         <main className="flex-1 px-8 py-7 max-w-[1400px] w-full mx-auto">
           {children}
         </main>
