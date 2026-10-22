@@ -3,22 +3,22 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, CartesianGrid, PieChart, Pie, Cell, Legend,
 } from 'recharts';
-import { api, fmtMoney, fmtDate } from '../api';
+import { api, fmtMoney, fmtMoneyCompact, fmtDate } from '../api';
 import { Skeleton, PageHeader } from '../components/ui';
 
 const COLORS = ['#10b981', '#0ea5e9', '#8b5cf6', '#f59e0b', '#f43f5e', '#64748b', '#14b8a6', '#6366f1'];
 
-function Kpi({ label, value, sub, accent, icon }) {
+function Kpi({ label, value, sub, accent, icon, title }) {
   return (
     <div className="card p-5 relative overflow-hidden group hover:shadow-md transition-shadow">
       <div className={`absolute left-0 top-0 bottom-0 w-1 ${accent}`} />
-      <div className="flex items-start justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
           <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</div>
-          <div className="mt-1.5 text-[26px] font-bold text-slate-900 tracking-tight">{value}</div>
+          <div className="mt-1.5 text-[22px] font-bold text-slate-900 tracking-tight tabular-nums leading-tight break-words" title={title || (typeof value === 'string' ? value : undefined)}>{value}</div>
           {sub && <div className="mt-1 text-xs text-slate-500">{sub}</div>}
         </div>
-        <div className="text-xl opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all">{icon}</div>
+        <div className="text-xl opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all shrink-0">{icon}</div>
       </div>
     </div>
   );
@@ -117,9 +117,9 @@ export default function Dashboard({ goDenials }) {
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
-        <Kpi label="Total Billed" value={fmtMoney(kpis.totalBilled)} sub={`${kpis.totalClaims} claims`} accent="bg-sky-400" icon="💰" />
-        <Kpi label="Collected" value={fmtMoney(kpis.totalCollected)} accent="bg-emerald-400" icon="✅" />
-        <Kpi label="Outstanding A/R" value={fmtMoney(kpis.totalAR)} accent="bg-amber-400" icon="⏳" />
+        <Kpi label="Total Billed" value={fmtMoneyCompact(kpis.totalBilled)} title={fmtMoney(kpis.totalBilled)} sub={`${kpis.totalClaims} claims`} accent="bg-sky-400" icon="💰" />
+        <Kpi label="Collected" value={fmtMoneyCompact(kpis.totalCollected)} title={fmtMoney(kpis.totalCollected)} accent="bg-emerald-400" icon="✅" />
+        <Kpi label="Outstanding A/R" value={fmtMoneyCompact(kpis.totalAR)} title={fmtMoney(kpis.totalAR)} accent="bg-amber-400" icon="⏳" />
         <Kpi label="Avg Days in A/R" value={kpis.avgDaysInAR} sub="days" accent="bg-violet-400" icon="📅" />
         <Kpi label="Clean Claim Rate" value={`${kpis.cleanClaimRate}%`} accent="bg-emerald-400" icon="✨" />
         <Kpi label="Denial Rate" value={`${kpis.denialRate}%`} accent="bg-rose-400" icon="⚠️" />

@@ -214,6 +214,28 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
 .ticker .track{display:flex;gap:48px;width:max-content;animation:scroll 30s linear infinite}
 .ticker span{font-size:13px;font-weight:600;color:#f87171;white-space:nowrap;letter-spacing:.4px}
 @media(max-width:640px){.stats{grid-template-columns:1fr 1fr}.nav-links a:not(.btn){display:none}}
+/* ---------- demo modal ---------- */
+.dmodal{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+.dmodal.open{display:flex}
+.dmodal .scrim{position:absolute;inset:0;background:rgba(4,10,18,.72);backdrop-filter:blur(6px)}
+.dmodal .box{position:relative;width:100%;max-width:480px;background:#0e1626;border:1px solid var(--line);border-radius:20px;padding:32px;box-shadow:0 30px 80px rgba(0,0,0,.5);max-height:92vh;overflow-y:auto}
+.dmodal h3{font-size:22px;margin:0 0 6px;letter-spacing:-.4px}
+.dmodal .sub{color:var(--mut);font-size:14px;margin:0 0 20px}
+.dmodal .fld{margin-bottom:14px}
+.dmodal label{display:block;font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--mut);margin-bottom:6px}
+.dmodal input,.dmodal select,.dmodal textarea{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;padding:11px 14px;color:#fff;font-size:15px;font-family:inherit}
+.dmodal input:focus,.dmodal select:focus,.dmodal textarea:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(16,185,129,.18)}
+.dmodal select option{background:#0e1626}
+.dmodal .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.dmodal .err{display:none;background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.4);color:#fda4af;font-size:13px;border-radius:10px;padding:10px 14px;margin-bottom:14px}
+.dmodal .err.show{display:block}
+.dmodal .x{position:absolute;top:16px;right:18px;background:none;border:none;color:var(--mut);font-size:22px;cursor:pointer;line-height:1}
+.dmodal .x:hover{color:#fff}
+.dmodal .hp{position:absolute;left:-9999px;opacity:0;height:0;width:0}
+.dmodal .done{text-align:center;padding:12px 0}
+.dmodal .done .big{font-size:44px;margin-bottom:10px}
+.dmodal .done h3{margin-bottom:8px}
+.dmodal .done p{color:var(--mut);font-size:14px;margin:0 0 20px}
 </style>
 </head>
 <body>
@@ -221,7 +243,7 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
   <a class="logo" href="#hero"><img src="claimpaid-icon.webp" alt="ClaimPaid"/>Claim<span>Paid</span></a>
   <div class="nav-links">
     <a href="#platform">Platform</a><a href="#ai-sec">AI Assistant</a><a href="#pricing">Pricing</a>
-    <a class="btn btn-green btn-sm" href="mailto:hello@claimpaid.io">Get started</a>
+    <a class="btn btn-green btn-sm" href="/app/" data-smart-cta>Get started</a>
   </div>
 </div></nav>
 
@@ -245,7 +267,7 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
     <h1 id="headline"></h1>
     <p class="hero-sub">ClaimPaid hunts down every denied dollar — smart worklists, auto-generated appeal letters, and an AI that knows every payer's policy by heart. Built by someone who's worked denials, not a SaaS team guessing at healthcare.</p>
     <div class="hero-ctas">
-      <a class="btn btn-green" href="mailto:hello@claimpaid.io?subject=ClaimPaid%20demo">Start recovering revenue →</a>
+      <a class="btn btn-green" href="/app/" data-smart-cta>Start recovering revenue →</a>
       <a class="btn btn-ghost" href="#platform">See how it works</a>
     </div>
     <div class="stats">
@@ -370,6 +392,7 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
       <div class="amt">$199</div><div class="per">per month</div>
       <ul><li><b>Full RCM platform</b> — claims, denials, worklists</li><li>Timely filing radar + 13-rule scrubber</li><li>Auto appeal letters (8 categories)</li><li>835 import / 837P export</li><li>Up to 3 team seats</li></ul>
       <a class="btn btn-ghost" style="justify-content:center" href="/app/?plan=starter">Choose Starter</a>
+      <div style="text-align:center;margin-top:10px"><a href="/app/?plan=starter&trial=1" style="font-size:13px;color:var(--green-lt);text-decoration:none">or start with a free 1-month trial →</a></div>
     </div>
     <div class="price hot reveal">
       <div class="pop">MOST POPULAR</div>
@@ -377,6 +400,7 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
       <div class="amt">$499</div><div class="per">per month</div>
       <ul><li><b>Everything in Starter</b></li><li><b>ClaimPaid AI</b> — embedded tab + quick-chat</li><li>Payer Policy Handbook, pre-loaded</li><li>Autopilot web crawling + Teach-it loop</li><li>Denial pattern analytics</li><li>Unlimited team seats</li></ul>
       <a class="btn btn-green" style="justify-content:center" href="/app/?plan=pro">Choose Pro + AI →</a>
+      <div style="text-align:center;margin-top:10px"><a href="/app/?plan=pro&trial=1" style="font-size:13px;color:var(--green-lt);text-decoration:none">or start with a free 1-month trial →</a></div>
     </div>
     <div class="price reveal">
       <h3>Enterprise</h3><div class="pd">For large billing companies &amp; MSOs</div>
@@ -390,13 +414,44 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
 <section id="cta"><div class="wrap"><div class="box reveal">
   <h2>Your denials are already<br/><span class="grad">someone's revenue.</span><br/>Make it yours.</h2>
   <p>Every week you wait, timely-filing clocks run out and appeal windows close. ClaimPaid is live in a day — start recovering what's yours.</p>
-  <a class="btn btn-green" href="mailto:hello@claimpaid.io?subject=ClaimPaid%20demo">Book a demo →</a>
+  <a class="btn btn-green" href="#" data-demo-modal>Book a demo →</a>
 </div></div></section>
 
 <footer><div class="wrap foot">
   <a class="logo" href="#hero" style="font-size:17px"><img src="claimpaid-icon.webp" alt="ClaimPaid" style="width:28px;height:28px"/>Claim<span>Paid</span></a>
   <div>© 2026 ClaimPaid · Get your claims paid. · <a href="mailto:hello@claimpaid.io">hello@claimpaid.io</a></div>
 </div></footer>
+
+<!-- demo request modal -->
+<div class="dmodal" id="demoModal" aria-hidden="true">
+  <div class="scrim" data-demo-close></div>
+  <div class="box" role="dialog" aria-modal="true" aria-label="Book a demo">
+    <button class="x" data-demo-close aria-label="Close">×</button>
+    <div id="demoForm">
+      <h3>Book a demo</h3>
+      <p class="sub">See ClaimPaid on your own denials. We'll reach out within one business day.</p>
+      <div class="err" id="demoErr"></div>
+      <div class="fld"><label>Full name</label><input id="d_name" autocomplete="name" placeholder="Jane Rivera"/></div>
+      <div class="fld"><label>Work email</label><input id="d_email" type="email" autocomplete="email" placeholder="jane@yourcompany.com"/></div>
+      <div class="fld"><label>Company</label><input id="d_company" autocomplete="organization" placeholder="Rivera Billing Services"/></div>
+      <div class="row2">
+        <div class="fld"><label>Phone (optional)</label><input id="d_phone" type="tel" autocomplete="tel" placeholder="(555) 123-4567"/></div>
+        <div class="fld"><label>Team size</label><select id="d_team">
+          <option value="">Select…</option><option>Just me</option><option>2–5</option><option>6–20</option><option>21–100</option><option>100+</option>
+        </select></div>
+      </div>
+      <div class="fld"><label>What should we focus on? (optional)</label><textarea id="d_msg" rows="3" placeholder="e.g. We're drowning in CO-97 denials from UHC…"></textarea></div>
+      <input class="hp" id="d_website" tabindex="-1" autocomplete="off"/>
+      <button class="btn btn-green" id="demoSubmit" style="width:100%;justify-content:center">Request demo →</button>
+    </div>
+    <div id="demoDone" class="done" style="display:none">
+      <div class="big">✅</div>
+      <h3>Request received</h3>
+      <p>Thanks — we'll be in touch within one business day to schedule your walkthrough.</p>
+      <button class="btn btn-ghost" data-demo-close>Back to site</button>
+    </div>
+  </div>
+</div>
 
 <script>
 /* ---------- headline word animation ---------- */
@@ -493,6 +548,94 @@ document.querySelectorAll('.bcard').forEach(c => c.addEventListener('mousemove',
     cam.lookAt(0,0,0);
     renderer.render(scene,cam);
   })();
+})();
+
+/* ---------- Smart CTA: plan holders -> dashboard, others -> buy a plan ---------- */
+(function () {
+  async function smartGo(btn) {
+    var orig = btn.innerHTML;
+    btn.innerHTML = 'Checking…';
+    try {
+      var token = null;
+      try { token = localStorage.getItem('pulse_token'); } catch (e) {}
+      if (!token) { location.href = '/app/?plan=pro'; return; }
+      var headers = { 'Authorization': 'Bearer ' + token };
+      var me = await fetch('/api/auth/me', { headers: headers });
+      if (!me.ok) { location.href = '/app/?plan=pro'; return; }
+      var st = await fetch('/api/billing/status', { headers: headers }).then(function (r) { return r.ok ? r.json() : null; });
+      var hasPlan = st && (st.plan === 'starter' || st.plan === 'pro') &&
+        (st.plan_status === 'active' || st.plan_status === 'trialing');
+      location.href = hasPlan ? '/app/' : '/app/?billing=open';
+    } catch (e) { location.href = '/app/?plan=pro'; }
+    finally { btn.innerHTML = orig; }
+  }
+  document.querySelectorAll('[data-smart-cta]').forEach(function (a) {
+    a.addEventListener('click', function (e) { e.preventDefault(); smartGo(a); });
+  });
+})();
+
+/* ---------- Demo request modal ---------- */
+(function () {
+  var modal = document.getElementById('demoModal');
+  var err = document.getElementById('demoErr');
+  function open() {
+    document.getElementById('demoForm').style.display = '';
+    document.getElementById('demoDone').style.display = 'none';
+    err.classList.remove('show');
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    setTimeout(function () { document.getElementById('d_name').focus(); }, 50);
+  }
+  function close() {
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+  document.querySelectorAll('[data-demo-modal]').forEach(function (a) {
+    a.addEventListener('click', function (e) { e.preventDefault(); open(); });
+  });
+  modal.querySelectorAll('[data-demo-close]').forEach(function (el) {
+    el.addEventListener('click', close);
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+
+  document.getElementById('demoSubmit').addEventListener('click', async function () {
+    var btn = this;
+    err.classList.remove('show');
+    var payload = {
+      name: document.getElementById('d_name').value.trim(),
+      email: document.getElementById('d_email').value.trim(),
+      company: document.getElementById('d_company').value.trim(),
+      phone: document.getElementById('d_phone').value.trim(),
+      team_size: document.getElementById('d_team').value,
+      message: document.getElementById('d_msg').value.trim(),
+      website: document.getElementById('d_website').value, // honeypot
+    };
+    if (!payload.name || !payload.email || !payload.company) {
+      err.textContent = 'Please fill in your name, work email, and company.';
+      err.classList.add('show');
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    try {
+      var res = await fetch('/api/demo/requests', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      var data = await res.json().catch(function () { return {}; });
+      if (!res.ok) throw new Error(data.error || 'Something went wrong — please try again.');
+      document.getElementById('demoForm').style.display = 'none';
+      document.getElementById('demoDone').style.display = '';
+    } catch (e) {
+      err.textContent = e.message;
+      err.classList.add('show');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Request demo →';
+    }
+  });
 })();
 </script>
 </body>

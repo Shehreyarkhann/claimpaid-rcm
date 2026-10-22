@@ -17,10 +17,11 @@ const STATUS_BADGE = {
   canceled: 'badge-slate',
 };
 
-export default function Billing() {
+export default function Billing({ defaultTrial = false }) {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(null);
+  const [trial, setTrial] = useState(defaultTrial);
   const toast = useToast();
 
   const load = () => {
@@ -37,9 +38,18 @@ export default function Billing() {
     const q = new URLSearchParams(window.location.search);
     const b = q.get('billing');
     if (b === 'success') {
-      toast.success('Subscription activated — welcome to ClaimPaid!');
       window.history.replaceState({}, '', '/app/');
-      setTimeout(load, 2500); // give the webhook a moment to land
+      // Give the webhook a moment to land, then toast based on the real status
+      setTimeout(async () => {
+        try {
+          const s = await api.billingStatus();
+          setStatus(s);
+          toast.success(s?.plan_status === 'trialing'
+            ? 'Free trial started — no charge for 30 days. Welcome to ClaimPaid!'
+            : 'Subscription activated — welcome to ClaimPaid!');
+        } catch { /* load() below covers errors */ }
+        setLoading(false);
+      }, 2500);
     } else if (b === 'cancelled') {
       toast.info('Checkout cancelled — no charge was made.');
       window.history.replaceState({}, '', '/app/');
@@ -53,7 +63,7 @@ export default function Billing() {
   const checkout = async (plan) => {
     setBusy(plan);
     try {
-      const { url } = await api.billingCheckout(plan);
+      const { url } = await api.billingCheckout(plan, trial);
       window.location.href = url;
     } catch (e) {
       toast.error(e.message);
@@ -138,19 +148,35 @@ export default function Billing() {
       </div>
 
       {/* Plan picker */}
+      {!isActive && (
+        <button
+          onClick={() => setTrial((t) => !t)}
+          className={`w-full flex items-center gap-4 rounded-2xl border-2 px-5 py-4 text-left transition ${
+            trial ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-white hover:border-slate-300'
+          }`}
+        >
+          <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition ${
+            trial ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-300 text-transparent'
+          }`}>✓</span>
+          <span>
+            <span className="block font-semibold text-slate-900">Start with 1 month free</span>
+            <span className="block text-sm text-slate-500">No charge today — your selected plan begins automatically after 30 days. Cancel anytime during the trial.</span>
+          </span>
+        </button>
+      )}
       <div className="grid md:grid-cols-3 gap-4">
         {planCard('starter', 'RCM Starter', 'For small billing teams', <><>$199</><span className="text-sm font-normal text-slate-500">/mo</span></>,
           ['Full RCM platform', 'Timely filing radar + 13-rule scrubber', 'Auto appeal letters (8 categories)', '835 import / 837P export', 'Up to 3 team seats'],
           planKey === 'starter' && isActive
             ? <span className="badge badge-green">Current plan</span>
             : <button className="btn btn-primary w-full" disabled={busy === 'starter' || !plans.starter?.available}
-                onClick={() => checkout('starter')}>{busy === 'starter' ? 'Redirecting…' : 'Choose Starter'}</button>)}
+                onClick={() => checkout('starter')}>{busy === 'starter' ? 'Redirecting…' : trial ? 'Start free trial' : 'Choose Starter'}</button>)}
         {planCard('pro', 'RCM Pro + AI', 'For teams serious about denial recovery', <><>$499</><span className="text-sm font-normal text-slate-500">/mo</span></>,
           ['Everything in Starter', 'ClaimPaid AI — embedded tab + quick-chat', 'Payer Policy Handbook, pre-loaded', 'Autopilot crawling + Teach-it loop', 'Denial pattern analytics', 'Unlimited team seats'],
           planKey === 'pro' && isActive
             ? <span className="badge badge-green">Current plan</span>
             : <button className="btn btn-primary w-full" disabled={busy === 'pro' || !plans.pro?.available}
-                onClick={() => checkout('pro')}>{busy === 'pro' ? 'Redirecting…' : 'Choose Pro + AI'}</button>)}
+                onClick={() => checkout('pro')}>{busy === 'pro' ? 'Redirecting…' : trial ? 'Start free trial' : 'Choose Pro + AI'}</button>)}
         {planCard('enterprise', 'Enterprise', 'For large billing companies & MSOs', 'Custom',
           ['Everything in Pro + AI', 'Multi-org management + SSO', 'Custom KB training on your contracts', 'Dedicated success manager', 'SLA + priority support'],
           <button className="btn btn-ghost w-full"

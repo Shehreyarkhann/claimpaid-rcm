@@ -84,7 +84,7 @@ router.get('/status', authRequired, (req, res) => {
 router.post('/checkout', authRequired, roleRequired('owner'), async (req, res) => {
   if (!billingConfigured(res)) return;
   const stripe = getStripe();
-  const { plan } = req.body || {};
+  const { plan, trial } = req.body || {};
   const planCfg = PLANS[plan];
   if (!planCfg) return res.status(400).json({ error: 'Unknown plan. Choose starter or pro.' });
   if (!planCfg.priceId) {
@@ -107,7 +107,11 @@ router.post('/checkout', authRequired, roleRequired('owner'), async (req, res) =
       success_url: `${appUrl}/app/?billing=success&plan=${plan}`,
       cancel_url: `${appUrl}/app/?billing=cancelled`,
       metadata: { org_id: String(org.id), plan },
-      subscription_data: { metadata: { org_id: String(org.id), plan } },
+      subscription_data: {
+        metadata: { org_id: String(org.id), plan },
+        // 1-month free trial: no charge today, billing starts automatically after 30 days
+        ...(trial ? { trial_period_days: 30 } : {}),
+      },
       allow_promotion_codes: true,
     });
     res.json({ url: session.url });
@@ -164,11 +168,19 @@ async function handleWebhook(req, res) {
         const subscriptionId = typeof session.subscription === 'string'
           ? session.subscription
           : session.subscription?.id;
-        db.prepare(`UPDATE orgs SET plan = ?, plan_status = 'active',
+        // Use the subscription's real status: 'trialing' when a free trial was taken
+        let planStatus = 'active';
+        if (subscriptionId) {
+          try {
+            const sub = await stripe.subscriptions.retrieve(subscriptionId);
+            planStatus = sub.status;
+          } catch (e) { console.error('Billing: could not fetch subscription status:', e.message); }
+        }
+        db.prepare(`UPDATE orgs SET plan = ?, plan_status = ?,
                     stripe_customer_id = COALESCE(stripe_customer_id, ?),
                     stripe_subscription_id = ? WHERE id = ?`)
-          .run(plan, String(session.customer), subscriptionId || null, orgId);
-        console.log(`Billing: org ${orgId} subscribed to ${plan}`);
+          .run(plan, planStatus, String(session.customer), subscriptionId || null, orgId);
+        console.log(`Billing: org ${orgId} subscribed to ${plan} (${planStatus})`);
       }
     } else if (event.type === 'customer.subscription.updated') {
       const sub = event.data.object;

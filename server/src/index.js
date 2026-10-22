@@ -19,6 +19,7 @@ const auditRoutes = require('./routes/audit');
 const eligibilityRoutes = require('./routes/eligibility');
 const orgRoutes = require('./routes/org');
 const { billingRoutes, handleWebhook } = require('./routes/billing');
+const demoRoutes = require('./routes/demo');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -52,6 +53,7 @@ app.use('/api/audit', auditRoutes);
 app.use('/api/eligibility', eligibilityRoutes);
 app.use('/api/org', orgRoutes);
 app.use('/api/billing', billingRoutes);
+app.use('/api/demo', demoRoutes);
 
 // Email-code MFA routes
 const { registerRoutes: registerMfaRoutes } = require('./mfa');

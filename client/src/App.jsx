@@ -55,10 +55,18 @@ function AuthGate({ children }) {
 }
 
 function Workspace() {
+  // Trial intent from landing pricing (?plan=pro&trial=1) — pre-checks the trial toggle on Billing
+  const [trialIntent] = useState(() => new URLSearchParams(window.location.search).get('trial') === '1');
   const [page, setPage] = useState(() => {
     // After landing-page pricing CTA signup (?plan=...), drop them on Billing
-    const plan = new URLSearchParams(window.location.search).get('plan');
+    const q = new URLSearchParams(window.location.search);
+    const plan = q.get('plan');
     if (plan === 'starter' || plan === 'pro') {
+      window.history.replaceState({}, '', '/app/');
+      return 'billing';
+    }
+    // Smart CTA for logged-in users without a plan (?billing=open)
+    if (q.get('billing') === 'open') {
       window.history.replaceState({}, '', '/app/');
       return 'billing';
     }
@@ -99,7 +107,7 @@ function Workspace() {
       {page === 'authz' && <Authorizations />}
       {page === 'elig' && <Eligibility />}
       {page === 'audit' && <AuditLog />}
-      {page === 'billing' && <Billing />}
+      {page === 'billing' && <Billing defaultTrial={trialIntent} />}
       {page === 'letters' && <LetterTemplates />}
       {page === 'denials' && (
         <Denials

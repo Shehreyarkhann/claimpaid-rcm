@@ -65,10 +65,10 @@ export const api = {
   authzDetail: (id) => get(`/api/authz/${id}`),
   authzFindForClaim: (claimId) => get(`/api/authz/find-for-claim/${claimId}`),
   billingStatus: () => get('/api/billing/status'),
-  billingCheckout: (plan) =>
+  billingCheckout: (plan, trial = false) =>
     authFetch('/api/billing/checkout', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan }),
+      body: JSON.stringify({ plan, trial }),
     }).then(handle),
   billingPortal: () =>
     authFetch('/api/billing/portal', { method: 'POST' }).then(handle),
@@ -78,6 +78,16 @@ export const csvUrl = (path) => path; // auth via cookie-less; use fetch for aut
 
 export const fmtMoney = (n) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n || 0);
+
+// Compact money for tight KPI cards: $4.25M, $380K, $1.10B
+export const fmtMoneyCompact = (n) => {
+  n = Number(n) || 0;
+  const abs = Math.abs(n);
+  if (abs >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+  if (abs >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
+  if (abs >= 1e3) return `$${(n / 1e3).toFixed(1)}K`;
+  return fmtMoney(n);
+};
 
 export const fmtMoney2 = (n) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(n || 0);
