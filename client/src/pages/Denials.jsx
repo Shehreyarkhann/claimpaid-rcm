@@ -127,13 +127,45 @@ function AppealDrawer({ appealId, onClose, onChanged, team }) {
         )}
 
         {/* Related prior authorization — the cross-link */}
+        {appeal.linked_auths && appeal.linked_auths.length > 0 && (
+          <div className="mb-6">
+            <div className="text-sm font-semibold text-slate-700 mb-2">✅ Linked authorizations ({appeal.linked_auths.length})</div>
+            <div className="space-y-2">
+              {appeal.linked_auths.map((a) => (
+                <div key={a.id} className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-sm">
+                  <div>
+                    <span className="font-semibold text-slate-900">Auth #{a.id}</span>
+                    <span className="text-slate-500"> · {a.cpt_codes || '—'} · {a.auth_number || 'no auth #'}</span>
+                    <div className="text-xs text-slate-400 mt-0.5 capitalize">{a.status.replace('_', ' ')}{a.payer ? ` · ${a.payer}` : ''}</div>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await authFetch(`/api/authz/${a.id}`, {
+                          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ linked_claim_id: null }),
+                        });
+                        if (!res.ok) throw new Error((await res.json()).error);
+                        toast.success(`Auth #${a.id} unlinked`);
+                        load(); onChanged();
+                      } catch (e) { toast.error(e.message); }
+                    }}
+                    className="btn btn-ghost !py-1.5 !text-xs shrink-0 !text-rose-600">
+                    Unlink
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {authMatches && authMatches.matches.length > 0 && (
           <div className="mb-6">
             <button onClick={() => setShowAuths(!showAuths)}
               className="w-full flex items-center justify-between bg-violet-50 border border-violet-200 rounded-xl px-4 py-3 hover:bg-violet-100/70 transition">
               <span className="text-sm font-semibold text-violet-900">
                 🔗 {authMatches.matches.length} related authorization{authMatches.matches.length === 1 ? '' : 's'} found
-                <span className="font-normal text-violet-600"> — same patient/payer</span>
+                <span className="font-normal text-violet-600"> — same patient or payer</span>
               </span>
               <span className="text-violet-600 text-lg">{showAuths ? '−' : '+'}</span>
             </button>
@@ -146,6 +178,9 @@ function AppealDrawer({ appealId, onClose, onChanged, team }) {
                       <span className="text-slate-500"> · {a.cpt_codes || '—'} · {a.auth_number || 'no auth #'}</span>
                       <div className="text-xs text-slate-400 mt-0.5">
                         {a.effective_status === 'expired' ? 'Expired' : a.effective_status === 'approved' ? `Valid through ${a.valid_to}` : a.effective_status.replace('_', ' ')}
+                        {a.patient_name === appeal.patient_name
+                          ? <span className="ml-1.5 badge badge-violet !text-[10px]">Same patient</span>
+                          : <span className="ml-1.5 badge badge-slate !text-[10px]">Same payer</span>}
                       </div>
                     </div>
                     <button
@@ -158,6 +193,7 @@ function AppealDrawer({ appealId, onClose, onChanged, team }) {
                           if (!res.ok) throw new Error((await res.json()).error);
                           toast.success(`Auth #${a.id} linked to this claim`);
                           setShowAuths(false);
+                          load(); onChanged();
                         } catch (e) { toast.error(e.message); }
                       }}
                       className="btn btn-outline !py-1.5 !text-xs shrink-0">

@@ -105,6 +105,12 @@ router.get('/:id', (req, res) => {
     FROM appeal_notes n JOIN users u ON u.id = n.user_id
     WHERE n.appeal_id = ? ORDER BY n.created_at ASC
   `).all(appeal.id);
+  appeal.linked_auths = db.prepare(`
+    SELECT ar.id, ar.auth_number, ar.status, ar.cpt_codes, p.name AS payer
+    FROM auth_requests ar LEFT JOIN payers p ON p.id = ar.payer_id
+    WHERE ar.linked_claim_id = ? AND ar.org_id = ?
+    ORDER BY ar.created_at DESC
+  `).all(appeal.claim_id, req.orgId);
   res.json(appeal);
 });
 
@@ -238,6 +244,12 @@ router.put('/:id', canWrite, (req, res) => {
     FROM appeal_notes n JOIN users u ON u.id = n.user_id
     WHERE n.appeal_id = ? ORDER BY n.created_at ASC
   `).all(updated.id);
+  updated.linked_auths = db.prepare(`
+    SELECT ar.id, ar.auth_number, ar.status, ar.cpt_codes, p.name AS payer
+    FROM auth_requests ar LEFT JOIN payers p ON p.id = ar.payer_id
+    WHERE ar.linked_claim_id = ? AND ar.org_id = ?
+    ORDER BY ar.created_at DESC
+  `).all(updated.claim_id, req.orgId);
   res.json(updated);
 });
 

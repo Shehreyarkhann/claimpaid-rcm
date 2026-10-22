@@ -143,12 +143,13 @@ router.get('/find-for-claim/:claimId', (req, res) => {
     LEFT JOIN claims c ON c.id = ar.linked_claim_id
     WHERE ar.org_id = ?
       AND (ar.patient_name = ? OR ar.payer_id = ?)
+      AND (ar.linked_claim_id IS NULL OR ar.linked_claim_id != ?)
     ORDER BY
       CASE WHEN ar.patient_name = ? AND ar.payer_id = ? THEN 0
            WHEN ar.patient_name = ? THEN 1 ELSE 2 END,
       ar.created_at DESC
     LIMIT 10
-  `).all(req.orgId, claim.patient_name, claim.payer_id, claim.patient_name, claim.payer_id, claim.patient_name);
+  `).all(req.orgId, claim.patient_name, claim.payer_id, claim.id, claim.patient_name, claim.payer_id, claim.patient_name);
 
   res.json({
     claim: { id: claim.id, claim_number: claim.claim_number, patient_name: claim.patient_name, denial_reason: claim.denial_reason },
