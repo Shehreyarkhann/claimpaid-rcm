@@ -270,8 +270,9 @@ Environment=NODE_ENV=production
 WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
-systemctl enable --now claimpaid-rcm
-systemctl enable --now claimpaid-ai
+systemctl enable claimpaid-rcm claimpaid-ai
+# restart (not just start) so re-deploy pulls pick up the new code
+systemctl restart claimpaid-rcm claimpaid-ai
 
 # ---------- nginx ----------
 echo "==> Configuring nginx"
