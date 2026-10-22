@@ -7,7 +7,7 @@ const router = express.Router();
 
 // --- Sign up: creates org + owner user ---
 router.post('/signup', (req, res) => {
-  const { orgName, name, email, password } = req.body || {};
+  const { orgName, name, email, password, plan } = req.body || {};
   if (!orgName || !name || !email || !password) {
     return res.status(400).json({ error: 'Organization name, name, email and password are required' });
   }
@@ -17,11 +17,15 @@ router.post('/signup', (req, res) => {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: 'Invalid email address' });
   }
+  // Optional plan intent (e.g. 'ai' for ClaimPaid AI signups) — sets the org's
+  // plan up front so product gating applies from the first login (trialing).
+  const { PLANS } = require('./billing');
+  const planKey = plan && PLANS[plan] ? plan : null;
 
   const existing = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(email.trim());
   if (existing) return res.status(409).json({ error: 'An account with this email already exists' });
 
-  const orgId = Number(db.prepare('INSERT INTO orgs (name) VALUES (?)').run(orgName.trim()).lastInsertRowid);
+  const orgId = Number(db.prepare('INSERT INTO orgs (name, plan) VALUES (?, ?)').run(orgName.trim(), planKey).lastInsertRowid);
   const hash = bcrypt.hashSync(password, 10);
   const userId = Number(
     db.prepare('INSERT INTO users (org_id, email, password_hash, name, role) VALUES (?, ?, ?, ?, ?)')

@@ -39,6 +39,11 @@ export default function AIAssistant() {
         </div>
         <span className="text-xs font-semibold px-3 py-1 rounded-full bg-violet-100 text-violet-700">POWERED BY CLAIMPAID AI</span>
       </div>
+      <div className="mb-3 flex justify-end">
+        <a href={`${AI_URL}/app/`} target="_blank" rel="noreferrer" className="text-xs font-semibold text-violet-700 hover:text-violet-900">
+          Open full AI dashboard → manage knowledge bases, documents & API
+        </a>
+      </div>
       <div className="flex-1 rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-white">
         <iframe
           src={src}
