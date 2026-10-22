@@ -23,7 +23,8 @@ export default function WorkspaceSwitcher({ collapsed }) {
   }, []);
 
   const doSwitch = async (orgId) => {
-    if (orgId === user?.org_id || busy) { setOpen(false); return; }
+    if (orgId === user?.org_id) { setOpen(false); return; }
+    if (busy) return;
     setBusy(true);
     try {
       const r = await api.switchOrg(orgId);
@@ -40,7 +41,9 @@ export default function WorkspaceSwitcher({ collapsed }) {
     setBusy(true);
     try {
       const org = await api.createOrg(newName.trim());
-      await doSwitch(org.id);
+      const r = await api.switchOrg(org.id);
+      localStorage.setItem('pulse_token', r.token);
+      window.location.reload();
     } catch (e) {
       alert(e.message);
       setBusy(false);
