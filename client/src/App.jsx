@@ -18,6 +18,7 @@ import AuditLog from './pages/AuditLog';
 import LetterTemplates from './pages/LetterTemplates';
 import AIAssistant from './pages/AIAssistant';
 import Billing from './pages/Billing';
+import DemoRequests from './pages/DemoRequests';
 import { Login, Signup, ForgotPassword, ResetPassword } from './pages/AuthPages';
 import { api } from './api';
 
@@ -55,6 +56,7 @@ function AuthGate({ children }) {
 }
 
 function Workspace() {
+  const { user } = useAuth();
   // Trial intent from landing pricing (?plan=pro&trial=1) — pre-checks the trial toggle on Billing
   const [trialIntent] = useState(() => new URLSearchParams(window.location.search).get('trial') === '1');
   const [page, setPage] = useState(() => {
@@ -73,6 +75,7 @@ function Workspace() {
     return 'work';
   });
   const [dueCount, setDueCount] = useState(0);
+  const [demoCount, setDemoCount] = useState(0);
   const [authzAlertCount, setAuthzAlertCount] = useState(0);
   // Cross-page deep links: { page, appealId, claimId, startAppealClaimId }
   const [deepLink, setDeepLink] = useState(null);
@@ -81,17 +84,20 @@ function Workspace() {
     const refresh = () => {
       api.dueFollowups().then((d) => setDueCount(d.length)).catch(() => {});
       api.authzStats().then((s) => setAuthzAlertCount((s.expiringSoon || 0) + (s.expiredUnhandled || 0) + (s.byStatus?.pending_info || 0))).catch(() => {});
+      if (user?.role === 'owner') {
+        api.demoRequests().then((r) => setDemoCount(r.filter((x) => !x.contacted).length)).catch(() => {});
+      }
     };
     refresh();
     const t = setInterval(refresh, 60000);
     return () => clearInterval(t);
-  }, [page]);
+  }, [page, user?.role]);
 
   const go = (p, link = null) => { setDeepLink(link); setPage(p); };
 
   return (
     <>
-    <Shell page={page} setPage={(p) => go(p)} dueCount={dueCount} authzAlertCount={authzAlertCount}>
+    <Shell page={page} setPage={(p) => go(p)} dueCount={dueCount} authzAlertCount={authzAlertCount} demoCount={demoCount}>
       {page === 'work' && (
         <MyWork
           onOpenAppeal={(appealId) => go('denials', { appealId })}
@@ -108,6 +114,7 @@ function Workspace() {
       {page === 'elig' && <Eligibility />}
       {page === 'audit' && <AuditLog />}
       {page === 'billing' && <Billing defaultTrial={trialIntent} />}
+      {page === 'leads' && <DemoRequests />}
       {page === 'letters' && <LetterTemplates />}
       {page === 'denials' && (
         <Denials

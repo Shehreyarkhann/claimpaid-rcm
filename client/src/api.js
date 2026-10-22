@@ -70,6 +70,12 @@ export const api = {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ plan, trial }),
     }).then(handle),
+  demoRequests: () => get('/api/demo/requests'),
+  markDemoContacted: (id, contacted) =>
+    authFetch(`/api/demo/requests/${id}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contacted }),
+    }).then(handle),
   billingPortal: () =>
     authFetch('/api/billing/portal', { method: 'POST' }).then(handle),
 };
