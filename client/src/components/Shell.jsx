@@ -154,7 +154,7 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
         </main>
         <footer className="px-8 pb-6 text-xs text-slate-400 max-w-[1400px] w-full mx-auto flex justify-between items-center">
           <span>ClaimPilot RCM · Your data is isolated to your organization</span>
-          <span>Part of <a href="https://claimpilot.io" target="_blank" rel="noreferrer" className="text-emerald-600 font-semibold hover:underline">ClaimPilot</a> · <a href="#" onClick={(e) => e.preventDefault()} title="Ask your payer policies anything" className="text-violet-600 font-semibold hover:underline">🤖 ClaimPilot AI</a></span>
+          <span>Part of <a href="https://claim-pilot.io" target="_blank" rel="noreferrer" className="text-emerald-600 font-semibold hover:underline">ClaimPilot</a> · <a href="#" onClick={(e) => e.preventDefault()} title="Ask your payer policies anything" className="text-violet-600 font-semibold hover:underline">🤖 ClaimPilot AI</a></span>
         </footer>
       </div>
     </div>
