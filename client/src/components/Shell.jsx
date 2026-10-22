@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useAuth } from '../auth';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 
