@@ -232,7 +232,13 @@ router.put('/:id', canWrite, (req, res) => {
   updates.push("updated_at = datetime('now')");
   params.push(req.params.id, req.orgId);
   db.prepare(`UPDATE appeals SET ${updates.join(', ')} WHERE id = ? AND org_id = ?`).run(...params);
-  res.json(appealDetail(req.params.id, req.orgId));
+  const updated = appealDetail(req.params.id, req.orgId);
+  updated.notes = db.prepare(`
+    SELECT n.id, n.note, n.created_at, u.name AS author
+    FROM appeal_notes n JOIN users u ON u.id = n.user_id
+    WHERE n.appeal_id = ? ORDER BY n.created_at ASC
+  `).all(updated.id);
+  res.json(updated);
 });
 
 // --- Add a note to the timeline ---
