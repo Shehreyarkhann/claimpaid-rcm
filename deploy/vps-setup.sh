@@ -123,7 +123,7 @@ sudo -u "${APP_USER}" bash -lc "
   rm -rf dist && npm run build
   cd '${APP_DIR}/server' && npm install --omit=dev --no-audit --no-fund
   cd '${AI_DIR}/client' && npm install --no-audit --no-fund
-  rm -rf dist && npm run build
+  rm -rf dist && VITE_BASE=/ai/app/ VITE_API_BASE=/ai npm run build
   cd '${AI_DIR}/server' && npm install --omit=dev --no-audit --no-fund
 "
 
