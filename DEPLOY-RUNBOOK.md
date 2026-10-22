@@ -1,4 +1,4 @@
-# Pulse RCM — Deployment Runbook
+# ClaimPaid — Deployment Runbook
 
 Prepared 2026-10-20. Read this before pushing to a host. Facts verified against
 Render's current free-tier docs and two 2026 platform comparisons.
@@ -33,10 +33,10 @@ On a real VPS none of the Render-free problems exist: the disk is persistent
 **You need (one-time, ~30 min):**
 1. **VPS** — Hetzner CX22 (~$4.50/mo) or DigitalOcean $6 droplet. Ubuntu 24.04.
    Create it, note the IP.
-2. **Domain** — ~$10/yr (Cloudflare / Porkbun / Namecheap), e.g. `pulsedemo.com`.
+2. **Domain** — ~$10/yr (Cloudflare / Porkbun / Namecheap), e.g. `claimpaid.io`.
 3. **DNS** — A record `@` (or a subdomain) → your VPS IP. Verify:
    `dig +short yourdomain.com` must print the VPS IP.
-4. **Repo on GitHub** — push this project (`.env` is already gitignored).
+4. **Repos on GitHub** — push this repo AND the ClaimPaid AI repo (`.env` is already gitignored in both).
 5. **Resend API key** (optional but recommended) — for MFA/password-reset emails.
    Without it, codes print to the server log instead of sending.
 

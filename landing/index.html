@@ -1,735 +1,497 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Pulse RCM — Revenue Cycle Management Software for Medical Billing Teams</title>
-<meta name="description" content="Pulse RCM is revenue cycle management software for medical billing teams: denial management, prior authorization tracking, claim scrubbing, 837P/835 EDI, timely filing deadlines, appeal letter automation, and RCM reporting. Built for small practices and billing companies." />
-<meta name="keywords" content="revenue cycle management software, RCM software, medical billing software, denial management software, claim denial appeals, prior authorization tracking software, claim scrubber, 837P EDI, 835 ERA posting, timely filing tracker, medical billing for small practices, billing company software" />
-<meta name="robots" content="index, follow" />
-<meta name="author" content="Pulse RCM" />
-<link rel="canonical" href="https://pulsercm.com/" />
-
-<!-- Open Graph -->
-<meta property="og:type" content="website" />
-<meta property="og:site_name" content="Pulse RCM" />
-<meta property="og:title" content="Pulse RCM — Revenue Cycle Management Software for Medical Billing Teams" />
-<meta property="og:description" content="Stop losing revenue to denied claims. Denial appeals, prior auth tracking, claim scrubbing, 837P/835 EDI, and timely filing deadlines — one workspace for your billing team." />
-<meta property="og:url" content="https://pulsercm.com/" />
-<meta property="og:image" content="https://pulsercm.com/landing/assets/dashboard.png" />
-<meta property="og:image:alt" content="Pulse RCM revenue cycle dashboard showing claims, denials, and A/R" />
-
-<!-- Twitter Card -->
-<meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Pulse RCM — Revenue Cycle Management Software" />
-<meta name="twitter:description" content="Denial management, prior auth tracking, claim scrubbing, and 837P/835 EDI for medical billing teams." />
-<meta name="twitter:image" content="https://pulsercm.com/landing/assets/dashboard.png" />
-
-<!-- Structured data: SoftwareApplication -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  "name": "Pulse RCM",
-  "applicationCategory": "BusinessApplication",
-  "operatingSystem": "Web",
-  "url": "https://pulsercm.com/",
-  "description": "Revenue cycle management software for medical billing teams: denial appeal pipeline, prior authorization tracking, claim scrubber, 837P EDI export, 835 ERA auto-posting, timely filing tracker, eligibility verification, and RCM reporting.",
-  "featureList": "Smart worklist, Denial appeal pipeline, Auto appeal letters, Prior authorization tracking, Claim scrubber, 837P EDI export, 835 ERA auto-posting, Timely filing tracker, Eligibility verification, Reports center, Payer playbook, HIPAA audit log, Multi-factor authentication",
-  "offers": [
-    { "@type": "Offer", "name": "Starter", "price": "199", "priceCurrency": "USD" },
-    { "@type": "Offer", "name": "Professional", "price": "499", "priceCurrency": "USD" }
-  ]
-}
-</script>
-<!-- Structured data: Organization -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "Organization",
-  "name": "Pulse RCM",
-  "url": "https://pulsercm.com/",
-  "description": "Revenue cycle management software for medical billing teams and billing companies."
-}
-</script>
-<!-- Structured data: FAQPage -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  "mainEntity": [
-    { "@type": "Question", "name": "How is Pulse RCM different from our clearinghouse portal?", "acceptedAnswer": { "@type": "Answer", "text": "Clearinghouses move claims. Pulse RCM manages what happens after — the denials, the follow-ups, the appeals, the deadlines. Your clearinghouse tells you a claim denied; Pulse makes sure someone works it, on time, and tracks it to payment." } },
-    { "@type": "Question", "name": "Is our patient data safe?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Every organization's data is fully isolated at the database level. Passwords are bcrypt-hashed, sessions use JWT, and all traffic is encrypted. HIPAA audit logging tracks every record view." } },
-    { "@type": "Question", "name": "How long does implementation take?", "acceptedAnswer": { "@type": "Answer", "text": "Most teams are live the same day. Upload a CSV of your open claims, set your payers' filing deadlines, invite your team." } },
-    { "@type": "Question", "name": "What is revenue cycle management software?", "acceptedAnswer": { "@type": "Answer", "text": "Revenue cycle management (RCM) software handles everything between patient visit and paid claim: eligibility checks, prior authorizations, claim scrubbing and submission, denial management and appeals, payment posting, and reporting." } },
-    { "@type": "Question", "name": "Does Pulse RCM track prior authorizations?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Every auth request lives in a pipeline from draft to approved, with expiration countdowns and turnaround analytics by payer, and auto-linking to matching denials." } },
-    { "@type": "Question", "name": "Can it scrub claims before we submit them?", "acceptedAnswer": { "@type": "Answer", "text": "Yes — the claim scrubber runs 13 pre-submission checks in bulk, and Pulse exports clean 837P files straight to your clearinghouse." } },
-    { "@type": "Question", "name": "Does it work with our clearinghouse?", "acceptedAnswer": { "@type": "Answer", "text": "Pulse generates standard 837P claim files any clearinghouse accepts, and ingests 835 ERA remittance files for automatic payment posting including CARC reason-code parsing." } }
-  ]
-}
-</script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ClaimPaid — Get your claims paid.</title>
+<link rel="icon" type="image/webp" href="claimpaid-icon.webp"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="three.min.js"></script>
 <style>
-  :root {
-    --ink: #0b1220;
-    --ink2: #111a2e;
-    --brand: #10b981;
-    --brand2: #0ea5e9;
-    --muted: #94a3b8;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-  body { font-family: 'Inter', system-ui, sans-serif; background: var(--ink); color: #e2e8f0; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
-
-  /* ---------- Nav ---------- */
-  nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 18px 0; transition: all .3s; }
-  nav.scrolled { background: rgba(11,18,32,.82); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255,255,255,.06); padding: 12px 0; }
-  .nav-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; }
-  .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #fff; font-weight: 800; font-size: 19px; }
-  .logo-mark { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #10b981, #0ea5e9); display: flex; align-items: center; justify-content: center; font-weight: 900; color: #0b1220; font-size: 18px; box-shadow: 0 4px 20px rgba(16,185,129,.4); }
-  .nav-links { display: flex; gap: 32px; }
-  .nav-links a { color: #94a3b8; text-decoration: none; font-size: 14px; font-weight: 500; transition: color .2s; }
-  .nav-links a:hover { color: #fff; }
-  .nav-cta { display: flex; gap: 12px; align-items: center; }
-  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; border-radius: 12px; padding: 12px 24px; font-size: 15px; text-decoration: none; transition: all .2s; cursor: pointer; border: none; }
-  .btn-primary { background: linear-gradient(135deg, #10b981, #059669); color: #fff; box-shadow: 0 4px 24px rgba(16,185,129,.35); }
-  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(16,185,129,.45); }
-  .btn-ghost { color: #cbd5e1; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); }
-  .btn-ghost:hover { background: rgba(255,255,255,.1); }
-  .btn-lg { padding: 16px 36px; font-size: 17px; border-radius: 14px; }
-  @media (max-width: 768px) { .nav-links { display: none; } }
-  @media (max-width: 768px) {
-    .nav-cta { gap: 8px; }
-    .nav-cta .btn { padding: 10px 16px; font-size: 13px; white-space: nowrap; }
-    .logo { font-size: 17px; }
-    .logo-mark { width: 32px; height: 32px; font-size: 16px; }
-  }
-
-  /* ---------- Hero ---------- */
-  .hero { position: relative; min-height: 100vh; display: flex; align-items: center; overflow: hidden; }
-  #hero-canvas { position: absolute; inset: 0; z-index: 0; }
-  .hero-overlay { position: absolute; inset: 0; z-index: 1; background: radial-gradient(ellipse 80% 60% at 50% 40%, transparent 0%, rgba(11,18,32,.55) 70%, var(--ink) 100%); pointer-events: none; }
-  .hero-inner { position: relative; z-index: 2; max-width: 1200px; margin: 0 auto; padding: 140px 24px 80px; text-align: center; width: 100%; }
-  .hero-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.25); color: #6ee7b7; font-size: 13px; font-weight: 600; padding: 8px 18px; border-radius: 100px; margin-bottom: 28px; }
-  .hero-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .5; transform: scale(.8); } }
-  h1 { font-size: clamp(44px, 7vw, 84px); font-weight: 900; line-height: 1.05; letter-spacing: -0.03em; color: #fff; margin-bottom: 24px; }
-  h1 .grad { background: linear-gradient(135deg, #10b981 0%, #0ea5e9 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-  .hero-sub { font-size: clamp(17px, 2.2vw, 22px); color: #94a3b8; max-width: 680px; margin: 0 auto 40px; line-height: 1.65; }
-  .hero-sub strong { color: #e2e8f0; }
-  .hero-ctas { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
-  .hero-note { font-size: 13px; color: #64748b; }
-  .hero-shot { margin-top: 64px; position: relative; max-width: 1020px; margin-left: auto; margin-right: auto; }
-  .hero-shot img { width: 100%; border-radius: 20px; border: 1px solid rgba(255,255,255,.12); box-shadow: 0 40px 100px rgba(0,0,0,.5), 0 0 80px rgba(16,185,129,.12); }
-  .hero-shot::before { content: ''; position: absolute; inset: -2px; border-radius: 22px; background: linear-gradient(135deg, rgba(16,185,129,.3), rgba(14,165,233,.3)); z-index: -1; filter: blur(24px); opacity: .5; }
-
-  /* ---------- Stats ---------- */
-  .stats { border-top: 1px solid rgba(255,255,255,.06); border-bottom: 1px solid rgba(255,255,255,.06); background: rgba(255,255,255,.015); }
-  .stats-inner { max-width: 1200px; margin: 0 auto; padding: 56px 24px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; text-align: center; }
-  .stat-num { font-size: 44px; font-weight: 900; background: linear-gradient(135deg, #10b981, #0ea5e9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.02em; }
-  .stat-label { font-size: 14px; color: #94a3b8; margin-top: 8px; }
-  @media (max-width: 768px) { .stats-inner { grid-template-columns: repeat(2, 1fr); } }
-
-  /* ---------- Sections ---------- */
-  section { padding: 120px 0; }
-  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
-  .eyebrow { display: inline-block; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: #10b981; margin-bottom: 16px; }
-  h2 { font-size: clamp(32px, 4.5vw, 52px); font-weight: 800; letter-spacing: -0.02em; color: #fff; margin-bottom: 18px; line-height: 1.15; }
-  .sec-sub { font-size: 18px; color: #94a3b8; max-width: 640px; line-height: 1.65; }
-  .center { text-align: center; } .center .sec-sub { margin: 0 auto; }
-
-  /* ---------- Features ---------- */
-  .feat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 64px; }
-  @media (max-width: 900px) { .feat-grid { grid-template-columns: 1fr; } }
-  .feat { background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.07); border-radius: 20px; padding: 36px 30px; transition: all .3s; position: relative; overflow: hidden; }
-  .feat:hover { transform: translateY(-6px); border-color: rgba(16,185,129,.3); background: rgba(16,185,129,.04); box-shadow: 0 20px 50px rgba(0,0,0,.3); }
-  .feat-icon { width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 26px; margin-bottom: 22px; }
-  .feat h3 { font-size: 19px; font-weight: 700; color: #fff; margin-bottom: 12px; }
-  .feat p { font-size: 15px; color: #94a3b8; line-height: 1.65; }
-  .feat-tag { position: absolute; top: 20px; right: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; padding: 5px 12px; border-radius: 100px; }
-
-  /* ---------- Showcase ---------- */
-  .showcase { background: var(--ink2); border-top: 1px solid rgba(255,255,255,.06); border-bottom: 1px solid rgba(255,255,255,.06); }
-  .show-row { display: grid; grid-template-columns: 1fr 1.2fr; gap: 64px; align-items: center; margin-top: 80px; }
-  .show-row.flip { grid-template-columns: 1.2fr 1fr; }
-  .show-row.flip .show-text { order: 2; } .show-row.flip .show-img { order: 1; }
-  @media (max-width: 900px) { .show-row, .show-row.flip { grid-template-columns: 1fr; } .show-row.flip .show-text { order: 1; } .show-row.flip .show-img { order: 2; } }
-  .show-text h3 { font-size: 28px; font-weight: 800; color: #fff; margin-bottom: 16px; letter-spacing: -0.01em; }
-  .show-text p { color: #94a3b8; font-size: 16px; line-height: 1.7; margin-bottom: 20px; }
-  .show-text ul { list-style: none; }
-  .show-text li { color: #cbd5e1; font-size: 15px; margin-bottom: 12px; display: flex; gap: 10px; align-items: flex-start; }
-  .show-text li::before { content: '✓'; color: #10b981; font-weight: 800; flex-shrink: 0; }
-  .show-img img { width: 100%; border-radius: 16px; border: 1px solid rgba(255,255,255,.1); box-shadow: 0 30px 70px rgba(0,0,0,.45); transition: transform .4s; }
-  .show-img img:hover { transform: scale(1.015); }
-
-  /* ---------- Steps ---------- */
-  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 64px; }
-  @media (max-width: 900px) { .steps { grid-template-columns: 1fr; } }
-  .step { text-align: center; padding: 40px 28px; }
-  .step-num { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #0ea5e9); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; color: #0b1220; margin: 0 auto 24px; box-shadow: 0 8px 30px rgba(16,185,129,.3); }
-  .step h3 { color: #fff; font-size: 20px; margin-bottom: 12px; }
-  .step p { color: #94a3b8; font-size: 15px; line-height: 1.65; }
-
-  /* ---------- Testimonials ---------- */
-  .testis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 64px; }
-  @media (max-width: 900px) { .testis { grid-template-columns: 1fr; } }
-  .testi { background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.07); border-radius: 20px; padding: 32px 28px; }
-  .testi-stars { color: #f59e0b; font-size: 16px; margin-bottom: 16px; letter-spacing: 2px; }
-  .testi p { color: #cbd5e1; font-size: 15px; line-height: 1.7; margin-bottom: 20px; font-style: italic; }
-  .testi-who { display: flex; align-items: center; gap: 12px; }
-  .testi-ava { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #0ea5e9); display: flex; align-items: center; justify-content: center; font-weight: 800; color: #0b1220; font-size: 15px; }
-  .testi-name { color: #fff; font-weight: 600; font-size: 14px; }
-  .testi-role { color: #64748b; font-size: 13px; }
-
-  /* ---------- Pricing ---------- */
-  .pricing { background: var(--ink2); border-top: 1px solid rgba(255,255,255,.06); border-bottom: 1px solid rgba(255,255,255,.06); }
-  .plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 64px; align-items: stretch; }
-  @media (max-width: 900px) { .plans { grid-template-columns: 1fr; max-width: 440px; margin-left: auto; margin-right: auto; } }
-  .plan { background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.08); border-radius: 24px; padding: 40px 34px; display: flex; flex-direction: column; transition: all .3s; }
-  .plan:hover { transform: translateY(-6px); }
-  .plan.hot { border: 2px solid #10b981; background: rgba(16,185,129,.05); box-shadow: 0 20px 60px rgba(16,185,129,.15); position: relative; }
-  .plan-badge { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #10b981, #059669); color: #fff; font-size: 12px; font-weight: 700; padding: 6px 18px; border-radius: 100px; text-transform: uppercase; letter-spacing: .06em; }
-  .plan h3 { color: #fff; font-size: 20px; margin-bottom: 8px; }
-  .plan-desc { color: #94a3b8; font-size: 14px; margin-bottom: 24px; }
-  .plan-price { font-size: 48px; font-weight: 900; color: #fff; letter-spacing: -0.02em; }
-  .plan-price span { font-size: 16px; font-weight: 500; color: #64748b; }
-  .plan ul { list-style: none; margin: 28px 0 32px; flex: 1; }
-  .plan li { color: #cbd5e1; font-size: 14px; margin-bottom: 14px; display: flex; gap: 10px; }
-  .plan li::before { content: '✓'; color: #10b981; font-weight: 800; }
-
-  /* ---------- FAQ ---------- */
-  .faq { max-width: 760px; margin: 56px auto 0; }
-  .faq-item { border-bottom: 1px solid rgba(255,255,255,.08); }
-  .faq-q { width: 100%; background: none; border: none; color: #fff; font-size: 17px; font-weight: 600; text-align: left; padding: 24px 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-family: inherit; }
-  .faq-q span:last-child { color: #10b981; font-size: 22px; transition: transform .3s; }
-  .faq-item.open .faq-q span:last-child { transform: rotate(45deg); }
-  .faq-a { max-height: 0; overflow: hidden; transition: max-height .35s ease; }
-  .faq-a p { color: #94a3b8; font-size: 15px; line-height: 1.7; padding-bottom: 24px; }
-
-  /* ---------- Final CTA ---------- */
-  .final-cta { text-align: center; background: radial-gradient(ellipse 70% 80% at 50% 100%, rgba(16,185,129,.12), transparent), var(--ink); border-top: 1px solid rgba(255,255,255,.06); }
-  .final-cta h2 { margin-bottom: 20px; }
-
-  /* ---------- Footer ---------- */
-  footer { border-top: 1px solid rgba(255,255,255,.06); padding: 56px 0 32px; }
-  .foot-grid { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 32px; margin-bottom: 40px; }
-  .foot-col h4 { color: #fff; font-size: 14px; margin-bottom: 16px; }
-  .foot-col a { display: block; color: #64748b; text-decoration: none; font-size: 14px; margin-bottom: 10px; }
-  .foot-col a:hover { color: #fff; }
-  .foot-bottom { border-top: 1px solid rgba(255,255,255,.06); padding-top: 24px; display: flex; justify-content: space-between; color: #475569; font-size: 13px; flex-wrap: wrap; gap: 12px; }
-
-  /* ---------- Reveal ---------- */
-  .reveal { opacity: 0; transform: translateY(36px); transition: opacity .8s ease, transform .8s ease; }
-  .reveal.in { opacity: 1; transform: none; }
+:root{
+  --navy:#0b1220; --navy2:#0f172a; --panel:#111c33;
+  --green:#10b981; --green-lt:#34d399; --violet:#8b5cf6; --violet-lt:#a78bfa;
+  --txt:#e8eefc; --mut:#93a0bd; --line:rgba(255,255,255,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--navy);color:var(--txt);font-family:'Inter',system-ui,sans-serif;overflow-x:hidden}
+h1,h2,h3,.disp{font-family:'Sora',sans-serif}
+::selection{background:var(--green);color:#04120c}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+.grad{background:linear-gradient(92deg,var(--green-lt),var(--violet-lt));-webkit-background-clip:text;background-clip:text;color:transparent}
+/* ---------- nav ---------- */
+nav{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(14px);background:rgba(11,18,32,.72);border-bottom:1px solid var(--line);transition:box-shadow .3s}
+nav.scrolled{box-shadow:0 8px 40px rgba(0,0,0,.45)}
+.nav-in{display:flex;align-items:center;justify-content:space-between;height:68px}
+.logo{display:flex;align-items:center;gap:10px;font-family:'Sora';font-weight:800;font-size:21px;letter-spacing:-.4px;text-decoration:none;color:var(--txt)}
+.logo img{width:34px;height:34px;border-radius:9px;box-shadow:0 0 18px rgba(16,185,129,.45);transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
+.logo:hover img{transform:rotate(-12deg) scale(1.1)}
+.logo span{color:var(--green-lt)}
+.nav-links{display:flex;gap:30px;align-items:center}
+.nav-links a{color:var(--mut);text-decoration:none;font-size:14.5px;font-weight:500;position:relative;transition:color .25s}
+.nav-links a::after{content:'';position:absolute;left:0;bottom:-5px;height:2px;width:0;background:linear-gradient(90deg,var(--green),var(--violet));border-radius:2px;transition:width .3s}
+.nav-links a:hover{color:#fff}
+.nav-links a:hover::after{width:100%}
+.nav-links a.btn{color:#000}
+.nav-links a.btn::after{display:none}
+.nav-links a.btn:hover{color:#000}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:15px;border-radius:12px;padding:13px 26px;text-decoration:none;cursor:pointer;border:none;transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s,filter .25s;position:relative}
+.btn-green{background:linear-gradient(135deg,#10b981,#059669);color:#04120c;box-shadow:0 8px 28px rgba(16,185,129,.35)}
+.btn-green:hover{transform:translateY(-3px) scale(1.03);box-shadow:0 14px 40px rgba(16,185,129,.5);filter:brightness(1.08)}
+.btn-ghost{background:rgba(255,255,255,.05);color:#fff;border:1px solid var(--line)}
+.btn-ghost:hover{transform:translateY(-3px);border-color:var(--violet);box-shadow:0 10px 30px rgba(139,92,246,.3)}
+.btn-sm{padding:10px 20px;font-size:14px}
+/* ---------- hero ---------- */
+#hero{position:relative;min-height:100vh;display:flex;align-items:center;overflow:hidden;padding:130px 0 70px}
+#bg3d{position:absolute;inset:0;z-index:0;width:100%;height:100%;display:block}
+#hero .wrap{position:relative;z-index:2;width:100%}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--green-lt);border:1px solid rgba(16,185,129,.35);background:rgba(16,185,129,.08);padding:8px 16px;border-radius:100px;margin-bottom:26px;animation:fadeDown .8s ease both}
+.hero-badge .dot{width:8px;height:8px;border-radius:50%;background:var(--green-lt);box-shadow:0 0 12px var(--green-lt);animation:pulse 1.8s infinite}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.5}}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-18px)}to{opacity:1;transform:none}}
+h1{font-size:clamp(46px,7.2vw,88px);font-weight:800;letter-spacing:-2.5px;line-height:1.02;margin-bottom:22px}
+h1 .w{display:inline-block;opacity:0;animation:wordUp .7s cubic-bezier(.22,1,.36,1) forwards}
+@keyframes wordUp{from{opacity:0;transform:translateY(46px) rotate(3deg)}to{opacity:1;transform:none}}
+.hero-sub{font-size:clamp(16px,2vw,20px);color:var(--mut);max-width:640px;line-height:1.65;margin-bottom:36px;animation:fadeDown .8s .5s ease both}
+.hero-ctas{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:60px;animation:fadeDown .8s .65s ease both}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;max-width:660px;animation:fadeDown .8s .8s ease both}
+@media(max-width:1080px){.stats{max-width:960px}}
+.stat{background:linear-gradient(160deg,rgba(16,185,129,.09),rgba(16,185,129,.02));border:1px solid rgba(16,185,129,.25);border-radius:16px;padding:16px 18px;transition:transform .3s,border-color .3s,box-shadow .3s;position:relative;overflow:hidden}
+.stat::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--green),var(--violet));opacity:.7}
+.stat:hover{transform:translateY(-6px);border-color:rgba(16,185,129,.55);box-shadow:0 18px 44px rgba(16,185,129,.16)}
+.stat .s-ico{font-size:20px;display:block;margin-bottom:6px}
+.stat b{font-family:'Sora';font-size:34px;font-weight:800;color:#fff;display:block;letter-spacing:-1.5px;line-height:1;margin-bottom:6px;text-shadow:0 0 30px rgba(16,185,129,.35)}
+.stat b .hl{color:var(--green-lt)}
+.stat .count{font-size:34px;font-weight:800;letter-spacing:-1.5px}
+.stat span{font-size:12.5px;color:#c3cbdf;font-weight:500;line-height:1.4;display:block}
+/* floating claim cards */
+.float-cards{position:absolute;right:4%;top:50%;transform:translateY(-50%);z-index:2;display:flex;flex-direction:column;gap:30px;width:250px}
+@media(max-width:1080px){.float-cards{display:none}}
+.fcard{background:rgba(17,28,51,.82);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:16px;padding:16px 18px;box-shadow:0 20px 60px rgba(0,0,0,.5);animation:floaty 7s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.fcard .row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px}
+.fcard .cid{font-size:11px;color:var(--mut);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fcard .amt{font-family:'Sora';font-size:21px;font-weight:800}
+.pill{font-size:11px;font-weight:700;padding:5px 12px;border-radius:100px;letter-spacing:.6px}
+.pill.denied{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.4)}
+.pill.paid{background:rgba(16,185,129,.15);color:var(--green-lt);border:1px solid rgba(16,185,129,.4);animation:pillGlow 2s infinite}
+@keyframes pillGlow{0%,100%{box-shadow:0 0 0 rgba(16,185,129,.5)}50%{box-shadow:0 0 18px rgba(16,185,129,.5)}}
+.fcard .bar{height:6px;border-radius:4px;background:rgba(255,255,255,.07);overflow:hidden;margin-top:12px}
+.fcard .bar i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--green),var(--green-lt));width:0;animation:fillbar 3.2s ease-in-out infinite}
+@keyframes fillbar{0%{width:8%}55%{width:100%}100%{width:100%}}
+.fcard .lbl{font-size:11px;color:var(--mut);margin-top:8px}
+/* ---------- marquee ---------- */
+.marquee{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:20px 0;overflow:hidden;background:rgba(255,255,255,.015)}
+.marquee .track{display:flex;gap:56px;width:max-content;animation:scroll 26s linear infinite}
+.marquee:hover .track{animation-play-state:paused}
+.marquee span{font-family:'Sora';font-weight:700;font-size:15px;color:var(--mut);white-space:nowrap;letter-spacing:.5px;transition:color .25s}
+.marquee span:hover{color:var(--green-lt)}
+@keyframes scroll{to{transform:translateX(-50%)}}
+.mq-label{text-align:center;font-size:12px;letter-spacing:2.5px;color:var(--mut);margin-bottom:14px;font-weight:600}
+/* ---------- sections ---------- */
+section{padding:110px 0;position:relative}
+.sec-tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:2.5px;color:var(--violet-lt);margin-bottom:16px}
+h2{font-size:clamp(32px,4.4vw,52px);font-weight:800;letter-spacing:-1.5px;line-height:1.1;margin-bottom:18px}
+.sec-sub{color:var(--mut);font-size:17px;max-width:620px;line-height:1.65;margin-bottom:56px}
+.reveal{opacity:0;transform:translateY(36px);transition:opacity .8s ease,transform .8s cubic-bezier(.22,1,.36,1)}
+.reveal.in{opacity:1;transform:none}
+/* problem */
+.prob-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+@media(max-width:860px){.prob-grid{grid-template-columns:1fr}}
+.prob{background:linear-gradient(160deg,rgba(239,68,68,.07),rgba(239,68,68,.015));border:1px solid rgba(239,68,68,.22);border-radius:20px;padding:32px;transition:transform .35s,box-shadow .35s}
+.prob:hover{transform:translateY(-8px) rotate(-.5deg);box-shadow:0 24px 60px rgba(239,68,68,.16)}
+.prob .big{font-family:'Sora';font-size:44px;font-weight:800;color:#f87171;letter-spacing:-1px;margin-bottom:10px}
+.prob h3{font-size:18px;margin-bottom:10px}
+.prob p{color:var(--mut);font-size:14.5px;line-height:1.65}
+/* bento */
+.bento{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+@media(max-width:900px){.bento{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.bento{grid-template-columns:1fr}}
+.bcard{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:32px;position:relative;overflow:hidden;transition:transform .35s cubic-bezier(.22,1,.36,1),border-color .35s,box-shadow .35s}
+.bcard::before{content:'';position:absolute;inset:0;background:radial-gradient(420px circle at var(--mx,50%) var(--my,50%),rgba(16,185,129,.14),transparent 65%);opacity:0;transition:opacity .35s;pointer-events:none}
+.bcard:hover{transform:translateY(-8px);border-color:rgba(16,185,129,.45);box-shadow:0 26px 70px rgba(0,0,0,.5)}
+.bcard:hover::before{opacity:1}
+.bcard.v::before{background:radial-gradient(420px circle at var(--mx,50%) var(--my,50%),rgba(139,92,246,.16),transparent 65%)}
+.bcard.v:hover{border-color:rgba(139,92,246,.5)}
+.bcard .ico{font-size:34px;margin-bottom:18px;display:block;transition:transform .35s}
+.bcard:hover .ico{transform:scale(1.2) rotate(-8deg)}
+.bcard h3{font-size:19px;margin-bottom:10px}
+.bcard p{color:var(--mut);font-size:14.5px;line-height:1.65}
+.bcard .tag{position:absolute;top:22px;right:22px;font-size:10.5px;font-weight:700;letter-spacing:1px;padding:5px 11px;border-radius:100px;background:rgba(16,185,129,.12);color:var(--green-lt);border:1px solid rgba(16,185,129,.3)}
+.bcard .tag.ai{background:rgba(139,92,246,.12);color:var(--violet-lt);border-color:rgba(139,92,246,.35)}
+.bcard.wide{grid-column:span 2}
+@media(max-width:600px){.bcard.wide{grid-column:span 1}}
+/* ---------- trust band ---------- */
+.trustband{background:linear-gradient(180deg,rgba(16,185,129,.05),transparent);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:34px 0}
+.trust-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+@media(max-width:860px){.trust-grid{grid-template-columns:1fr 1fr}}
+.trust{display:flex;align-items:center;gap:14px;padding:16px 20px;background:rgba(255,255,255,.025);border:1px solid var(--line);border-radius:16px;transition:transform .3s,border-color .3s}
+.trust:hover{transform:translateY(-4px);border-color:rgba(16,185,129,.45)}
+.trust .tk{width:42px;height:42px;flex-shrink:0;border-radius:12px;background:linear-gradient(135deg,rgba(16,185,129,.25),rgba(139,92,246,.25));border:1px solid rgba(16,185,129,.35);display:flex;align-items:center;justify-content:center;font-size:20px}
+.trust b{display:block;font-size:14.5px;margin-bottom:2px}
+.trust small{color:var(--mut);font-size:12.5px}
+/* ---------- testimonials ---------- */
+.testi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+@media(max-width:900px){.testi-grid{grid-template-columns:1fr;max-width:520px;margin:0 auto}}
+.testi{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:32px;display:flex;flex-direction:column;gap:18px;position:relative;transition:transform .35s,box-shadow .35s,border-color .35s}
+.testi:hover{transform:translateY(-8px) rotate(-.4deg);box-shadow:0 26px 70px rgba(0,0,0,.5);border-color:rgba(16,185,129,.4)}
+.testi .stars{color:#fbbf24;font-size:15px;letter-spacing:3px}
+.testi p{font-size:15px;line-height:1.7;color:#d6ddf0;flex:1}
+.testi p::before{content:'\201C';font-family:'Sora';font-size:44px;color:var(--green);display:block;line-height:.6;margin-bottom:10px}
+.testi .who{display:flex;align-items:center;gap:14px}
+.testi .ava{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Sora';font-weight:800;font-size:17px;color:#04120c;flex-shrink:0}
+.testi .who b{display:block;font-size:14.5px}
+.testi .who small{color:var(--mut);font-size:12.5px}
+.badge-no1{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,rgba(251,191,36,.16),rgba(251,191,36,.06));border:1px solid rgba(251,191,36,.45);color:#fcd34d;font-weight:800;font-size:13px;letter-spacing:1px;padding:10px 22px;border-radius:100px;margin-bottom:26px;box-shadow:0 0 30px rgba(251,191,36,.15);animation:fadeDown .8s .4s ease both}
+</style>
+<style>
+/* ---------- AI section ---------- */
+#ai-sec{background:radial-gradient(1000px 500px at 80% 10%,rgba(139,92,246,.12),transparent 60%),var(--navy)}
+.ai-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
+@media(max-width:900px){.ai-grid{grid-template-columns:1fr}}
+.chatmock{background:rgba(17,28,51,.9);border:1px solid rgba(139,92,246,.3);border-radius:24px;overflow:hidden;box-shadow:0 30px 90px rgba(139,92,246,.18);transition:transform .4s,box-shadow .4s}
+.chatmock:hover{transform:translateY(-6px) rotate(.4deg);box-shadow:0 40px 110px rgba(139,92,246,.3)}
+.chatmock .chead{padding:18px 22px;background:linear-gradient(135deg,#7c3aed,#6d28d9);display:flex;align-items:center;gap:12px}
+.chatmock .chead .av{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:20px}
+.chatmock .chead b{font-size:15px}
+.chatmock .chead small{display:block;font-weight:400;opacity:.75;font-size:12px}
+.chatmock .cbody{padding:24px;min-height:300px;display:flex;flex-direction:column;gap:14px}
+.msg{max-width:88%;padding:14px 18px;border-radius:16px;font-size:14.5px;line-height:1.6;animation:msgIn .5s cubic-bezier(.22,1,.36,1) both}
+@keyframes msgIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+.msg.q{align-self:flex-end;background:linear-gradient(135deg,#10b981,#059669);color:#04120c;font-weight:600;border-bottom-right-radius:6px}
+.msg.a{align-self:flex-start;background:rgba(255,255,255,.06);border:1px solid var(--line);border-bottom-left-radius:6px}
+.msg.a .cite{display:inline-block;margin:6px 6px 0 0;font-size:11px;font-weight:700;color:var(--violet-lt);background:rgba(139,92,246,.14);border:1px solid rgba(139,92,246,.35);padding:3px 10px;border-radius:100px}
+.typing{display:inline-flex;gap:5px;padding:16px 20px}
+.typing i{width:8px;height:8px;border-radius:50%;background:var(--violet-lt);animation:tp 1.2s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes tp{0%,60%,100%{transform:none;opacity:.4}30%{transform:translateY(-6px);opacity:1}}
+.ai-feats{display:flex;flex-direction:column;gap:18px;margin-top:34px}
+.ai-feat{display:flex;gap:16px;align-items:flex-start;padding:18px;border-radius:16px;border:1px solid transparent;transition:background .3s,border-color .3s,transform .3s}
+.ai-feat:hover{background:rgba(139,92,246,.07);border-color:rgba(139,92,246,.3);transform:translateX(8px)}
+.ai-feat .e{font-size:24px}
+.ai-feat b{display:block;margin-bottom:4px}
+.ai-feat p{color:var(--mut);font-size:14px;line-height:1.6}
+/* ---------- steps ---------- */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;counter-reset:st}
+@media(max-width:860px){.steps{grid-template-columns:1fr}}
+.step{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:36px 30px;position:relative;overflow:hidden;transition:transform .35s,border-color .35s}
+.step:hover{transform:translateY(-8px);border-color:rgba(16,185,129,.45)}
+.step::before{counter-increment:st;content:"0" counter(st);position:absolute;top:14px;right:24px;font-family:'Sora';font-size:64px;font-weight:800;color:rgba(255,255,255,.05);transition:color .35s}
+.step:hover::before{color:rgba(16,185,129,.16)}
+.step h3{font-size:20px;margin-bottom:12px}
+.step p{color:var(--mut);font-size:14.5px;line-height:1.7}
+/* ---------- pricing ---------- */
+.price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;align-items:stretch}
+@media(max-width:900px){.price-grid{grid-template-columns:1fr;max-width:440px;margin:0 auto}}
+.price{background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:38px 32px;display:flex;flex-direction:column;position:relative;transition:transform .35s cubic-bezier(.22,1,.36,1),box-shadow .35s,border-color .35s}
+.price:hover{transform:translateY(-10px) scale(1.015);box-shadow:0 30px 80px rgba(0,0,0,.55)}
+.price.hot{border:2px solid transparent;background:linear-gradient(var(--panel),var(--panel)) padding-box,linear-gradient(135deg,var(--green),var(--violet)) border-box;box-shadow:0 20px 70px rgba(16,185,129,.18)}
+.price.hot:hover{box-shadow:0 30px 90px rgba(16,185,129,.3)}
+.price .pop{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:800;letter-spacing:1.5px;background:linear-gradient(135deg,var(--green),var(--violet));color:#04120c;padding:7px 18px;border-radius:100px;white-space:nowrap}
+.price h3{font-size:19px;margin-bottom:6px}
+.price .pd{color:var(--mut);font-size:13.5px;margin-bottom:22px}
+.price .amt{font-family:'Sora';font-size:46px;font-weight:800;letter-spacing:-1.5px;margin-bottom:4px}
+.price .per{color:var(--mut);font-size:13px;margin-bottom:26px}
+.price ul{list-style:none;margin-bottom:32px;flex:1}
+.price li{font-size:14px;color:var(--mut);padding:9px 0;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:flex-start;line-height:1.5}
+.price li::before{content:'✓';color:var(--green-lt);font-weight:800;flex-shrink:0}
+.price li b{color:var(--txt);font-weight:600}
+/* ---------- final CTA ---------- */
+#cta .box{position:relative;overflow:hidden;background:linear-gradient(140deg,#0d2b22,#131a38 60%,#1c1440);border:1px solid rgba(16,185,129,.3);border-radius:32px;padding:90px 40px;text-align:center}
+#cta .box::before{content:'';position:absolute;width:600px;height:600px;left:50%;top:50%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(16,185,129,.16),transparent 65%);animation:breathe 5s ease-in-out infinite;pointer-events:none}
+@keyframes breathe{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.25)}}
+#cta h2{position:relative}
+#cta p{position:relative;color:var(--mut);font-size:18px;max-width:560px;margin:0 auto 38px;line-height:1.65}
+#cta .btn{position:relative;font-size:17px;padding:17px 44px}
+/* ---------- footer ---------- */
+footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-size:13.5px}
+.foot{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px}
+.foot a{color:var(--mut);text-decoration:none;margin-left:22px;transition:color .25s}
+.foot a:hover{color:var(--green-lt)}
+.ticker{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:rgba(239,68,68,.03);overflow:hidden;padding:14px 0;margin-bottom:0}
+.ticker .track{display:flex;gap:48px;width:max-content;animation:scroll 30s linear infinite}
+.ticker span{font-size:13px;font-weight:600;color:#f87171;white-space:nowrap;letter-spacing:.4px}
+@media(max-width:640px){.stats{grid-template-columns:1fr 1fr}.nav-links a:not(.btn){display:none}}
 </style>
 </head>
 <body>
+<nav id="nav"><div class="wrap nav-in">
+  <a class="logo" href="#hero"><img src="claimpaid-icon.webp" alt="ClaimPaid"/>Claim<span>Paid</span></a>
+  <div class="nav-links">
+    <a href="#platform">Platform</a><a href="#ai-sec">AI Assistant</a><a href="#pricing">Pricing</a>
+    <a class="btn btn-green btn-sm" href="mailto:hello@claimpaid.io">Get started</a>
+  </div>
+</div></nav>
 
-<nav id="nav">
-  <div class="nav-inner">
-    <a href="#" class="logo"><span class="logo-mark">P</span> Pulse RCM</a>
-    <div class="nav-links">
-      <a href="#features">Features</a>
-      <a href="#showcase">Product</a>
-      <a href="#pricing">Pricing</a>
-      <a href="#faq">FAQ</a>
+<div id="hero">
+  <canvas id="bg3d"></canvas>
+  <div class="float-cards">
+    <div class="fcard">
+      <div class="row"><span class="cid">CLM-100122 · Medicaid NY</span><span class="pill denied">DENIED</span></div>
+      <div class="amt">$5,183.64</div>
+      <div class="lbl">Coordination of benefits — appeal drafted automatically</div>
+      <div class="bar"><i></i></div><div class="lbl">Recovering…</div>
     </div>
-    <div class="nav-cta">
-      <a href="/app" class="btn btn-ghost" id="signin-btn">Sign in</a>
-      <a href="/app" class="btn btn-primary" id="start-btn">Get started free</a>
+    <div class="fcard">
+      <div class="row"><span class="cid">CLM-100091 · Aetna</span><span class="pill paid">✓ PAID</span></div>
+      <div class="amt">$8,275.36</div>
+      <div class="lbl">Timely-filing appeal won in 6 days</div>
     </div>
   </div>
-</nav>
-
-<!-- ============ HERO ============ -->
-<div class="hero">
-  <canvas id="hero-canvas"></canvas>
-  <div class="hero-overlay"></div>
-  <div class="hero-inner">
-    <div class="hero-badge"><span class="dot"></span> Built for billing teams · No credit card required</div>
-    <h1>Revenue cycle software<br>that <span class="grad">recovers denied claims.</span></h1>
-    <p class="hero-sub">Pulse RCM is the <strong>revenue cycle management platform</strong> for medical billing teams — a smart worklist that tells billers what to work, a <strong>denial appeal pipeline</strong> with auto-generated letters, <strong>prior authorization tracking</strong>, a <strong>claim scrubber</strong>, 837P/835 EDI, and <strong>timely filing deadlines</strong> that never slip.</p>
+  <div class="wrap">
+    <div class="hero-badge"><span class="dot"></span>AI-powered revenue-cycle management</div>
+    <h1 id="headline"></h1>
+    <p class="hero-sub">ClaimPaid hunts down every denied dollar — smart worklists, auto-generated appeal letters, and an AI that knows every payer's policy by heart. Built by someone who's worked denials, not a SaaS team guessing at healthcare.</p>
     <div class="hero-ctas">
-      <a href="/app" class="btn btn-primary btn-lg">Start recovering revenue →</a>
-      <a href="#showcase" class="btn btn-ghost btn-lg">See it in action</a>
+      <a class="btn btn-green" href="mailto:hello@claimpaid.io?subject=ClaimPaid%20demo">Start recovering revenue →</a>
+      <a class="btn btn-ghost" href="#platform">See how it works</a>
     </div>
-    <p class="hero-note">Free 14-day trial · Set up in under 10 minutes · Cancel anytime</p>
-    <div class="hero-shot reveal">
-      <img src="assets/dashboard.png" alt="Pulse RCM revenue cycle management dashboard — claims, denials, A/R aging, and timely filing alerts" />
+    <div class="stats">
+      <div class="stat"><span class="s-ico">✉️</span><b><span class="count hl" data-to="8">0</span></b><span>Denial categories covered</span></div>
+      <div class="stat"><span class="s-ico">🔍</span><b><span class="count hl" data-to="13">0</span></b><span>Claim-scrubber rules</span></div>
+      <div class="stat"><span class="s-ico">🤖</span><b>24/7</b><span>AI policy assistant</span></div>
+      <div class="stat"><span class="s-ico">🔑</span><b><span class="count hl" data-to="0">0</span></b><span>API keys to start</span></div>
     </div>
   </div>
 </div>
 
-<!-- ============ STATS ============ -->
-<div class="stats">
-  <div class="stats-inner">
-    <div class="reveal"><div class="stat-num" data-count="2.4" data-prefix="$" data-suffix="M">—</div><div class="stat-label">Recovered by early customers</div></div>
-    <div class="reveal"><div class="stat-num" data-count="38" data-suffix="%">—</div><div class="stat-label">Faster denial resolution</div></div>
-    <div class="reveal"><div class="stat-num" data-count="99.2" data-suffix="%">—</div><div class="stat-label">Timely filing compliance</div></div>
-    <div class="reveal"><div class="stat-num" data-count="12" data-suffix="hrs">—</div><div class="stat-label">Saved per biller, weekly</div></div>
+<div class="marquee">
+  <div class="mq-label">TRAINED ON THE PAYERS YOU BILL EVERY DAY</div>
+  <div class="track" id="payerTrack">
+    <span>AETNA</span><span>CIGNA</span><span>UNITEDHEALTHCARE</span><span>ANTHEM BCBS</span><span>HUMANA</span><span>MEDICARE</span><span>MEDICAID NY</span><span>AETNA</span><span>CIGNA</span><span>UNITEDHEALTHCARE</span><span>ANTHEM BCBS</span><span>HUMANA</span><span>MEDICARE</span><span>MEDICAID NY</span>
   </div>
 </div>
 
-<!-- ============ FEATURES ============ -->
-<section id="features">
-  <div class="wrap">
-    <div class="center reveal">
-      <span class="eyebrow">Why Pulse RCM</span>
-      <h2>The complete revenue cycle toolkit.<br>One login, zero spreadsheets.</h2>
-      <p class="sec-sub">Purpose-built RCM software for medical billing — denials, authorizations, claims, eligibility, and reporting in one workspace. Not a generic CRM with a healthcare sticker on it.</p>
+<div class="trustband"><div class="wrap">
+  <div class="trust-grid">
+    <div class="trust reveal"><div class="tk">⚡</div><div><b>Live in 24 hours</b><small>No implementation project</small></div></div>
+    <div class="trust reveal"><div class="tk">💰</div><div><b>Zero per-claim fees</b><small>Flat pricing, cancel anytime</small></div></div>
+    <div class="trust reveal"><div class="tk">🛡️</div><div><b>Your data stays yours</b><small>Isolated per organization</small></div></div>
+    <div class="trust reveal"><div class="tk">🏥</div><div><b>Built by a billing insider</b><small>Not a generic SaaS team</small></div></div>
+  </div>
+</div></div>
+
+<section id="problem"><div class="wrap">
+  <div class="sec-tag reveal">THE PROBLEM</div>
+  <h2 class="reveal">Denials are a tax on<br/>revenue <span class="grad">you already earned.</span></h2>
+  <p class="sec-sub reveal">You did the work. You saw the patient. Then a payer keeps the money over a missing modifier or a 90-day clock you never saw coming. Every denial left unworked is a write-off you chose.</p>
+  <div class="prob-grid">
+    <div class="prob reveal"><div class="big">90 days</div><h3>UHC's filing guillotine</h3><p>The tightest commercial window in the industry. Miss it by a day and the claim is dead — you can't even bill the patient. ClaimPaid's filing radar flags these before they expire.</p></div>
+    <div class="prob reveal"><div class="big">CO-29</div><h3>Death by timely filing</h3><p>The most painful denial code in billing. Entirely preventable, completely unrecoverable without proof of submission. ClaimPaid tracks every deadline per payer, automatically.</p></div>
+    <div class="prob reveal"><div class="big">21+ days</div><h3>Appeals that stall out</h3><p>An appeal sitting untouched for three weeks is an appeal you've forgotten. ClaimPaid auto-escalates stale appeals and nudges your team on the right cadence.</p></div>
+  </div>
+</div></section>
+
+<div class="ticker"><div class="track">
+  <span>⚠ CO-29 · Timely filing expired — $4,224.06 at risk</span><span>⚠ CO-197 · Prior auth missing — $2,370.17 at risk</span><span>⚠ CO-16 · Lacks information — $575.66 at risk</span><span>⚠ CO-97 · Bundled into primary — $310.07 at risk</span><span>⚠ CO-29 · Timely filing expired — $4,224.06 at risk</span><span>⚠ CO-197 · Prior auth missing — $2,370.17 at risk</span><span>⚠ CO-16 · Lacks information — $575.66 at risk</span><span>⚠ CO-97 · Bundled into primary — $310.07 at risk</span>
+</div></div>
+
+<section id="platform"><div class="wrap">
+  <div class="sec-tag reveal">THE PLATFORM</div>
+  <h2 class="reveal">One workspace.<br/><span class="grad">Every dollar chased.</span></h2>
+  <p class="sec-sub reveal">Not another dashboard to glance at. A work engine your billers open every morning — prioritized, drafted, and tracked to paid.</p>
+  <div class="bento">
+    <div class="bcard wide reveal"><span class="tag">CORE</span><span class="ico">🎯</span><h3>Smart Worklist — "My Work"</h3><p>Every claim, appeal, and follow-up scored by dollars at stake and days until the filing deadline dies. Your team stops guessing what to work first. 78 items, $366k at stake — sorted before coffee.</p></div>
+    <div class="bcard reveal"><span class="tag">CORE</span><span class="ico">⚖️</span><h3>Denial Appeal Pipeline</h3><p>Open → in progress → submitted → won. Win an appeal and the claim auto-marks paid. Nothing falls through.</p></div>
+    <div class="bcard reveal"><span class="tag">CORE</span><span class="ico">✉️</span><h3>Auto Appeal Letters</h3><p>One click generates a payer-ready appeal letter for 8 denial categories — with your letterhead, signature block, and the right argument for the denial code.</p></div>
+    <div class="bcard reveal"><span class="tag">CORE</span><span class="ico">⏰</span><h3>Timely Filing Radar</h3><p>Per-payer deadlines (UHC 90d, Aetna 120d, Cigna 180d…) tracked against every open claim. Red alerts before revenue becomes unrecoverable.</p></div>
+    <div class="bcard reveal"><span class="tag">CORE</span><span class="ico">🔍</span><h3>13-Rule Claim Scrubber</h3><p>Catch coding errors, missing modifiers, and eligibility gaps before the claim leaves the building — not after the denial lands.</p></div>
+    <div class="bcard v reveal"><span class="tag ai">AI</span><span class="ico">🤖</span><h3>ClaimPaid AI, Embedded</h3><p>A full AI tab plus a floating quick-chat inside the platform. Ask "What's UHC's timely filing limit?" mid-appeal — get the cited answer instantly.</p></div>
+    <div class="bcard reveal"><span class="tag">CORE</span><span class="ico">📄</span><h3>835 ERA Import + 837P Export</h3><p>Drop in remittance files — payments auto-post, CAS denial codes auto-parse and link straight into appeals. Export clean 837P claims out.</p></div>
+    <div class="bcard reveal"><span class="tag">CORE</span><span class="ico">🛡️</span><h3>Authorizations + Eligibility</h3><p>Prior-auth pipeline with expiration countdowns, denial-to-auth cross-links, and eligibility checks that stop CO-50s before they happen.</p></div>
+    <div class="bcard reveal"><span class="tag">CORE</span><span class="ico">📊</span><h3>Reports + Payer Playbook</h3><p>Five exportable reports, denial-pattern analytics by payer × reason, and a living playbook of what actually wins against each payer.</p></div>
+  </div>
+</div></section>
+<section id="ai-sec"><div class="wrap">
+  <div class="ai-grid">
+    <div>
+      <div class="sec-tag reveal">CLAIMPAID AI</div>
+      <h2 class="reveal">Ask it like you'd ask<br/>your <span class="grad">best biller.</span></h2>
+      <p class="sec-sub reveal" style="margin-bottom:0">"What's UnitedHealthcare's timely filing limit?" — answered in seconds, with the policy cited. Trained on payer manuals, appeal windows, and denial codes. It even crawls payer sites so it stays current.</p>
+      <div class="ai-feats">
+        <div class="ai-feat reveal"><span class="e">📚</span><div><b>Feed it your world</b><p>Drop in payer PDFs, import policy URLs, or point it at a sitemap — it ingests, chunks, and embeds everything automatically.</p></div></div>
+        <div class="ai-feat reveal"><span class="e">🔄</span><div><b>It keeps itself current</b><p>Autopilot re-crawls your sources every 6 hours. New policy published? The AI knows before your team does.</p></div></div>
+        <div class="ai-feat reveal"><span class="e">🧠</span><div><b>It learns from misses</b><p>Every unanswered question lands in an Insights queue. Teach it once — it answers with a citation forever after.</p></div></div>
+        <div class="ai-feat reveal"><span class="e">⚡</span><div><b>Lives inside the platform</b><p>Full tab + floating quick-chat. No tab-switching, no copy-paste — policy answers where the work happens.</p></div></div>
+      </div>
     </div>
-    <div class="feat-grid">
-      <div class="feat reveal">
-        <span class="feat-tag" style="background:rgba(16,185,129,.15);color:#6ee7b7">Flagship</span>
-        <div class="feat-icon" style="background:rgba(16,185,129,.12)">🎯</div>
-        <h3>Smart Worklist</h3>
-        <p>Your billers open one screen and know exactly what to work: overdue follow-ups first, then filing deadlines, then high-dollar denials. No hunting, no spreadsheets, no guesswork.</p>
-      </div>
-      <div class="feat reveal">
-        <div class="feat-icon" style="background:rgba(14,165,233,.12)">⚖️</div>
-        <h3>Denial Appeal Pipeline</h3>
-        <p>Work denials like a sales pipeline: open → in progress → submitted → won. Assign, prioritize, track follow-ups, and watch your win rate climb. Winning auto-marks the claim paid.</p>
-      </div>
-      <div class="feat reveal">
-        <span class="feat-tag" style="background:rgba(139,92,246,.15);color:#c4b5fd">New</span>
-        <div class="feat-icon" style="background:rgba(139,92,246,.12)">✉️</div>
-        <h3>Auto Appeal Letters</h3>
-        <p>One click drafts a payer-ready appeal letter — 8 denial-reason templates, your letterhead, linked auth numbers pulled in automatically. Customize every template to your organization's voice.</p>
-      </div>
-      <div class="feat reveal">
-        <span class="feat-tag" style="background:rgba(244,63,94,.15);color:#fda4af">Critical</span>
-        <div class="feat-icon" style="background:rgba(244,63,94,.12)">⏰</div>
-        <h3>Timely Filing Tracker</h3>
-        <p>Every payer's deadline, counted down on every claim. Missed filing = unappealable denial = money gone forever. Pulse screams before that happens. Nobody else does this at this price.</p>
-      </div>
-      <div class="feat reveal">
-        <span class="feat-tag" style="background:rgba(139,92,246,.15);color:#c4b5fd">New</span>
-        <div class="feat-icon" style="background:rgba(59,130,246,.12)">📋</div>
-        <h3>Prior Authorization Tracking</h3>
-        <p>Every auth request in one pipeline — draft to approved — with expiration countdowns and turnaround analytics by payer. Auths auto-link to matching denials so appeals cite the right numbers.</p>
-      </div>
-      <div class="feat reveal">
-        <span class="feat-tag" style="background:rgba(139,92,246,.15);color:#c4b5fd">New</span>
-        <div class="feat-icon" style="background:rgba(245,158,11,.12)">🔍</div>
-        <h3>Claim Scrubber</h3>
-        <p>Catch rejections before the payer does. 13 pre-submission checks — CPT/ICD validity, NPI format, billed amounts, filing deadlines, duplicates — run in bulk with one click.</p>
-      </div>
-      <div class="feat reveal">
-        <span class="feat-tag" style="background:rgba(139,92,246,.15);color:#c4b5fd">New</span>
-        <div class="feat-icon" style="background:rgba(20,184,166,.12)">📤</div>
-        <h3>837P EDI Export</h3>
-        <p>Generate professional 837P claim files straight from your worklist — ISA through IEA segments, your billing NPI and taxonomy baked in. Ready for any clearinghouse.</p>
-      </div>
-      <div class="feat reveal">
-        <div class="feat-icon" style="background:rgba(245,158,11,.12)">💳</div>
-        <h3>835 ERA Auto-Posting</h3>
-        <p>Upload payer remittance files and watch payments post automatically — paid, partial, denied — with CARC reason codes parsed and auth-related denials linked to their authorizations.</p>
-      </div>
-      <div class="feat reveal">
-        <span class="feat-tag" style="background:rgba(139,92,246,.15);color:#c4b5fd">New</span>
-        <div class="feat-icon" style="background:rgba(16,185,129,.12)">✅</div>
-        <h3>Eligibility Verification Log</h3>
-        <p>Stop eligibility denials at the source. Log coverage checks with copay and deductible capture, and see which patients still need verification before their visit.</p>
-      </div>
-      <div class="feat reveal">
-        <div class="feat-icon" style="background:rgba(139,92,246,.12)">📊</div>
-        <h3>Reports Center</h3>
-        <p>A/R aging by payer, denial root-cause analysis, per-biller productivity, collection rates, filing compliance. Five reports, every one exportable to CSV for Monday's meeting.</p>
-      </div>
-      <div class="feat reveal">
-        <div class="feat-icon" style="background:rgba(20,184,166,.12)">📖</div>
-        <h3>Payer Playbook</h3>
-        <p>Your team's shared brain: "Aetna needs modifier 25 on 99213." "UHC appeals fax: 800-xxx." Tribal knowledge that used to walk out the door when someone quit.</p>
-      </div>
-      <div class="feat reveal">
-        <span class="feat-tag" style="background:rgba(139,92,246,.15);color:#c4b5fd">New</span>
-        <div class="feat-icon" style="background:rgba(100,116,139,.15)">🔒</div>
-        <h3>HIPAA Audit Log + MFA</h3>
-        <p>Every claim and authorization view is logged with who, what, and when — owner-only audit viewer. Email-code multi-factor authentication and secure password reset included.</p>
-      </div>
+    <div class="chatmock reveal" id="chatmock">
+      <div class="chead"><div class="av">🤖</div><div><b>ClaimPaid AI</b><small>Payer Policy Handbook · online</small></div></div>
+      <div class="cbody" id="chatbody"></div>
     </div>
   </div>
-</section>
+</div></section>
 
-<!-- ============ SHOWCASE ============ -->
-<section id="showcase" class="showcase">
-  <div class="wrap">
-    <div class="center reveal">
-      <span class="eyebrow">Product tour</span>
-      <h2>See what your team sees<br>every morning.</h2>
+<section id="how"><div class="wrap">
+  <div class="sec-tag reveal">HOW IT WORKS</div>
+  <h2 class="reveal">Live in a day.<br/><span class="grad">Paid in weeks.</span></h2>
+  <p class="sec-sub reveal">No six-month implementation. No consultants. Your billing operation, upgraded.</p>
+  <div class="steps">
+    <div class="step reveal"><h3>Import your claims</h3><p>Bring your open AR — CSV, 835 files, or manual entry. ClaimPaid scores everything by dollars at stake and filing-deadline urgency. Day one, your team knows exactly what to work.</p></div>
+    <div class="step reveal"><h3>Work the smart list</h3><p>Open My Work each morning: prioritized follow-ups, one-click appeal letters, auth tracking, and the AI one tap away for any policy question. Denials move through the pipeline to won.</p></div>
+    <div class="step reveal"><h3>Watch revenue land</h3><p>Won appeals auto-mark claims paid. Reports show win rates by payer and reason. The playbook learns what beats each payer — and your whole team benefits.</p></div>
+  </div>
+</div></section>
+
+<section id="love"><div class="wrap">
+  <div class="sec-tag reveal">WALL OF LOVE</div>
+  <h2 class="reveal">Billing teams<br/><span class="grad">get their money back.</span></h2>
+  <p class="sec-sub reveal">Real workflows, real recoveries. Here's what happens when denials get worked instead of written off.</p>
+  <div class="testi-grid">
+    <div class="testi reveal">
+      <div class="stars">★★★★★</div>
+      <p>We recovered $18,400 in the first month just working the smart list. The timely-filing alerts alone paid for the whole year.</p>
+      <div class="who"><div class="ava" style="background:linear-gradient(135deg,#34d399,#10b981)">MR</div><div><b>Revenue Cycle Manager</b><small>14-provider multi-specialty practice</small></div></div>
     </div>
-
-    <div class="show-row reveal">
-      <div class="show-text">
-        <h3>☀️ The Daily Briefing</h3>
-        <p>One screen answers "what needs me today?" Overdue follow-ups, critical filing deadlines with dollars at stake, unworked denials, and what the team recovered this week.</p>
-        <ul><li>Prioritized by revenue impact, not alphabetically</li><li>Live team activity feed</li><li>One-click 835 ERA upload</li></ul>
-      </div>
-      <div class="show-img"><img src="assets/worklist.png" alt="Pulse RCM daily briefing — prioritized biller worklist with overdue follow-ups and filing deadlines" /></div>
+    <div class="testi reveal">
+      <div class="stars">★★★★★</div>
+      <p>The appeal letters write themselves. My billers went from dreading denials to clearing them same-day. Our win rate is up 31%.</p>
+      <div class="who"><div class="ava" style="background:linear-gradient(135deg,#a78bfa,#8b5cf6)">JC</div><div><b>Billing Supervisor</b><small>Durable medical equipment company</small></div></div>
     </div>
-
-    <div class="show-row flip reveal">
-      <div class="show-text">
-        <h3>⚖️ Denial Appeals, Worked Like a Pipeline</h3>
-        <p>Every denial gets assigned, prioritized, and tracked to resolution. Notes timeline keeps the full story. Status changes move the underlying claim automatically.</p>
-        <ul><li>Open → In Progress → Submitted → Won/Lost</li><li>Follow-up dates with overdue alerts</li><li>Win rate by biller, by payer, by reason</li></ul>
-      </div>
-      <div class="show-img"><img src="assets/appeals.png" alt="Pulse RCM denial appeal pipeline — assigned appeals with priorities, follow-up dates, and win tracking" /></div>
-    </div>
-
-    <div class="show-row reveal">
-      <div class="show-text">
-        <h3>✉️ Appeal Letters That Write Themselves</h3>
-        <p>One click drafts a payer-ready appeal letter from 8 denial-reason templates — your letterhead, the linked authorization number, claim details, all filled in. Customize every template to your organization's voice once, and every letter follows it.</p>
-        <ul><li>Medical necessity, no-auth, timely filing, coding + 4 more</li><li>Smart follow-ups auto-scheduled on status change</li><li>Denial pattern detection spots payer trends early</li></ul>
-      </div>
-      <div class="show-img"><img src="assets/appeals.png" alt="Pulse RCM auto-generated appeal letter with customizable denial-reason templates" /></div>
-    </div>
-
-    <div class="show-row flip reveal">
-      <div class="show-text">
-        <h3>📊 Reports Your Manager Actually Opens</h3>
-        <p>Five reports, zero spreadsheet gymnastics. A/R aging by payer, denial root causes, team productivity, collections, filing compliance — all exportable to CSV.</p>
-        <ul><li>Stacked A/R aging visualization</li><li>Denial rate trends by payer</li><li>Per-biller win rates and dollars recovered</li></ul>
-      </div>
-      <div class="show-img"><img src="assets/reports.png" alt="Pulse RCM reports center — A/R aging, denial analysis, and team productivity reports" /></div>
+    <div class="testi reveal">
+      <div class="stars">★★★★★</div>
+      <p>I asked the AI about a UHC bundling denial mid-appeal and had the policy cited in ten seconds. That's the whole product right there.</p>
+      <div class="who"><div class="ava" style="background:linear-gradient(135deg,#fbbf24,#f59e0b)">SP</div><div><b>Owner</b><small>Independent billing company</small></div></div>
     </div>
   </div>
-</section>
+  <p class="reveal" style="margin-top:28px;font-size:12.5px;color:var(--mut);text-align:center">Representative results from private beta workflows. Individual results vary by payer mix and AR age.</p>
+</div></section>
 
-<!-- ============ STEPS ============ -->
-<section>
-  <div class="wrap">
-    <div class="center reveal">
-      <span class="eyebrow">Get started</span>
-      <h2>Live in three steps.</h2>
-      <p class="sec-sub">From signup to your team's first recovered dollar in under a day.</p>
+<section id="pricing"><div class="wrap">
+  <div class="sec-tag reveal">PRICING</div>
+  <div class="reveal"><span class="badge-no1">★ PRO + AI — THE COMPLETE PACKAGE</span></div>
+  <h2 class="reveal">Pays for itself with<br/><span class="grad">one won appeal.</span></h2>
+  <p class="sec-sub reveal">One recovered $5,000 claim covers months of ClaimPaid. Simple tiers, no per-claim fees, cancel anytime.</p>
+  <div class="price-grid">
+    <div class="price reveal">
+      <h3>RCM Starter</h3><div class="pd">For small billing teams getting organized</div>
+      <div class="amt">$199</div><div class="per">per month</div>
+      <ul><li><b>Full RCM platform</b> — claims, denials, worklists</li><li>Timely filing radar + 13-rule scrubber</li><li>Auto appeal letters (8 categories)</li><li>835 import / 837P export</li><li>Up to 3 team seats</li></ul>
+      <a class="btn btn-ghost" style="justify-content:center" href="mailto:hello@claimpaid.io?subject=ClaimPaid%20Starter">Choose Starter</a>
     </div>
-    <div class="steps">
-      <div class="step reveal"><div class="step-num">1</div><h3>Create your workspace</h3><p>Sign up, invite your team. Your data is fully isolated — multi-tenant by design, HIPAA-aware from day one.</p></div>
-      <div class="step reveal"><div class="step-num">2</div><h3>Import your claims</h3><p>Upload a CSV or connect your clearinghouse. Set your payers' timely filing deadlines once — Pulse handles the rest.</p></div>
-      <div class="step reveal"><div class="step-num">3</div><h3>Work the queue</h3><p>Your team opens My Work every morning and works top to bottom. Watch denials convert to dollars on the dashboard.</p></div>
+    <div class="price hot reveal">
+      <div class="pop">MOST POPULAR</div>
+      <h3>RCM Pro + AI</h3><div class="pd">For teams serious about denial recovery</div>
+      <div class="amt">$499</div><div class="per">per month</div>
+      <ul><li><b>Everything in Starter</b></li><li><b>ClaimPaid AI</b> — embedded tab + quick-chat</li><li>Payer Policy Handbook, pre-loaded</li><li>Autopilot web crawling + Teach-it loop</li><li>Denial pattern analytics</li><li>Unlimited team seats</li></ul>
+      <a class="btn btn-green" style="justify-content:center" href="mailto:hello@claimpaid.io?subject=ClaimPaid%20Pro%20%2B%20AI">Choose Pro + AI →</a>
+    </div>
+    <div class="price reveal">
+      <h3>Enterprise</h3><div class="pd">For large billing companies &amp; MSOs</div>
+      <div class="amt">Custom</div><div class="per">annual agreement</div>
+      <ul><li><b>Everything in Pro + AI</b></li><li>Multi-org management + SSO</li><li>Custom KB training on your contracts</li><li>Dedicated success manager</li><li>SLA + priority support</li></ul>
+      <a class="btn btn-ghost" style="justify-content:center" href="mailto:hello@claimpaid.io?subject=ClaimPaid%20Enterprise">Talk to us</a>
     </div>
   </div>
-</section>
+</div></section>
 
-<!-- ============ TESTIMONIALS ============ -->
-<section class="showcase">
-  <div class="wrap">
-    <div class="center reveal">
-      <span class="eyebrow">Loved by billing teams</span>
-      <h2>They stopped drowning.<br>Started collecting.</h2>
-    </div>
-    <div class="testis">
-      <div class="testi reveal">
-        <div class="testi-stars">★★★★★</div>
-        <p>"We recovered $180K in denied claims in the first quarter. The timely filing tracker alone paid for a decade of subscriptions — it caught 23 claims about to expire."</p>
-        <div class="testi-who"><div class="testi-ava">MR</div><div><div class="testi-name">Maria Rodriguez</div><div class="testi-role">Billing Manager, 14-provider practice</div></div></div>
-      </div>
-      <div class="testi reveal">
-        <div class="testi-stars">★★★★★</div>
-        <p>"My billers used to spend the first hour deciding what to work. Now they open My Work and go. Productivity is up 40% and I can finally see who's doing what."</p>
-        <div class="testi-who"><div class="testi-ava">JC</div><div><div class="testi-name">James Chen</div><div class="testi-role">Owner, Chen Billing Services</div></div></div>
-      </div>
-      <div class="testi reveal">
-        <div class="testi-stars">★★★★★</div>
-        <p>"We replaced three spreadsheets and a whiteboard. The 835 upload posts a full day's remittances in two minutes. I don't know how we worked before this."</p>
-        <div class="testi-who"><div class="testi-ava">SP</div><div><div class="testi-name">Sarah Patel</div><div class="testi-role">RCM Director, urgent care group</div></div></div>
-      </div>
-    </div>
-  </div>
-</section>
+<section id="cta"><div class="wrap"><div class="box reveal">
+  <h2>Your denials are already<br/><span class="grad">someone's revenue.</span><br/>Make it yours.</h2>
+  <p>Every week you wait, timely-filing clocks run out and appeal windows close. ClaimPaid is live in a day — start recovering what's yours.</p>
+  <a class="btn btn-green" href="mailto:hello@claimpaid.io?subject=ClaimPaid%20demo">Book a demo →</a>
+</div></div></section>
 
-<!-- ============ PRICING ============ -->
-<section id="pricing" class="pricing">
-  <div class="wrap">
-    <div class="center reveal">
-      <span class="eyebrow">Pricing</span>
-      <h2>One recovered claim pays<br>for the whole year.</h2>
-      <p class="sec-sub">Simple per-team pricing. No per-claim fees, no implementation charges, no surprises.</p>
-    </div>
-    <div class="plans">
-      <div class="plan reveal">
-        <h3>Starter</h3><p class="plan-desc">For small practices getting organized.</p>
-        <div class="plan-price">$199<span>/mo</span></div>
-        <ul><li>Up to 3 team members</li><li>5,000 claims</li><li>Smart worklist + denial appeals</li><li>Timely filing tracker</li><li>CSV import</li><li>Email support</li></ul>
-        <a href="/app" class="btn btn-ghost" style="width:100%">Start free trial</a>
-      </div>
-      <div class="plan hot reveal">
-        <span class="plan-badge">Most popular</span>
-        <h3>Professional</h3><p class="plan-desc">For billing companies and growing teams.</p>
-        <div class="plan-price">$499<span>/mo</span></div>
-        <ul><li>Up to 15 team members</li><li>Unlimited claims</li><li>Everything in Starter</li><li>835 ERA auto-posting</li><li>Full reports center + CSV exports</li><li>Payer playbook</li><li>Priority support</li></ul>
-        <a href="/app" class="btn btn-primary" style="width:100%">Start free trial</a>
-      </div>
-      <div class="plan reveal">
-        <h3>Enterprise</h3><p class="plan-desc">For MSOs, large groups, and RCM outsourcers.</p>
-        <div class="plan-price">Custom</div>
-        <ul><li>Unlimited team members</li><li>Everything in Professional</li><li>SSO / SAML</li><li>Custom integrations + API</li><li>Dedicated success manager</li><li>BAA + security review</li></ul>
-        <a href="/app" class="btn btn-ghost" style="width:100%">Talk to us</a>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ FAQ ============ -->
-<section id="faq">
-  <div class="wrap">
-    <div class="center reveal">
-      <span class="eyebrow">FAQ</span>
-      <h2>Questions, answered.</h2>
-    </div>
-    <div class="faq reveal">
-      <div class="faq-item">
-        <button class="faq-q">How is this different from our clearinghouse portal? <span>+</span></button>
-        <div class="faq-a"><p>Clearinghouses move claims. Pulse RCM manages what happens after — the denials, the follow-ups, the appeals, the deadlines. Your clearinghouse tells you a claim denied; Pulse makes sure someone works it, on time, and tracks it to payment.</p></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q">Is our patient data safe? <span>+</span></button>
-        <div class="faq-a"><p>Yes. Every organization's data is fully isolated at the database level. Passwords are bcrypt-hashed, sessions use JWT, and all traffic is encrypted. We're HIPAA-aware by design and sign BAAs on Professional and Enterprise plans.</p></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q">How long does implementation take? <span>+</span></button>
-        <div class="faq-a"><p>Most teams are live the same day. Upload a CSV of your open claims, set your payers' filing deadlines (we pre-fill industry standards), invite your team. The 835 ERA integration takes about an hour with your clearinghouse credentials.</p></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q">Can we import from our current system? <span>+</span></button>
-        <div class="faq-a"><p>Yes — CSV import handles claims in bulk, and our team helps with larger migrations on Professional and Enterprise plans. If you can export it, we can import it.</p></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q">What if we cancel? <span>+</span></button>
-        <div class="faq-a"><p>Your data is yours. Export everything to CSV before you go, no retention games, no cancellation calls. We're confident you won't want to — but the door is always open.</p></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q">What is revenue cycle management software? <span>+</span></button>
-        <div class="faq-a"><p>Revenue cycle management (RCM) software handles everything between patient visit and paid claim: eligibility checks, prior authorizations, claim scrubbing and submission, denial management and appeals, payment posting, and reporting. Pulse RCM covers the full cycle in one workspace built for billing teams.</p></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q">Does Pulse RCM track prior authorizations? <span>+</span></button>
-        <div class="faq-a"><p>Yes. Every auth request lives in a pipeline from draft to approved, with expiration countdowns and turnaround analytics by payer. When a claim denies for no-auth, Pulse auto-links the matching authorization so your appeal cites the right numbers.</p></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q">Can it scrub claims before we submit them? <span>+</span></button>
-        <div class="faq-a"><p>Yes — the claim scrubber runs 13 pre-submission checks (CPT/ICD validity, NPI format, billed amounts, filing deadlines, duplicates) in bulk. Catch payer rejections before they happen, and export clean 837P files straight to your clearinghouse.</p></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q">Does it work with our clearinghouse? <span>+</span></button>
-        <div class="faq-a"><p>Pulse generates standard 837P claim files any clearinghouse accepts, and ingests 835 ERA remittance files for automatic payment posting — including CARC reason-code parsing. No proprietary integration required.</p></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ FINAL CTA ============ -->
-<section class="final-cta">
-  <div class="wrap reveal">
-    <span class="eyebrow">Ready when you are</span>
-    <h2>Every denied claim sitting<br>in your A/R is money<br>waiting to be <span style="background:linear-gradient(135deg,#10b981,#0ea5e9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">recovered.</span></h2>
-    <p class="sec-sub" style="margin:0 auto 36px">Join the billing teams turning denials into dollars.</p>
-    <a href="/app" class="btn btn-primary btn-lg">Start your free 14-day trial →</a>
-    <p class="hero-note" style="margin-top:18px">No credit card · Live in 10 minutes · Cancel anytime</p>
-  </div>
-</section>
-
-<footer>
-  <div class="wrap">
-    <div class="foot-grid">
-      <div>
-        <a href="#" class="logo" style="margin-bottom:16px"><span class="logo-mark">P</span> Pulse RCM</a>
-        <p style="color:#64748b;font-size:14px;max-width:280px;line-height:1.6">Revenue cycle management your billing team will actually love to use.</p>
-      </div>
-      <div class="foot-col"><h4>Product</h4><a href="#features">Features</a><a href="#showcase">Tour</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></div>
-      <div class="foot-col"><h4>Company</h4><a href="#">About</a><a href="#">Blog</a><a href="#">Careers</a><a href="#">Contact</a></div>
-      <div class="foot-col"><h4>Legal</h4><a href="#">Privacy</a><a href="#">Terms</a><a href="#">Security</a><a href="#">HIPAA</a></div>
-    </div>
-    <div class="foot-bottom">
-      <span>© 2026 Pulse RCM. All rights reserved.</span>
-      <span>Built for the people who keep healthcare paid.</span>
-    </div>
-  </div>
-</footer>
+<footer><div class="wrap foot">
+  <a class="logo" href="#hero" style="font-size:17px"><img src="claimpaid-icon.webp" alt="ClaimPaid" style="width:28px;height:28px"/>Claim<span>Paid</span></a>
+  <div>© 2026 ClaimPaid · Get your claims paid. · <a href="mailto:hello@claimpaid.io">hello@claimpaid.io</a></div>
+</div></footer>
 
 <script>
-// ---------- Nav scroll ----------
-const nav = document.getElementById('nav');
-addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 40), { passive: true });
-
-// ---------- Reveal on scroll ----------
-const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && e.target.classList.add('in')), { threshold: 0.12 });
-document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
-
-// ---------- Animated counters ----------
-const cio = new IntersectionObserver((es) => es.forEach((e) => {
-  if (!e.isIntersecting) return;
-  cio.unobserve(e.target);
-  const el = e.target, target = parseFloat(el.dataset.count), pre = el.dataset.prefix || '', suf = el.dataset.suffix || '';
-  const t0 = performance.now(), dur = 1600;
-  const tick = (t) => {
-    const p = Math.min(1, (t - t0) / dur), ease = 1 - Math.pow(1 - p, 3), v = target * ease;
-    el.textContent = pre + (target % 1 ? v.toFixed(1) : Math.round(v).toLocaleString()) + suf;
-    if (p < 1) requestAnimationFrame(tick);
-  };
-  requestAnimationFrame(tick);
-}), { threshold: 0.5 });
-document.querySelectorAll('.stat-num').forEach((el) => cio.observe(el));
-
-// ---------- FAQ accordion ----------
-document.querySelectorAll('.faq-q').forEach((btn) => btn.addEventListener('click', () => {
-  const item = btn.parentElement, ans = item.querySelector('.faq-a'), open = item.classList.contains('open');
-  document.querySelectorAll('.faq-item.open').forEach((o) => { o.classList.remove('open'); o.querySelector('.faq-a').style.maxHeight = null; });
-  if (!open) { item.classList.add('open'); ans.style.maxHeight = ans.scrollHeight + 'px'; }
+/* ---------- headline word animation ---------- */
+(function(){
+  const el = document.getElementById('headline');
+  const words = [['Get',0],['your',1],['claims',2],['<span class="grad">paid.</span>',3]];
+  el.innerHTML = words.map(([w,i]) => `<span class="w" style="animation-delay:${.15+i*.13}s">${w}</span>`).join(' ');
+})();
+/* ---------- nav shadow ---------- */
+addEventListener('scroll', () => document.getElementById('nav').classList.toggle('scrolled', scrollY > 30));
+/* ---------- scroll reveals ---------- */
+const io = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} }), {threshold:.12});
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+/* ---------- count-up stats ---------- */
+const cio = new IntersectionObserver(es => es.forEach(e => {
+  if(!e.isIntersecting) return; cio.unobserve(e.target);
+  const to = +e.target.dataset.to, t0 = performance.now();
+  (function tick(t){ const p = Math.min((t-t0)/1400,1), ease = 1-Math.pow(1-p,3);
+    e.target.textContent = Math.round(to*ease); if(p<1) requestAnimationFrame(tick); })(t0);
+}), {threshold:.5});
+document.querySelectorAll('.count').forEach(el => cio.observe(el));
+/* ---------- bento mouse glow ---------- */
+document.querySelectorAll('.bcard').forEach(c => c.addEventListener('mousemove', e => {
+  const r = c.getBoundingClientRect();
+  c.style.setProperty('--mx', (e.clientX-r.left)+'px'); c.style.setProperty('--my', (e.clientY-r.top)+'px');
 }));
-
-// ---------- Logged-in state ----------
-if (localStorage.getItem('pulse_token')) {
-  document.getElementById('signin-btn').textContent = 'Open dashboard';
-  document.getElementById('start-btn').textContent = 'Open dashboard →';
-}
-
-// ============================================================
-// THREE.JS HERO — floating coins + particle network + parallax
-// Guarded: if the CDN fails, the page works fine without it.
-// ============================================================
-(function () {
-  if (!window.THREE) return;
-  const canvas = document.getElementById('hero-canvas');
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+/* ---------- AI chat typing demo ---------- */
+(function(){
+  const body = document.getElementById('chatbody'); if(!body) return;
+  const convo = [
+    {q:'What\u2019s UHC\u2019s timely filing limit?',
+     a:'UnitedHealthcare requires claims within <b>90 days</b> of the date of service — the tightest commercial window. Appeals within 180 days.', c:['PAYER-01-TIMELY-FILING.MD']},
+    {q:'What does CO-29 mean?',
+     a:'<b>CO-29</b> = timely filing expired. Only appealable with proof of timely submission (your 999 acknowledgment). Otherwise it\u2019s a contractual write-off.', c:['PAYER-03-DENIAL-CODES.MD']},
+  ];
+  let i = 0;
+  function loop(){
+    body.innerHTML = '';
+    const turn = convo[i % convo.length];
+    const q = document.createElement('div'); q.className='msg q'; q.textContent = turn.q; body.appendChild(q);
+    setTimeout(() => {
+      const t = document.createElement('div'); t.className='msg a typing'; t.innerHTML='<i></i><i></i><i></i>'; body.appendChild(t);
+      setTimeout(() => {
+        t.classList.remove('typing');
+        t.innerHTML = turn.a + turn.c.map(x=>`<span class="cite">[${x}]</span>`).join('');
+        setTimeout(() => { i++; loop(); }, 5200);
+      }, 1400);
+    }, 900);
+  }
+  const o = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting){ loop(); o.disconnect(); } }), {threshold:.35});
+  o.observe(document.getElementById('chatmock'));
+})();
+/* ---------- THREE.js hero: rising $ and ✓ particles ---------- */
+(function(){
+  if(typeof THREE === 'undefined') return;
+  const canvas = document.getElementById('bg3d');
+  const renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true});
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
-  camera.position.z = 14;
-
-  function resize() {
-    const w = canvas.clientWidth || innerWidth, h = canvas.clientHeight || innerHeight;
-    renderer.setSize(w, h, false);
-    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-  }
-  resize();
-  addEventListener('resize', resize);
-
-  // --- Particle field ---
-  const N = 220;
-  const pos = new Float32Array(N * 3);
-  const vel = [];
-  for (let i = 0; i < N; i++) {
-    pos[i * 3] = (Math.random() - 0.5) * 36;
-    pos[i * 3 + 1] = (Math.random() - 0.5) * 22;
-    pos[i * 3 + 2] = (Math.random() - 0.5) * 14;
-    vel.push({ x: (Math.random() - 0.5) * 0.012, y: (Math.random() - 0.5) * 0.01, z: (Math.random() - 0.5) * 0.006 });
-  }
-  const pGeo = new THREE.BufferGeometry();
-  pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  const pMat = new THREE.PointsMaterial({ color: 0x10b981, size: 0.09, transparent: true, opacity: 0.75 });
-  const points = new THREE.Points(pGeo, pMat);
-  scene.add(points);
-
-  // Connection lines between near particles
-  const lineGeo = new THREE.BufferGeometry();
-  const linePos = new Float32Array(N * N * 6);
-  lineGeo.setAttribute('position', new THREE.BufferAttribute(linePos, 3));
-  const lineMat = new THREE.LineBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.09 });
-  const lines = new THREE.LineSegments(lineGeo, lineMat);
-  scene.add(lines);
-
-  // --- Floating coins (cylinders with $ sprite) ---
-  function dollarTexture() {
-    const c = document.createElement('canvas');
-    c.width = c.height = 128;
-    const g = c.getContext('2d');
-    g.fillStyle = '#10b981';
-    g.beginPath(); g.arc(64, 64, 60, 0, 7); g.fill();
-    g.fillStyle = '#0b1220';
-    g.font = '900 72px Inter, sans-serif';
-    g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText('$', 64, 68);
+  const cam = new THREE.PerspectiveCamera(60, 1, .1, 100); cam.position.z = 14;
+  function glyphTexture(ch, color){
+    const c = document.createElement('canvas'); c.width = c.height = 128;
+    const x = c.getContext('2d');
+    x.font = '900 84px Sora, sans-serif'; x.textAlign='center'; x.textBaseline='middle';
+    x.shadowColor = color; x.shadowBlur = 26; x.fillStyle = color; x.fillText(ch, 64, 70);
     return new THREE.CanvasTexture(c);
   }
-  const coinTex = dollarTexture();
-  const coins = [];
-  for (let i = 0; i < 14; i++) {
-    const geo = new THREE.CylinderGeometry(0.55, 0.55, 0.09, 40);
-    const mat = new THREE.MeshBasicMaterial({ map: coinTex, transparent: true, opacity: 0.85 });
-    const coin = new THREE.Mesh(geo, mat);
-    coin.position.set((Math.random() - 0.5) * 30, (Math.random() - 0.5) * 18, (Math.random() - 0.5) * 8 - 2);
-    coin.rotation.set(Math.random() * 0.6 - 0.3, Math.random() * Math.PI, 0);
-    coin.userData = { spin: 0.004 + Math.random() * 0.008, float: Math.random() * Math.PI * 2, speed: 0.3 + Math.random() * 0.5 };
-    scene.add(coin);
-    coins.push(coin);
+  const tex$ = glyphTexture('$', '#34d399'), texC = glyphTexture('✓', '#a78bfa');
+  const N = 42, parts = [];
+  const geo = new THREE.PlaneGeometry(1, 1);
+  for(let i=0;i<N;i++){
+    const m = new THREE.SpriteMaterial({map: Math.random()<.6?tex$:texC, transparent:true, opacity:.12+Math.random()*.22, depthWrite:false, blending:THREE.AdditiveBlending});
+    const s = new THREE.Sprite(m);
+    const sc = .5+Math.random()*1.0; s.scale.set(sc,sc,1);
+    s.position.set((Math.random()-.5)*30, (Math.random()-.5)*18, (Math.random()-.5)*8);
+    s.userData = {vy:.008+Math.random()*.02, ph:Math.random()*6.28, sw:.3+Math.random()*.7};
+    scene.add(s); parts.push(s);
   }
-
-  // --- Soft glow orbs ---
-  const orbs = [];
-  [[0x10b981, -8, 3, -6, 3.2], [0x0ea5e9, 9, -2, -7, 2.6], [0x8b5cf6, 2, 5, -9, 2.0]].forEach(([color, x, y, z, r]) => {
-    const m = new THREE.Mesh(
-      new THREE.SphereGeometry(r, 24, 24),
-      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.07 })
-    );
-    m.position.set(x, y, z);
-    scene.add(m); orbs.push(m);
-  });
-
-  // --- Mouse parallax ---
-  let mx = 0, my = 0, tx = 0, ty = 0;
-  addEventListener('mousemove', (e) => {
-    tx = (e.clientX / innerWidth - 0.5) * 2;
-    ty = (e.clientY / innerHeight - 0.5) * 2;
-  }, { passive: true });
-
-  const clock = new THREE.Clock();
-  let visible = true;
-  new IntersectionObserver(([e]) => visible = e.isIntersecting).observe(canvas);
-
-  (function animate() {
-    requestAnimationFrame(animate);
-    if (!visible) return;
-    const t = clock.getElapsedTime();
-
-    // Particles drift
-    const p = pGeo.attributes.position.array;
-    for (let i = 0; i < N; i++) {
-      p[i * 3] += vel[i].x; p[i * 3 + 1] += vel[i].y; p[i * 3 + 2] += vel[i].z;
-      if (Math.abs(p[i * 3]) > 18) vel[i].x *= -1;
-      if (Math.abs(p[i * 3 + 1]) > 11) vel[i].y *= -1;
-    }
-    pGeo.attributes.position.needsUpdate = true;
-
-    // Lines between close particles
-    let li = 0;
-    for (let i = 0; i < N && li < linePos.length - 6; i++) {
-      for (let j = i + 1; j < N && li < linePos.length - 6; j++) {
-        const dx = p[i*3]-p[j*3], dy = p[i*3+1]-p[j*3+1], dz = p[i*3+2]-p[j*3+2];
-        if (dx*dx + dy*dy + dz*dz < 7) {
-          linePos[li++] = p[i*3]; linePos[li++] = p[i*3+1]; linePos[li++] = p[i*3+2];
-          linePos[li++] = p[j*3]; linePos[li++] = p[j*3+1]; linePos[li++] = p[j*3+2];
-        }
-      }
-    }
-    for (; li < linePos.length; li++) linePos[li] = 0;
-    lineGeo.attributes.position.needsUpdate = true;
-    lineGeo.setDrawRange(0, li / 3);
-
-    // Coins float + spin
-    coins.forEach((c) => {
-      c.rotation.y += c.userData.spin;
-      c.position.y += Math.sin(t * c.userData.speed + c.userData.float) * 0.004;
-    });
-
-    // Orbs breathe
-    orbs.forEach((o, i) => {
-      const s = 1 + Math.sin(t * 0.5 + i * 2) * 0.12;
-      o.scale.set(s, s, s);
-    });
-
-    // Camera parallax
-    mx += (tx - mx) * 0.04; my += (ty - my) * 0.04;
-    camera.position.x = mx * 1.6;
-    camera.position.y = -my * 1.1;
-    camera.lookAt(0, 0, 0);
-
-    renderer.render(scene, camera);
+  // soft green/violet ambient lights as big faint sprites
+  const glow = (color, x, y, sc) => { const m = new THREE.SpriteMaterial({map:glyphTexture('●',color), transparent:true, opacity:.06, depthWrite:false, blending:THREE.AdditiveBlending});
+    const s = new THREE.Sprite(m); s.scale.set(sc,sc,1); s.position.set(x,y,-6); scene.add(s); };
+  glow('#10b981', -8, 3, 16); glow('#8b5cf6', 9, -2, 18);
+  let mx=0, my=0;
+  addEventListener('mousemove', e => { mx = (e.clientX/innerWidth-.5); my = (e.clientY/innerHeight-.5); });
+  function size(){ const w=canvas.clientWidth||innerWidth, h=canvas.clientHeight||innerHeight;
+    renderer.setSize(w,h,false); cam.aspect=w/h; cam.updateProjectionMatrix(); }
+  size(); addEventListener('resize', size);
+  let t=0;
+  (function anim(){
+    requestAnimationFrame(anim); t+=.008;
+    parts.forEach(p=>{ p.position.y += p.userData.vy; p.position.x += Math.sin(t*2+p.userData.ph)*.008*p.userData.sw;
+      p.material.rotation += .0015; if(p.position.y>11) p.position.y=-11; });
+    cam.position.x += ((mx*2.2)-cam.position.x)*.04;
+    cam.position.y += ((-my*1.4)-cam.position.y)*.04;
+    cam.lookAt(0,0,0);
+    renderer.render(scene,cam);
   })();
 })();
 </script>

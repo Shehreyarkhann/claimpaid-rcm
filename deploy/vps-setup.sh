@@ -1,35 +1,48 @@
 #!/usr/bin/env bash
-# Pulse RCM — VPS setup script (Option 1: Hetzner/DigitalOcean)
+# ClaimPaid — VPS setup script (Hetzner/DigitalOcean)
+# Deploys: landing page + RCM app (/) and ClaimPaid AI (/ai/) on one domain.
 # Run as root on a FRESH Ubuntu 24.04 VPS:
-#   curl -fsSL https://raw.githubusercontent.com/<you>/pulse-rcm/main/deploy/vps-setup.sh -o vps-setup.sh
+#   curl -fsSL https://raw.githubusercontent.com/<you>/claimpaid-rcm/main/deploy/vps-setup.sh -o vps-setup.sh
 #   chmod +x vps-setup.sh
-#   DOMAIN=pulse.example.com REPO_URL=https://github.com/<you>/pulse-rcm.git ./vps-setup.sh
+#   DOMAIN=claimpaid.io \
+#   REPO_URL=https://github.com/<you>/claimpaid-rcm.git \
+#   AI_REPO_URL=https://github.com/<you>/claimpaid-ai.git \
+#   SMTP_PASS='re_...' SMTP_FROM='noreply@claimpaid.io' \
+#   ./vps-setup.sh
 #
 # Prerequisites (do these first, ~5 min):
 #   1. VPS created (Hetzner CX22 ~$4.50/mo or DO $6 droplet), Ubuntu 24.04
-#   2. A domain you own (e.g. pulsedemo.com, ~$10/yr on Cloudflare/Porkbun)
-#   3. DNS: A record  @ (or a subdomain) -> your VPS IP. Verify with:
-#        dig +short pulse.example.com   # must print your VPS IP
+#   2. Domain registered (claimpaid.io) with DNS A record @ -> VPS IP. Verify:
+#        dig +short claimpaid.io   # must print your VPS IP
+#   3. Resend API key (https://resend.com) for transactional email
 #
 # What this script does:
 #   - hardens SSH + firewall (ufw: 22/80/443) + fail2ban
 #   - installs Node.js 22, nginx, certbot
-#   - creates a dedicated `pulse` user, clones the repo to /opt/pulse-rcm
-#   - builds the client, installs server deps, writes server/.env
-#   - optionally seeds the demo org (demo@pulsercm.com / demo1234)
-#   - installs a systemd service (auto-restart, starts on boot)
-#   - configures nginx reverse proxy + free Let's Encrypt SSL
-#   - sets up a daily SQLite backup (7-day rotation in /var/backups/pulse-rcm)
+#   - creates a dedicated `claimpaid` user, clones both repos
+#   - builds both clients, installs server deps, writes server/.env files
+#   - seeds demo orgs (RCM + AI Payer Policy Handbook KB) on fresh DBs
+#   - installs systemd services (auto-restart, start on boot)
+#   - configures nginx reverse proxy (/ -> :4000, /ai/ -> :4001) + Let's Encrypt SSL
+#   - daily SQLite backups (7-day rotation)
 #
-# Idempotent: safe to re-run (it will rebuild + restart the app).
+# Idempotent: safe to re-run (it will rebuild + restart everything).
 set -euo pipefail
 
 # ---------- config (override via env) ----------
-DOMAIN="${DOMAIN:?Set DOMAIN, e.g. DOMAIN=pulse.example.com}"
-REPO_URL="${REPO_URL:?Set REPO_URL, e.g. REPO_URL=https://github.com/you/pulse-rcm.git}"
-APP_DIR="${APP_DIR:-/opt/pulse-rcm}"
-APP_USER="${APP_USER:-pulse}"
-SEED_DEMO="${SEED_DEMO:-true}"          # seed demo org + claims
+DOMAIN="${DOMAIN:?Set DOMAIN, e.g. DOMAIN=claimpaid.io}"
+REPO_URL="${REPO_URL:?Set REPO_URL, e.g. REPO_URL=https://github.com/you/claimpaid-rcm.git}"
+AI_REPO_URL="${AI_REPO_URL:?Set AI_REPO_URL, e.g. AI_REPO_URL=https://github.com/you/claimpaid-ai.git}"
+APP_DIR="${APP_DIR:-/opt/claimpaid-rcm}"
+AI_DIR="${AI_DIR:-/opt/claimpaid-ai}"
+APP_USER="${APP_USER:-claimpaid}"
+SEED_DEMO="${SEED_DEMO:-true}"          # seed demo org + claims + AI KB
+# ClaimPaid AI answers: demo = extractive (no key), or set LLM_PROVIDER + LLM_API_KEY
+# (groq|together|openai) for generative cited answers.
+LLM_PROVIDER="${LLM_PROVIDER:-demo}"
+LLM_API_KEY="${LLM_API_KEY:-}"
+LLM_MODEL="${LLM_MODEL:-}"
+BRAVE_API_KEY="${BRAVE_API_KEY:-}"      # optional web-fallback search
 # Email (Resend SMTP). Leave SMTP_PASS empty to run without email
 # (MFA codes then print to the server log instead of sending).
 EMAIL_PROVIDER="${EMAIL_PROVIDER:-smtp}"
@@ -37,9 +50,9 @@ SMTP_HOST="${SMTP_HOST:-smtp.resend.com}"
 SMTP_PORT="${SMTP_PORT:-587}"
 SMTP_USER="${SMTP_USER:-resend}"
 SMTP_PASS="${SMTP_PASS:-}"
-SMTP_FROM="${SMTP_FROM:-noreply@example.com}"
+SMTP_FROM="${SMTP_FROM:-noreply@claimpaid.io}"
 
-echo "==> Pulse RCM setup for ${DOMAIN}"
+echo "==> ClaimPaid setup for ${DOMAIN}"
 
 # ---------- preflight: DNS ----------
 VPS_IP="$(curl -fsSL --max-time 10 https://api.ipify.org || true)"
@@ -81,22 +94,31 @@ if ! id "${APP_USER}" >/dev/null 2>&1; then
 fi
 
 # ---------- fetch code ----------
-echo "==> Fetching code into ${APP_DIR}"
+echo "==> Fetching code into ${APP_DIR} and ${AI_DIR}"
 if [[ -d "${APP_DIR}/.git" ]]; then
   git -C "${APP_DIR}" pull --ff-only
 else
   rm -rf "${APP_DIR}"
   git clone --depth 1 "${REPO_URL}" "${APP_DIR}"
 fi
-chown -R "${APP_USER}:${APP_USER}" "${APP_DIR}"
+if [[ -d "${AI_DIR}/.git" ]]; then
+  git -C "${AI_DIR}" pull --ff-only
+else
+  rm -rf "${AI_DIR}"
+  git clone --depth 1 "${AI_REPO_URL}" "${AI_DIR}"
+fi
+chown -R "${APP_USER}:${APP_USER}" "${APP_DIR}" "${AI_DIR}"
 
 # ---------- build ----------
-echo "==> Installing deps + building client"
+echo "==> Installing deps + building clients (RCM + AI)"
 sudo -u "${APP_USER}" bash -lc "
   set -e
   cd '${APP_DIR}/client' && npm install --no-audit --no-fund
   rm -rf dist && npm run build
   cd '${APP_DIR}/server' && npm install --omit=dev --no-audit --no-fund
+  cd '${AI_DIR}/client' && npm install --no-audit --no-fund
+  rm -rf dist && npm run build
+  cd '${AI_DIR}/server' && npm install --omit=dev --no-audit --no-fund
 "
 
 # ---------- .env ----------
@@ -122,19 +144,59 @@ EOF
 chmod 600 "${APP_DIR}/server/.env"
 chown "${APP_USER}:${APP_USER}" "${APP_DIR}/server/.env"
 
+# ---------- AI .env (before seeding — the seed server reads it) ----------
+echo "==> Writing AI server/.env"
+if [[ ! -f "${AI_DIR}/server/.env" ]]; then
+  AI_JWT_SECRET="$(openssl rand -hex 32)"
+else
+  AI_JWT_SECRET="$(grep -E '^JWT_SECRET=' "${AI_DIR}/server/.env" | cut -d= -f2 || true)"
+  [[ -z "${AI_JWT_SECRET}" ]] && AI_JWT_SECRET="$(openssl rand -hex 32)"
+fi
+cat > "${AI_DIR}/server/.env" <<EOF
+# generated by vps-setup.sh — do not commit
+PORT=4001
+NODE_ENV=production
+JWT_SECRET=${AI_JWT_SECRET}
+SEED_DEMO=false
+LLM_PROVIDER=${LLM_PROVIDER}
+LLM_API_KEY=${LLM_API_KEY}
+LLM_MODEL=${LLM_MODEL}
+BRAVE_API_KEY=${BRAVE_API_KEY}
+EOF
+chmod 600 "${AI_DIR}/server/.env"
+chown "${APP_USER}:${APP_USER}" "${AI_DIR}/server/.env"
+
 # ---------- seed demo data (fresh DB only) ----------
 if [[ "${SEED_DEMO}" == "true" && ! -f "${APP_DIR}/server/rcm.db" ]]; then
-  echo "==> Seeding demo data"
+  echo "==> Seeding RCM demo data"
   sudo -u "${APP_USER}" bash -lc "
     cd '${APP_DIR}/server' && npm run seed && node src/seed-authz.js
   "
 fi
+if [[ "${SEED_DEMO}" == "true" && ! -f "${AI_DIR}/server/askbase.db" ]]; then
+  echo "==> Seeding AI demo data (Payer Policy Handbook KB)"
+  echo "    (first boot downloads the embeddings model ~90MB — may take a few minutes)"
+  sudo -u "${APP_USER}" bash -lc "
+    set -e
+    cd '${AI_DIR}/server'
+    SEED_DEMO=true PORT=4001 node src/index.js > /tmp/claimpaid-ai-seed.log 2>&1 &
+    SRV=\$!
+    for i in \$(seq 1 60); do
+      if curl -fsS --max-time 3 http://127.0.0.1:4001/api/health >/dev/null 2>&1; then break; fi
+      sleep 10
+    done
+    curl -fsS --max-time 5 http://127.0.0.1:4001/api/health >/dev/null || { echo 'AI seed server did not start'; kill \$SRV 2>/dev/null || true; exit 1; }
+    node seed-payer-kb.js
+    kill \$SRV 2>/dev/null || true; wait 2>/dev/null || true
+    echo '    AI demo seed complete'
+  "
+fi
 
-# ---------- systemd service ----------
-echo "==> Installing systemd service"
-cat > /etc/systemd/system/pulse-rcm.service <<EOF
+# ---------- systemd services ----------
+echo "==> Installing systemd services"
+cat > /etc/systemd/system/claimpaid-rcm.service <<EOF
 [Unit]
-Description=Pulse RCM (Node.js)
+Description=ClaimPaid RCM (Node.js)
 After=network.target
 
 [Service]
@@ -145,18 +207,38 @@ ExecStart=/usr/bin/node src/index.js
 Restart=always
 RestartSec=5
 Environment=NODE_ENV=production
-# logs: journalctl -u pulse-rcm -f
+# logs: journalctl -u claimpaid-rcm -f
+
+[Install]
+WantedBy=multi-user.target
+EOF
+cat > /etc/systemd/system/claimpaid-ai.service <<EOF
+[Unit]
+Description=ClaimPaid AI (Node.js)
+After=network.target
+
+[Service]
+Type=simple
+User=${APP_USER}
+WorkingDirectory=${AI_DIR}/server
+ExecStart=/usr/bin/node src/index.js
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+# first boot downloads the embeddings model (~90MB) — allow a minute
+# logs: journalctl -u claimpaid-ai -f
 
 [Install]
 WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
-systemctl enable --now pulse-rcm
+systemctl enable --now claimpaid-rcm
+systemctl enable --now claimpaid-ai
 
 # ---------- nginx ----------
 echo "==> Configuring nginx"
-cat > /etc/nginx/sites-available/pulse-rcm <<EOF
-# Pulse RCM — reverse proxy to the Node app (serves /, /app and /api itself)
+cat > /etc/nginx/sites-available/claimpaid <<EOF
+# ClaimPaid — RCM app serves / (landing) and /app ; AI dashboard at /ai/
 server {
     listen 80;
     server_name ${DOMAIN};
@@ -194,8 +276,9 @@ server {
     client_max_body_size 25m;  # CSV/835 uploads
 }
 EOF
-ln -sf /etc/nginx/sites-available/pulse-rcm /etc/nginx/sites-enabled/pulse-rcm
+ln -sf /etc/nginx/sites-available/claimpaid /etc/nginx/sites-enabled/claimpaid
 rm -f /etc/nginx/sites-enabled/default
+rm -f /etc/nginx/sites-enabled/pulse-rcm  # legacy name
 nginx -t
 systemctl enable --now nginx
 systemctl reload nginx
@@ -208,31 +291,38 @@ certbot --nginx -d "${DOMAIN}" --non-interactive --agree-tos \
   echo "   certbot --nginx -d ${DOMAIN} --redirect"
 }
 
-# ---------- daily SQLite backup ----------
-echo "==> Daily DB backup (7-day rotation)"
-mkdir -p /var/backups/pulse-rcm
-cat > /etc/cron.daily/pulse-rcm-backup <<EOF
+# ---------- daily SQLite backups ----------
+echo "==> Daily DB backups (7-day rotation)"
+mkdir -p /var/backups/claimpaid
+cat > /etc/cron.daily/claimpaid-backup <<EOF
 #!/bin/sh
-# online-safe SQLite backup, keeps 7 days
-sqlite3 '${APP_DIR}/server/rcm.db' ".backup '/var/backups/pulse-rcm/rcm-\$(date +%F).db'" 2>/dev/null || \
-  cp '${APP_DIR}/server/rcm.db' '/var/backups/pulse-rcm/rcm-\$(date +%F).db'
-find /var/backups/pulse-rcm -name 'rcm-*.db' -mtime +7 -delete
+# online-safe SQLite backups, keeps 7 days
+sqlite3 '${APP_DIR}/server/rcm.db' ".backup '/var/backups/claimpaid/rcm-\$(date +%F).db'" 2>/dev/null || \
+  cp '${APP_DIR}/server/rcm.db' '/var/backups/claimpaid/rcm-\$(date +%F).db'
+sqlite3 '${AI_DIR}/server/askbase.db' ".backup '/var/backups/claimpaid/ai-\$(date +%F).db'" 2>/dev/null || \
+  cp '${AI_DIR}/server/askbase.db' '/var/backups/claimpaid/ai-\$(date +%F).db'
+find /var/backups/claimpaid -name '*.db' -mtime +7 -delete
 EOF
-chmod +x /etc/cron.daily/pulse-rcm-backup
-chown -R "${APP_USER}:${APP_USER}" /var/backups/pulse-rcm
+chmod +x /etc/cron.daily/claimpaid-backup
+chown -R "${APP_USER}:${APP_USER}" /var/backups/claimpaid
 
 # ---------- status ----------
 sleep 3
 echo ""
 echo "================================================================"
-if systemctl is-active --quiet pulse-rcm; then
-  echo "  Pulse RCM is LIVE:  https://${DOMAIN}/app"
-  echo "  Demo login: demo@pulsercm.com / demo1234"
+RCM_OK=""; AI_OK=""
+systemctl is-active --quiet claimpaid-rcm && RCM_OK="yes"
+systemctl is-active --quiet claimpaid-ai && AI_OK="yes"
+if [[ -n "${RCM_OK}" ]]; then
+  echo "  ClaimPaid is LIVE:  https://${DOMAIN}/"
+  echo "    App:  https://${DOMAIN}/app   (demo@pulsercm.com / demo1234)"
+  echo "    AI:   https://${DOMAIN}/ai/app  (demo@askbase.com / demo1234)"
 else
-  echo "  !! service failed to start — check: journalctl -u pulse-rcm -n 50"
+  echo "  !! RCM service failed — check: journalctl -u claimpaid-rcm -n 50"
 fi
-echo "  Logs:    journalctl -u pulse-rcm -f"
-echo "  Restart: systemctl restart pulse-rcm"
+[[ -z "${AI_OK}" ]] && echo "  !! AI service failed — check: journalctl -u claimpaid-ai -n 50"
+echo "  Logs:    journalctl -u claimpaid-rcm -f   |   journalctl -u claimpaid-ai -f"
+echo "  Restart: systemctl restart claimpaid-rcm claimpaid-ai"
 echo "  Update:  re-run this script (git pull + rebuild + restart)"
-echo "  Backups: /var/backups/pulse-rcm (daily, 7-day rotation)"
+echo "  Backups: /var/backups/claimpaid (daily, 7-day rotation)"
 echo "================================================================="
