@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Place of Service Codes: What Billers Need to Know</title>
+<meta name="description" content="Place of service codes explained: the POS codes billers use most (11, 19, 22, 24), how POS affects payment, and common POS denials."/>
+<link rel="canonical" href="https://claimpaid.io/blog/place-of-service-codes/"/>
+<meta name="robots" content="index, follow, max-image-preview:large"/>
+<meta property="og:type" content="article"/>
+<meta property="og:site_name" content="ClaimPaid"/>
+<meta property="og:title" content="Place of Service Codes: What Billers Need to Know"/>
+<meta property="og:description" content="POS codes 11, 19, 22, 24 and more — what they mean, how they affect payment, and the denials they cause."/>
+<meta property="og:url" content="https://claimpaid.io/blog/place-of-service-codes/"/>
+<meta property="og:image" content="https://picsum.photos/seed/cp-place-of-service-codes-hero/1200/630"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Place of Service Codes: What Billers Need to Know"/>
+<meta name="twitter:description" content="Place of service codes explained: the POS codes billers use most (11, 19, 22, 24), how POS affects payment, and common POS denials."/>
+<meta name="twitter:image" content="https://picsum.photos/seed/cp-place-of-service-codes-hero/1200/630"/>
+<link rel="icon" type="image/webp" href="/claimpaid-icon.webp"/>
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "Article", "headline": "Place of Service Codes: What Billers Need to Know", "datePublished": "2026-10-23", "dateModified": "2026-10-23", "author": {"@type": "Organization", "name": "ClaimPaid", "url": "https://claimpaid.io/"}, "publisher": {"@type": "Organization", "name": "ClaimPaid", "url": "https://claimpaid.io/", "logo": {"@type": "ImageObject", "url": "https://claimpaid.io/claimpaid-icon.webp"}}, "mainEntityOfPage": {"@type": "WebPage", "@id": "https://claimpaid.io/blog/place-of-service-codes/"}, "image": "https://picsum.photos/seed/cp-place-of-service-codes-hero/1200/630", "description": "Place of service codes explained: the POS codes billers use most (11, 19, 22, 24), how POS affects payment, and common POS denials."}
+</script>
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "What is a place of service code?", "acceptedAnswer": {"@type": "Answer", "text": "A place of service (POS) code is a two-digit code on every claim indicating where the service was performed \u2014 e.g., 11 for office, 22 for on-campus outpatient hospital, 24 for ambulatory surgical center. CMS maintains the official code set."}}, {"@type": "Question", "name": "Does place of service affect how much a claim pays?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. Medicare pays facility vs. non-facility rates for the same CPT code depending on POS \u2014 the same procedure can pay differently in an office (POS 11) versus a hospital outpatient department (POS 22), because overhead costs fall on different parties."}}, {"@type": "Question", "name": "What are POS codes 02 and 10?", "acceptedAnswer": {"@type": "Answer", "text": "They're Medicare's telehealth place of service codes: 02 indicates telehealth when the patient is not at home, 10 indicates telehealth when the patient is at home. Using the wrong one \u2014 or an in-person POS for telehealth \u2014 is a common denial trigger."}}, {"@type": "Question", "name": "Why do my claims keep denying for place of service?", "acceptedAnswer": {"@type": "Answer", "text": "The most common causes are stale location defaults in the billing system (especially after a site-of-service change), POS codes inconsistent with the procedure performed, and mismatches between professional and facility claims for the same encounter."}}, {"@type": "Question", "name": "Where do I find the official POS code list?", "acceptedAnswer": {"@type": "Answer", "text": "CMS publishes and maintains the complete place of service code set. Check the CMS website for the current list, since codes are occasionally added or revised."}}]}
+</script>
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Home", "item": "https://claimpaid.io/"}, {"@type": "ListItem", "position": 2, "name": "Blog", "item": "https://claimpaid.io/blog/"}, {"@type": "ListItem", "position": 3, "name": "Place of Service Codes: What Billers Need to Know", "item": "https://claimpaid.io/blog/place-of-service-codes/"}]}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+
+:root{--navy:#0b1220;--navy2:#0f172a;--panel:#111c33;--green:#10b981;--green-lt:#34d399;--violet:#8b5cf6;--violet-lt:#a78bfa;--txt:#e8eefc;--mut:#93a0bd;--line:rgba(255,255,255,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--navy);color:var(--txt);font-family:'Inter',system-ui,sans-serif;line-height:1.75}
+h1,h2,h3{font-family:'Sora',sans-serif;line-height:1.3}
+.wrap{max-width:780px;margin:0 auto;padding:0 24px}
+.grad{background:linear-gradient(92deg,var(--green-lt),var(--violet-lt));-webkit-background-clip:text;background-clip:text;color:transparent}
+nav{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(14px);background:rgba(11,18,32,.85);border-bottom:1px solid var(--line)}
+.nav-in{max-width:1100px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:68px}
+.logo{display:flex;align-items:center;gap:10px;font-family:'Sora';font-weight:800;font-size:21px;letter-spacing:-.4px;text-decoration:none;color:var(--txt)}
+.logo img{width:34px;height:34px;border-radius:9px;box-shadow:0 0 18px rgba(16,185,129,.45)}
+.logo span{color:var(--green-lt)}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{color:var(--mut);text-decoration:none;font-size:14.5px;font-weight:500}
+.nav-links a:hover{color:#fff}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:15px;border-radius:12px;padding:13px 26px;text-decoration:none;border:none;transition:transform .25s,box-shadow .25s;cursor:pointer}
+.btn-green{background:linear-gradient(135deg,#10b981,#059669);color:#04120c;box-shadow:0 8px 28px rgba(16,185,129,.35)}
+.btn-green:hover{transform:translateY(-3px);box-shadow:0 14px 40px rgba(16,185,129,.5)}
+.btn-sm{padding:10px 20px;font-size:14px}
+article{padding:140px 0 60px}
+.crumb{font-size:13px;color:var(--mut);margin-bottom:18px}
+.crumb a{color:var(--green-lt);text-decoration:none}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--green-lt);background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);padding:5px 12px;border-radius:100px;margin-bottom:18px}
+article h1{font-size:clamp(30px,4.5vw,46px);font-weight:800;letter-spacing:-1.2px;margin-bottom:14px}
+.byline{color:var(--mut);font-size:14px;margin-bottom:34px}
+.answer{background:linear-gradient(160deg,rgba(16,185,129,.1),rgba(16,185,129,.03));border:1px solid rgba(16,185,129,.4);border-left:4px solid var(--green);border-radius:14px;padding:22px 26px;margin-bottom:38px}
+.answer .lbl{font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--green-lt);margin-bottom:10px}
+.answer p{font-size:16px;margin:0}
+.prose h2{font-size:26px;font-weight:700;letter-spacing:-.5px;margin:44px 0 16px}
+.prose h3{font-size:19px;font-weight:700;margin:30px 0 12px;color:#fff}
+.prose p{margin:0 0 18px;color:#c9d2e8}
+.prose ul,.prose ol{margin:0 0 20px 22px;color:#c9d2e8}
+.prose li{margin-bottom:10px}
+.prose strong{color:#fff}
+.prose a{color:var(--green-lt);text-decoration:underline;text-underline-offset:3px}
+table{width:100%;border-collapse:collapse;margin:24px 0;font-size:14.5px}
+th{background:rgba(16,185,129,.1);color:#fff;text-align:left;padding:12px 14px;font-family:'Sora';font-size:13.5px}
+td{padding:12px 14px;border-top:1px solid var(--line);color:#c9d2e8;vertical-align:top}
+tr:hover td{background:rgba(255,255,255,.02)}
+.faq{margin:44px 0}
+.faq-item{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 24px;margin-bottom:14px}
+.faq-item h3{font-size:16.5px;margin:0 0 8px;color:#fff}
+.faq-item p{margin:0;font-size:14.5px;color:#c9d2e8}
+.cta{background:linear-gradient(140deg,rgba(16,185,129,.14),rgba(139,92,246,.1));border:1px solid rgba(16,185,129,.4);border-radius:20px;padding:40px;text-align:center;margin:50px 0}
+.cta h2{font-size:26px;margin-bottom:12px}
+.cta p{color:var(--mut);margin-bottom:24px;max-width:520px;margin-left:auto;margin-right:auto}
+footer{border-top:1px solid var(--line);padding:40px 0;color:var(--mut);font-size:13.5px}
+.foot{max-width:1100px;margin:0 auto;padding:0 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px}
+.foot a{color:var(--mut);text-decoration:none}
+.foot a:hover{color:var(--green-lt)}
+.foot-links{display:flex;gap:22px}
+.note{font-size:13.5px;color:var(--mut);background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.3);border-radius:12px;padding:16px 20px;margin:26px 0}
+@media(max-width:640px){.nav-links a:not(.btn){display:none}table{font-size:13px}}
+
+
+.hero-img{width:100%;height:auto;aspect-ratio:1200/630;object-fit:cover;border-radius:18px;margin:8px 0 34px;border:1px solid var(--line);background:var(--panel)}
+.mid-img{width:100%;height:auto;aspect-ratio:1200/630;object-fit:cover;border-radius:16px;margin:30px 0 8px;border:1px solid var(--line);background:var(--panel)}
+.img-cap{font-size:13px;color:var(--mut);text-align:center;margin:0 0 28px}
+.statbox{background:linear-gradient(140deg,rgba(16,185,129,.14),rgba(139,92,246,.1));border:1px solid rgba(16,185,129,.4);border-radius:16px;padding:28px 30px;margin:34px 0;text-align:center}
+.statbox .num{font-family:'Sora',sans-serif;font-size:46px;font-weight:800;letter-spacing:-1px;background:linear-gradient(92deg,var(--green-lt),var(--violet-lt));-webkit-background-clip:text;background-clip:text;color:transparent}
+.statbox .cap{font-size:14px;color:var(--mut);margin-top:8px;max-width:560px;margin-left:auto;margin-right:auto}
+.pullquote{border-left:4px solid var(--violet);padding:8px 0 8px 26px;margin:34px 0;font-size:19px;font-style:italic;color:#fff;line-height:1.6}
+.flow{display:flex;align-items:stretch;margin:32px 0;flex-wrap:wrap}
+.flow .step{flex:1;min-width:150px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center;font-size:14px;color:#c9d2e8}
+.flow .step .n{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:var(--green-lt);font-weight:700;font-size:13px;margin-bottom:10px}
+.flow .arr{align-self:center;color:var(--green-lt);font-size:22px;padding:0 6px}
+@media(max-width:640px){.flow .arr{display:none}.flow .step{min-width:100%;margin-bottom:8px}}
+
+</style>
+</head>
+<body>
+<nav><div class="nav-in">
+  <a class="logo" href="/"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo"/>Claim<span>Paid</span></a>
+  <div class="nav-links"><a href="/">Product</a><a href="/blog/">Blog</a><a class="btn btn-green btn-sm" href="/app/">Get started</a></div>
+</div></nav>
+
+<article><div class="wrap">
+<div class="crumb"><a href="/">Home</a> / <a href="/blog/">Blog</a> / Place of Service Codes: What Billers Need to Know</div>
+<span class="tag">Coding</span>
+<h1>Place of Service Codes: What Billers Need to Know</h1>
+<div class="byline">ClaimPaid · October 23, 2026 · 7 min read</div>
+<img class="hero-img" src="https://picsum.photos/seed/cp-place-of-service-codes-hero/1200/630" alt="Illustration for the place of service codes guide" loading="lazy" width="1200" height="630"/>
+
+<div class="answer">
+<div class="lbl">The short answer</div>
+<p>Place of service (POS) codes are two-digit codes on every claim telling the payer where the service was performed — 11 for office, 19 for off-campus outpatient hospital, 22 for on-campus outpatient hospital, 24 for ambulatory surgical center, and so on. POS directly affects payment: Medicare pays different rates for the same service depending on whether it was performed in a facility or non-facility setting. Wrong POS is a common, fully preventable denial cause.</p>
+</div>
+
+<div class="prose">
+
+<p>Every claim answers three basic questions: who, what, and where. The "where" is the place of service code — two digits that tell the payer the setting of the encounter. Get it right and it's invisible. Get it wrong and the claim denies, or worse, pays at the wrong rate and nobody notices.</p>
+
+<h2>The POS codes you'll use most</h2>
+<table>
+<tr><th>Code</th><th>Setting</th><th>Notes</th></tr>
+<tr><td>11</td><td>Office</td><td>The classic physician office visit — non-facility payment</td></tr>
+<tr><td>19</td><td>Off-campus outpatient hospital</td><td>Facility payment; site-neutral payment rules may apply</td></tr>
+<tr><td>22</td><td>On-campus outpatient hospital</td><td>Facility payment</td></tr>
+<tr><td>24</td><td>Ambulatory surgical center</td><td>ASC facility payment rules</td></tr>
+<tr><td>31</td><td>Skilled nursing facility</td><td>Patient in a SNF bed</td></tr>
+<tr><td>32</td><td>Nursing facility</td><td>Long-term care setting</td></tr>
+<tr><td>81</td><td>Independent laboratory</td><td>Freestanding lab services</td></tr>
+<tr><td>02 / 10</td><td>Telehealth</td><td>02: patient not at home; 10: patient at home (Medicare)</td></tr>
+</table>
+<p>This isn't the full list — CMS maintains the complete POS code set — but these cover the vast majority of professional claims.</p>
+
+<div class="flow"><div class="step"><div class="n">1</div><br/>Where was the patient seen?</div><div class="arr">→</div><div class="step"><div class="n">2</div><br/>Match the setting to the POS code</div><div class="arr">→</div><div class="step"><div class="n">3</div><br/>Check facility vs non-facility payment</div><div class="arr">→</div><div class="step"><div class="n">4</div><br/>Submit — POS errors are preventable denials</div></div>
+<h2>Why POS changes the payment</h2>
+<p>Medicare (and many commercial payers following its lead) pays a <strong>facility rate</strong> vs. a <strong>non-facility rate</strong> for the same CPT code. The logic: when the physician works in a facility, the facility bears overhead costs and bills separately; in a non-facility setting like an office, the physician bears them. Same procedure, different POS, different payment — sometimes substantially.</p>
+<p>That makes POS accuracy a revenue issue, not just a compliance checkbox. Systematically coding POS 22 where POS 11 belongs (or vice versa) either leaves money on the table or creates overpayment liability.</p>
+
+<h2>Common POS denials</h2>
+<ul>
+<li><strong>POS inconsistent with the procedure:</strong> a surgical code billed with POS 11, or an office visit with POS 24. Payer edits catch these instantly.</li>
+<li><strong>POS doesn't match the facility claim:</strong> when both a professional and facility claim exist for an encounter, mismatched POS codes trigger reviews.</li>
+<li><strong>Telehealth POS errors:</strong> using the wrong telehealth POS (02 vs. 10) or billing telehealth with an in-person POS. Payer telehealth rules are still evolving — verify per payer.</li>
+<li><strong>Site-of-service shifts:</strong> a practice moves locations (office to hospital outpatient department, for instance) and the billing system keeps sending the old POS. Every claim is wrong until someone updates the default.</li>
+</ul>
+
+<img class="mid-img" src="https://picsum.photos/seed/cp-place-of-service-codes-mid/1200/630" alt="Illustration of different healthcare facility settings" loading="lazy" width="1200" height="630"/><div class="img-cap">Illustration of different healthcare facility settings</div>
+<h2>Getting POS right systematically</h2>
+<ol>
+<li><strong>Default POS by location in the PM system</strong> — but review defaults whenever a provider adds a new practice location. Stale defaults are the #1 source of POS errors.</li>
+<li><strong>Scrub for POS-procedure mismatches</strong> before submission. This is exactly what <a href="/blog/what-is-claim-scrubbing/">claim scrubbing</a> is for — a rules check catches an impossible POS/code combination in seconds.</li>
+<li><strong>Reconcile professional and facility POS</strong> for encounters that generate both claim types.</li>
+<li><strong>Track POS denials as a category</strong> in your <a href="/blog/denial-management-kpis/">denial KPIs</a>. A spike usually means a location or default changed, not that coders forgot the codes.</li>
+</ol>
+<p>Pair POS discipline with <a href="/blog/medical-billing-modifiers-guide/">modifier discipline</a> — the two most common coding-level denial sources — and a large share of preventable denials disappears before submission.</p>
+
+<div class="faq">
+<h2>Frequently asked questions</h2>
+<div class="faq-item"><h3>What is a place of service code?</h3><p>A place of service (POS) code is a two-digit code on every claim indicating where the service was performed — e.g., 11 for office, 22 for on-campus outpatient hospital, 24 for ambulatory surgical center. CMS maintains the official code set.</p></div><div class="faq-item"><h3>Does place of service affect how much a claim pays?</h3><p>Yes. Medicare pays facility vs. non-facility rates for the same CPT code depending on POS — the same procedure can pay differently in an office (POS 11) versus a hospital outpatient department (POS 22), because overhead costs fall on different parties.</p></div><div class="faq-item"><h3>What are POS codes 02 and 10?</h3><p>They&#x27;re Medicare&#x27;s telehealth place of service codes: 02 indicates telehealth when the patient is not at home, 10 indicates telehealth when the patient is at home. Using the wrong one — or an in-person POS for telehealth — is a common denial trigger.</p></div><div class="faq-item"><h3>Why do my claims keep denying for place of service?</h3><p>The most common causes are stale location defaults in the billing system (especially after a site-of-service change), POS codes inconsistent with the procedure performed, and mismatches between professional and facility claims for the same encounter.</p></div><div class="faq-item"><h3>Where do I find the official POS code list?</h3><p>CMS publishes and maintains the complete place of service code set. Check the CMS website for the current list, since codes are occasionally added or revised.</p></div>
+</div>
+</div>
+
+<div class="cta">
+<h2>Stop losing revenue to denials</h2>
+<p>ClaimPaid tracks every denied claim through a structured appeal pipeline — deadlines, documentation, payer-specific appeal letters, and follow-up — so nothing slips through the cracks.</p>
+<a class="btn btn-green" href="/#pricing">See plans — from $199/mo →</a>
+</div>
+</div>
+</article>
+
+<footer><div class="foot">
+  <a class="logo" href="/" style="font-size:17px"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo" style="width:28px;height:28px"/>Claim<span>Paid</span></a>
+  <div class="foot-links"><a href="/blog/">Blog</a><a href="/legal/terms">Terms</a><a href="/legal/privacy">Privacy</a><a href="mailto:support@claimpaid.io">support@claimpaid.io</a></div>
+  <div>© 2026 ClaimPaid · Get your claims paid.</div>
+</div></footer>
+</body>
+</html>

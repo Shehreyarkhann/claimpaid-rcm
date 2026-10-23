@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>What Are Crossover Claims? Medicare-Medicaid Billing</title>
+<meta name="description" content="What are crossover claims? How Medicare automatically forwards claims to Medicaid for dual-eligible patients, and what billers must watch for."/>
+<link rel="canonical" href="https://claimpaid.io/blog/crossover-claims-explained/"/>
+<meta name="robots" content="index, follow, max-image-preview:large"/>
+<meta property="og:type" content="article"/>
+<meta property="og:site_name" content="ClaimPaid"/>
+<meta property="og:title" content="What Are Crossover Claims? Medicare-Medicaid Billing"/>
+<meta property="og:description" content="Crossover claims explained: how Medicare forwards claims to Medicaid automatically — and when it doesn&#x27;t."/>
+<meta property="og:url" content="https://claimpaid.io/blog/crossover-claims-explained/"/>
+<meta property="og:image" content="https://picsum.photos/seed/cp-crossover-claims-explained-hero/1200/630"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="What Are Crossover Claims? Medicare-Medicaid Billing"/>
+<meta name="twitter:description" content="What are crossover claims? How Medicare automatically forwards claims to Medicaid for dual-eligible patients, and what billers must watch for."/>
+<meta name="twitter:image" content="https://picsum.photos/seed/cp-crossover-claims-explained-hero/1200/630"/>
+<link rel="icon" type="image/webp" href="/claimpaid-icon.webp"/>
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "Article", "headline": "What Are Crossover Claims? Medicare-Medicaid Billing", "datePublished": "2026-10-23", "dateModified": "2026-10-23", "author": {"@type": "Organization", "name": "ClaimPaid", "url": "https://claimpaid.io/"}, "publisher": {"@type": "Organization", "name": "ClaimPaid", "url": "https://claimpaid.io/", "logo": {"@type": "ImageObject", "url": "https://claimpaid.io/claimpaid-icon.webp"}}, "mainEntityOfPage": {"@type": "WebPage", "@id": "https://claimpaid.io/blog/crossover-claims-explained/"}, "image": "https://picsum.photos/seed/cp-crossover-claims-explained-hero/1200/630", "description": "What are crossover claims? How Medicare automatically forwards claims to Medicaid for dual-eligible patients, and what billers must watch for."}
+</script>
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "What is a crossover claim?", "acceptedAnswer": {"@type": "Answer", "text": "A crossover claim is one that Medicare automatically forwards to the patient's secondary payer (usually Medicaid) after processing, through the COBA program. The biller doesn't submit a separate secondary claim \u2014 Medicare sends the claim data, including payment information, directly to the secondary payer."}}, {"@type": "Question", "name": "Do I need to bill Medicaid separately for dual-eligible patients?", "acceptedAnswer": {"@type": "Answer", "text": "Usually not \u2014 if the claim is crossover-eligible, Medicare forwards it automatically and billing Medicaid separately creates a duplicate. But when crossover doesn't fire (non-covered services, COBA gaps, eligibility timing issues), manual secondary billing is required."}}, {"@type": "Question", "name": "Why didn't my claim cross over to Medicaid?", "acceptedAnswer": {"@type": "Answer", "text": "Common reasons: the service wasn't covered by Medicare (nothing to forward), the secondary payer doesn't participate in COBA, the claim type doesn't support crossover, or dual eligibility wasn't active on the date of service. Check the remittance advice for crossover indicators."}}, {"@type": "Question", "name": "Does Medicaid always pay the remaining balance after Medicare?", "acceptedAnswer": {"@type": "Answer", "text": "No. Medicaid as secondary typically pays only up to its own fee schedule \u2014 if Medicare's payment already meets or exceeds what Medicaid allows, Medicaid pays nothing further. That's the correct outcome, not a denial."}}, {"@type": "Question", "name": "What is COBA in Medicare billing?", "acceptedAnswer": {"@type": "Answer", "text": "COBA (Coordination of Benefits Agreement) is the program through which Medicare electronically transfers processed claim data to secondary payers. It's the mechanism behind crossover claims, replacing the old process of providers billing each payer separately."}}]}
+</script>
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Home", "item": "https://claimpaid.io/"}, {"@type": "ListItem", "position": 2, "name": "Blog", "item": "https://claimpaid.io/blog/"}, {"@type": "ListItem", "position": 3, "name": "What Are Crossover Claims? Medicare-Medicaid Billing Explained", "item": "https://claimpaid.io/blog/crossover-claims-explained/"}]}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+
+:root{--navy:#0b1220;--navy2:#0f172a;--panel:#111c33;--green:#10b981;--green-lt:#34d399;--violet:#8b5cf6;--violet-lt:#a78bfa;--txt:#e8eefc;--mut:#93a0bd;--line:rgba(255,255,255,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--navy);color:var(--txt);font-family:'Inter',system-ui,sans-serif;line-height:1.75}
+h1,h2,h3{font-family:'Sora',sans-serif;line-height:1.3}
+.wrap{max-width:780px;margin:0 auto;padding:0 24px}
+.grad{background:linear-gradient(92deg,var(--green-lt),var(--violet-lt));-webkit-background-clip:text;background-clip:text;color:transparent}
+nav{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(14px);background:rgba(11,18,32,.85);border-bottom:1px solid var(--line)}
+.nav-in{max-width:1100px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:68px}
+.logo{display:flex;align-items:center;gap:10px;font-family:'Sora';font-weight:800;font-size:21px;letter-spacing:-.4px;text-decoration:none;color:var(--txt)}
+.logo img{width:34px;height:34px;border-radius:9px;box-shadow:0 0 18px rgba(16,185,129,.45)}
+.logo span{color:var(--green-lt)}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{color:var(--mut);text-decoration:none;font-size:14.5px;font-weight:500}
+.nav-links a:hover{color:#fff}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:15px;border-radius:12px;padding:13px 26px;text-decoration:none;border:none;transition:transform .25s,box-shadow .25s;cursor:pointer}
+.btn-green{background:linear-gradient(135deg,#10b981,#059669);color:#04120c;box-shadow:0 8px 28px rgba(16,185,129,.35)}
+.btn-green:hover{transform:translateY(-3px);box-shadow:0 14px 40px rgba(16,185,129,.5)}
+.btn-sm{padding:10px 20px;font-size:14px}
+article{padding:140px 0 60px}
+.crumb{font-size:13px;color:var(--mut);margin-bottom:18px}
+.crumb a{color:var(--green-lt);text-decoration:none}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--green-lt);background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);padding:5px 12px;border-radius:100px;margin-bottom:18px}
+article h1{font-size:clamp(30px,4.5vw,46px);font-weight:800;letter-spacing:-1.2px;margin-bottom:14px}
+.byline{color:var(--mut);font-size:14px;margin-bottom:34px}
+.answer{background:linear-gradient(160deg,rgba(16,185,129,.1),rgba(16,185,129,.03));border:1px solid rgba(16,185,129,.4);border-left:4px solid var(--green);border-radius:14px;padding:22px 26px;margin-bottom:38px}
+.answer .lbl{font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--green-lt);margin-bottom:10px}
+.answer p{font-size:16px;margin:0}
+.prose h2{font-size:26px;font-weight:700;letter-spacing:-.5px;margin:44px 0 16px}
+.prose h3{font-size:19px;font-weight:700;margin:30px 0 12px;color:#fff}
+.prose p{margin:0 0 18px;color:#c9d2e8}
+.prose ul,.prose ol{margin:0 0 20px 22px;color:#c9d2e8}
+.prose li{margin-bottom:10px}
+.prose strong{color:#fff}
+.prose a{color:var(--green-lt);text-decoration:underline;text-underline-offset:3px}
+table{width:100%;border-collapse:collapse;margin:24px 0;font-size:14.5px}
+th{background:rgba(16,185,129,.1);color:#fff;text-align:left;padding:12px 14px;font-family:'Sora';font-size:13.5px}
+td{padding:12px 14px;border-top:1px solid var(--line);color:#c9d2e8;vertical-align:top}
+tr:hover td{background:rgba(255,255,255,.02)}
+.faq{margin:44px 0}
+.faq-item{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 24px;margin-bottom:14px}
+.faq-item h3{font-size:16.5px;margin:0 0 8px;color:#fff}
+.faq-item p{margin:0;font-size:14.5px;color:#c9d2e8}
+.cta{background:linear-gradient(140deg,rgba(16,185,129,.14),rgba(139,92,246,.1));border:1px solid rgba(16,185,129,.4);border-radius:20px;padding:40px;text-align:center;margin:50px 0}
+.cta h2{font-size:26px;margin-bottom:12px}
+.cta p{color:var(--mut);margin-bottom:24px;max-width:520px;margin-left:auto;margin-right:auto}
+footer{border-top:1px solid var(--line);padding:40px 0;color:var(--mut);font-size:13.5px}
+.foot{max-width:1100px;margin:0 auto;padding:0 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px}
+.foot a{color:var(--mut);text-decoration:none}
+.foot a:hover{color:var(--green-lt)}
+.foot-links{display:flex;gap:22px}
+.note{font-size:13.5px;color:var(--mut);background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.3);border-radius:12px;padding:16px 20px;margin:26px 0}
+@media(max-width:640px){.nav-links a:not(.btn){display:none}table{font-size:13px}}
+
+
+.hero-img{width:100%;height:auto;aspect-ratio:1200/630;object-fit:cover;border-radius:18px;margin:8px 0 34px;border:1px solid var(--line);background:var(--panel)}
+.mid-img{width:100%;height:auto;aspect-ratio:1200/630;object-fit:cover;border-radius:16px;margin:30px 0 8px;border:1px solid var(--line);background:var(--panel)}
+.img-cap{font-size:13px;color:var(--mut);text-align:center;margin:0 0 28px}
+.statbox{background:linear-gradient(140deg,rgba(16,185,129,.14),rgba(139,92,246,.1));border:1px solid rgba(16,185,129,.4);border-radius:16px;padding:28px 30px;margin:34px 0;text-align:center}
+.statbox .num{font-family:'Sora',sans-serif;font-size:46px;font-weight:800;letter-spacing:-1px;background:linear-gradient(92deg,var(--green-lt),var(--violet-lt));-webkit-background-clip:text;background-clip:text;color:transparent}
+.statbox .cap{font-size:14px;color:var(--mut);margin-top:8px;max-width:560px;margin-left:auto;margin-right:auto}
+.pullquote{border-left:4px solid var(--violet);padding:8px 0 8px 26px;margin:34px 0;font-size:19px;font-style:italic;color:#fff;line-height:1.6}
+.flow{display:flex;align-items:stretch;margin:32px 0;flex-wrap:wrap}
+.flow .step{flex:1;min-width:150px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center;font-size:14px;color:#c9d2e8}
+.flow .step .n{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:var(--green-lt);font-weight:700;font-size:13px;margin-bottom:10px}
+.flow .arr{align-self:center;color:var(--green-lt);font-size:22px;padding:0 6px}
+@media(max-width:640px){.flow .arr{display:none}.flow .step{min-width:100%;margin-bottom:8px}}
+
+</style>
+</head>
+<body>
+<nav><div class="nav-in">
+  <a class="logo" href="/"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo"/>Claim<span>Paid</span></a>
+  <div class="nav-links"><a href="/">Product</a><a href="/blog/">Blog</a><a class="btn btn-green btn-sm" href="/app/">Get started</a></div>
+</div></nav>
+
+<article><div class="wrap">
+<div class="crumb"><a href="/">Home</a> / <a href="/blog/">Blog</a> / What Are Crossover Claims? Medicare-Medicaid Billing Explained</div>
+<span class="tag">Medicare &amp; Medicaid</span>
+<h1>What Are Crossover Claims? Medicare-Medicaid Billing Explained</h1>
+<div class="byline">ClaimPaid · October 23, 2026 · 7 min read</div>
+<img class="hero-img" src="https://picsum.photos/seed/cp-crossover-claims-explained-hero/1200/630" alt="Illustration for the crossover claims guide" loading="lazy" width="1200" height="630"/>
+
+<div class="answer">
+<div class="lbl">The short answer</div>
+<p>A crossover claim is one that Medicare automatically forwards to a patient's secondary payer — usually Medicaid — after Medicare processes it, through the Coordination of Benefits Agreement (COBA) program. For dual-eligible patients, this means you typically don't bill Medicaid separately; Medicare sends the claim over with its payment information. But crossover doesn't cover every situation: non-covered services, certain claim types, and COBA enrollment gaps still require manual secondary billing.</p>
+</div>
+
+<div class="prose">
+
+<p>For patients covered by both Medicare and Medicaid — "dual-eligible" beneficiaries — billing could be a two-step headache on every claim. Crossover is the mechanism that removes the second step: Medicare automatically forwards the processed claim to Medicaid (or another secondary payer), so the biller doesn't have to send it twice. Understanding when crossover works — and when it silently doesn't — prevents some of the most confusing secondary-billing denials in the business.</p>
+
+<h2>How crossover works</h2>
+<p>After Medicare adjudicates a claim, the Coordination of Benefits Agreement (COBA) program transmits the claim data — including what Medicare paid and what remains — directly to the secondary payer. Medicaid then processes its secondary liability and pays accordingly, or determines there's no additional payment due.</p>
+<p>For the billing team, the practical effect is simple: for crossover-eligible claims, <strong>do not bill Medicaid separately</strong>. Submitting a separate secondary claim for a claim that's already crossing over creates duplicates, which create their own denials and reconciliation messes.</p>
+
+<div class="flow"><div class="step"><div class="n">1</div><br/>Bill Medicare primary</div><div class="arr">→</div><div class="step"><div class="n">2</div><br/>Medicare adjudicates</div><div class="arr">→</div><div class="step"><div class="n">3</div><br/>COBA auto-forwards to Medicaid</div><div class="arr">→</div><div class="step"><div class="n">4</div><br/>Medicaid pays secondary / patient balance resolved</div></div>
+<h2>When crossover doesn't happen</h2>
+<p>Crossover is reliable but not universal. Watch for these gaps:</p>
+<ul>
+<li><strong>Services Medicare doesn't cover:</strong> if Medicare denies as non-covered, there's often nothing to cross over — but Medicaid might still cover the service. These need manual secondary billing.</li>
+<li><strong>COBA enrollment gaps:</strong> the secondary payer must participate in COBA for the automatic transfer. If it doesn't, you're billing secondary manually.</li>
+<li><strong>Certain claim types:</strong> some claim formats and settings don't cross over cleanly. Know your state's rules.</li>
+<li><strong>Eligibility timing:</strong> if dual eligibility wasn't active on the date of service, crossover won't fire — and the resulting secondary denial will confuse anyone who assumes it did.</li>
+</ul>
+
+<h2>What billers should do</h2>
+<ol>
+<li><strong>Verify dual eligibility on the date of service</strong> — not just "has Medicaid," but active for that date. Our <a href="/blog/eligibility-verification-checklist/">eligibility checklist</a> covers the full verification routine.</li>
+<li><strong>Check whether the claim crossed over</strong> before billing secondary manually. The <a href="/blog/era-vs-eob-difference/">remittance advice (ERA or EOB)</a> usually indicates crossover; billing a duplicate secondary claim is a classic self-inflicted denial.</li>
+<li><strong>Know your timely filing clocks for both payers.</strong> If crossover fails and you discover it late, the secondary payer's filing deadline may already be blown. See <a href="/blog/timely-filing-limits-by-payer-2026/">timely filing limits by payer</a>.</li>
+<li><strong>Understand Medicaid secondary payment rules.</strong> Medicaid typically pays only up to its fee schedule — if Medicare already paid more than Medicaid allows, Medicaid pays nothing further. That's normal, not a denial to appeal.</li>
+</ol>
+
+<h2>Crossover and coordination of benefits</h2>
+<p>Crossover is really COB automation — the payer-to-payer handoff that <a href="/blog/coordination-of-benefits-guide/">coordination of benefits</a> rules require. When the COB order is wrong in the patient's record (Medicare listed as secondary, for instance), crossover misfires and both payers deny. Getting the coverage order right at registration prevents the whole cascade.</p>
+
+<img class="mid-img" src="https://picsum.photos/seed/cp-crossover-claims-explained-mid/1200/630" alt="Illustration of claims data flowing between payer systems" loading="lazy" width="1200" height="630"/><div class="img-cap">Illustration of claims data flowing between payer systems</div>
+<h2>The bottom line</h2>
+<p>Crossover eliminates duplicate billing work for dual-eligible claims — when it fires. The billing team's job is knowing when it should have fired but didn't, catching that fast, and billing secondary manually before the clock runs out. Trust the automation, but verify it.</p>
+
+<div class="faq">
+<h2>Frequently asked questions</h2>
+<div class="faq-item"><h3>What is a crossover claim?</h3><p>A crossover claim is one that Medicare automatically forwards to the patient&#x27;s secondary payer (usually Medicaid) after processing, through the COBA program. The biller doesn&#x27;t submit a separate secondary claim — Medicare sends the claim data, including payment information, directly to the secondary payer.</p></div><div class="faq-item"><h3>Do I need to bill Medicaid separately for dual-eligible patients?</h3><p>Usually not — if the claim is crossover-eligible, Medicare forwards it automatically and billing Medicaid separately creates a duplicate. But when crossover doesn&#x27;t fire (non-covered services, COBA gaps, eligibility timing issues), manual secondary billing is required.</p></div><div class="faq-item"><h3>Why didn&#x27;t my claim cross over to Medicaid?</h3><p>Common reasons: the service wasn&#x27;t covered by Medicare (nothing to forward), the secondary payer doesn&#x27;t participate in COBA, the claim type doesn&#x27;t support crossover, or dual eligibility wasn&#x27;t active on the date of service. Check the remittance advice for crossover indicators.</p></div><div class="faq-item"><h3>Does Medicaid always pay the remaining balance after Medicare?</h3><p>No. Medicaid as secondary typically pays only up to its own fee schedule — if Medicare&#x27;s payment already meets or exceeds what Medicaid allows, Medicaid pays nothing further. That&#x27;s the correct outcome, not a denial.</p></div><div class="faq-item"><h3>What is COBA in Medicare billing?</h3><p>COBA (Coordination of Benefits Agreement) is the program through which Medicare electronically transfers processed claim data to secondary payers. It&#x27;s the mechanism behind crossover claims, replacing the old process of providers billing each payer separately.</p></div>
+</div>
+</div>
+
+<div class="cta">
+<h2>Stop losing revenue to denials</h2>
+<p>ClaimPaid tracks every denied claim through a structured appeal pipeline — deadlines, documentation, payer-specific appeal letters, and follow-up — so nothing slips through the cracks.</p>
+<a class="btn btn-green" href="/#pricing">See plans — from $199/mo →</a>
+</div>
+</div>
+</article>
+
+<footer><div class="foot">
+  <a class="logo" href="/" style="font-size:17px"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo" style="width:28px;height:28px"/>Claim<span>Paid</span></a>
+  <div class="foot-links"><a href="/blog/">Blog</a><a href="/legal/terms">Terms</a><a href="/legal/privacy">Privacy</a><a href="mailto:support@claimpaid.io">support@claimpaid.io</a></div>
+  <div>© 2026 ClaimPaid · Get your claims paid.</div>
+</div></footer>
+</body>
+</html>

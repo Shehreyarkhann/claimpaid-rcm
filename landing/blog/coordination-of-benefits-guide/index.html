@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Coordination of Benefits (COB): How It Affects Claims</title>
+<meta name="description" content="Coordination of benefits explained: how primary vs secondary payer order is determined, the birthday rule, and fixing COB denials."/>
+<link rel="canonical" href="https://claimpaid.io/blog/coordination-of-benefits-guide/"/>
+<meta name="robots" content="index, follow, max-image-preview:large"/>
+<meta property="og:type" content="article"/>
+<meta property="og:site_name" content="ClaimPaid"/>
+<meta property="og:title" content="Coordination of Benefits (COB): How It Affects Claims"/>
+<meta property="og:description" content="COB determines which payer pays first. The rules, the birthday rule, and how to fix COB denials."/>
+<meta property="og:url" content="https://claimpaid.io/blog/coordination-of-benefits-guide/"/>
+<meta property="og:image" content="https://picsum.photos/seed/cp-coordination-of-benefits-guide-hero/1200/630"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Coordination of Benefits (COB): How It Affects Claims"/>
+<meta name="twitter:description" content="Coordination of benefits explained: how primary vs secondary payer order is determined, the birthday rule, and fixing COB denials."/>
+<meta name="twitter:image" content="https://picsum.photos/seed/cp-coordination-of-benefits-guide-hero/1200/630"/>
+<link rel="icon" type="image/webp" href="/claimpaid-icon.webp"/>
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "Article", "headline": "Coordination of Benefits (COB): How It Affects Claims", "datePublished": "2026-10-23", "dateModified": "2026-10-23", "author": {"@type": "Organization", "name": "ClaimPaid", "url": "https://claimpaid.io/"}, "publisher": {"@type": "Organization", "name": "ClaimPaid", "url": "https://claimpaid.io/", "logo": {"@type": "ImageObject", "url": "https://claimpaid.io/claimpaid-icon.webp"}}, "mainEntityOfPage": {"@type": "WebPage", "@id": "https://claimpaid.io/blog/coordination-of-benefits-guide/"}, "image": "https://picsum.photos/seed/cp-coordination-of-benefits-guide-hero/1200/630", "description": "Coordination of benefits explained: how primary vs secondary payer order is determined, the birthday rule, and fixing COB denials."}
+</script>
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "What is coordination of benefits?", "acceptedAnswer": {"@type": "Answer", "text": "Coordination of benefits (COB) is the set of rules determining which insurance plan pays first when a patient has more than one. The primary payer processes the claim first; the secondary payer then considers the remaining balance. Getting the order wrong causes CO-22 denials."}}, {"@type": "Question", "name": "What is the birthday rule in insurance?", "acceptedAnswer": {"@type": "Answer", "text": "For dependent children covered under both parents' health plans, the birthday rule says the parent whose birthday comes earlier in the calendar year (comparing month and day only) generally holds the primary plan. It's one of the standard COB determination rules."}}, {"@type": "Question", "name": "How do I fix a CO-22 coordination of benefits denial?", "acceptedAnswer": {"@type": "Answer", "text": "Confirm the actual coverage order with the patient, correct the primary/secondary order in your records, bill the true primary payer first if needed, then rebill or appeal the secondary with the primary's remittance attached. If the payer's COB file is wrong, the patient usually must update it directly with the payer."}}, {"@type": "Question", "name": "Is Medicaid always secondary?", "acceptedAnswer": {"@type": "Answer", "text": "Yes \u2014 Medicaid is the payer of last resort by law. If a patient has any other health coverage, Medicaid is secondary (or tertiary) to it."}}, {"@type": "Question", "name": "Why do COB denials keep happening for the same patient?", "acceptedAnswer": {"@type": "Answer", "text": "Because the coverage order in the payer's file is wrong and hasn't been corrected. Until the patient updates their COB information with the payer (often via a questionnaire or phone call), every claim will hit the same denial. Fix the payer's record, not just the claim."}}]}
+</script>
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Home", "item": "https://claimpaid.io/"}, {"@type": "ListItem", "position": 2, "name": "Blog", "item": "https://claimpaid.io/blog/"}, {"@type": "ListItem", "position": 3, "name": "Coordination of Benefits (COB): How It Affects Claims", "item": "https://claimpaid.io/blog/coordination-of-benefits-guide/"}]}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+
+:root{--navy:#0b1220;--navy2:#0f172a;--panel:#111c33;--green:#10b981;--green-lt:#34d399;--violet:#8b5cf6;--violet-lt:#a78bfa;--txt:#e8eefc;--mut:#93a0bd;--line:rgba(255,255,255,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--navy);color:var(--txt);font-family:'Inter',system-ui,sans-serif;line-height:1.75}
+h1,h2,h3{font-family:'Sora',sans-serif;line-height:1.3}
+.wrap{max-width:780px;margin:0 auto;padding:0 24px}
+.grad{background:linear-gradient(92deg,var(--green-lt),var(--violet-lt));-webkit-background-clip:text;background-clip:text;color:transparent}
+nav{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(14px);background:rgba(11,18,32,.85);border-bottom:1px solid var(--line)}
+.nav-in{max-width:1100px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:68px}
+.logo{display:flex;align-items:center;gap:10px;font-family:'Sora';font-weight:800;font-size:21px;letter-spacing:-.4px;text-decoration:none;color:var(--txt)}
+.logo img{width:34px;height:34px;border-radius:9px;box-shadow:0 0 18px rgba(16,185,129,.45)}
+.logo span{color:var(--green-lt)}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{color:var(--mut);text-decoration:none;font-size:14.5px;font-weight:500}
+.nav-links a:hover{color:#fff}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:15px;border-radius:12px;padding:13px 26px;text-decoration:none;border:none;transition:transform .25s,box-shadow .25s;cursor:pointer}
+.btn-green{background:linear-gradient(135deg,#10b981,#059669);color:#04120c;box-shadow:0 8px 28px rgba(16,185,129,.35)}
+.btn-green:hover{transform:translateY(-3px);box-shadow:0 14px 40px rgba(16,185,129,.5)}
+.btn-sm{padding:10px 20px;font-size:14px}
+article{padding:140px 0 60px}
+.crumb{font-size:13px;color:var(--mut);margin-bottom:18px}
+.crumb a{color:var(--green-lt);text-decoration:none}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--green-lt);background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);padding:5px 12px;border-radius:100px;margin-bottom:18px}
+article h1{font-size:clamp(30px,4.5vw,46px);font-weight:800;letter-spacing:-1.2px;margin-bottom:14px}
+.byline{color:var(--mut);font-size:14px;margin-bottom:34px}
+.answer{background:linear-gradient(160deg,rgba(16,185,129,.1),rgba(16,185,129,.03));border:1px solid rgba(16,185,129,.4);border-left:4px solid var(--green);border-radius:14px;padding:22px 26px;margin-bottom:38px}
+.answer .lbl{font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--green-lt);margin-bottom:10px}
+.answer p{font-size:16px;margin:0}
+.prose h2{font-size:26px;font-weight:700;letter-spacing:-.5px;margin:44px 0 16px}
+.prose h3{font-size:19px;font-weight:700;margin:30px 0 12px;color:#fff}
+.prose p{margin:0 0 18px;color:#c9d2e8}
+.prose ul,.prose ol{margin:0 0 20px 22px;color:#c9d2e8}
+.prose li{margin-bottom:10px}
+.prose strong{color:#fff}
+.prose a{color:var(--green-lt);text-decoration:underline;text-underline-offset:3px}
+table{width:100%;border-collapse:collapse;margin:24px 0;font-size:14.5px}
+th{background:rgba(16,185,129,.1);color:#fff;text-align:left;padding:12px 14px;font-family:'Sora';font-size:13.5px}
+td{padding:12px 14px;border-top:1px solid var(--line);color:#c9d2e8;vertical-align:top}
+tr:hover td{background:rgba(255,255,255,.02)}
+.faq{margin:44px 0}
+.faq-item{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 24px;margin-bottom:14px}
+.faq-item h3{font-size:16.5px;margin:0 0 8px;color:#fff}
+.faq-item p{margin:0;font-size:14.5px;color:#c9d2e8}
+.cta{background:linear-gradient(140deg,rgba(16,185,129,.14),rgba(139,92,246,.1));border:1px solid rgba(16,185,129,.4);border-radius:20px;padding:40px;text-align:center;margin:50px 0}
+.cta h2{font-size:26px;margin-bottom:12px}
+.cta p{color:var(--mut);margin-bottom:24px;max-width:520px;margin-left:auto;margin-right:auto}
+footer{border-top:1px solid var(--line);padding:40px 0;color:var(--mut);font-size:13.5px}
+.foot{max-width:1100px;margin:0 auto;padding:0 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px}
+.foot a{color:var(--mut);text-decoration:none}
+.foot a:hover{color:var(--green-lt)}
+.foot-links{display:flex;gap:22px}
+.note{font-size:13.5px;color:var(--mut);background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.3);border-radius:12px;padding:16px 20px;margin:26px 0}
+@media(max-width:640px){.nav-links a:not(.btn){display:none}table{font-size:13px}}
+
+
+.hero-img{width:100%;height:auto;aspect-ratio:1200/630;object-fit:cover;border-radius:18px;margin:8px 0 34px;border:1px solid var(--line);background:var(--panel)}
+.mid-img{width:100%;height:auto;aspect-ratio:1200/630;object-fit:cover;border-radius:16px;margin:30px 0 8px;border:1px solid var(--line);background:var(--panel)}
+.img-cap{font-size:13px;color:var(--mut);text-align:center;margin:0 0 28px}
+.statbox{background:linear-gradient(140deg,rgba(16,185,129,.14),rgba(139,92,246,.1));border:1px solid rgba(16,185,129,.4);border-radius:16px;padding:28px 30px;margin:34px 0;text-align:center}
+.statbox .num{font-family:'Sora',sans-serif;font-size:46px;font-weight:800;letter-spacing:-1px;background:linear-gradient(92deg,var(--green-lt),var(--violet-lt));-webkit-background-clip:text;background-clip:text;color:transparent}
+.statbox .cap{font-size:14px;color:var(--mut);margin-top:8px;max-width:560px;margin-left:auto;margin-right:auto}
+.pullquote{border-left:4px solid var(--violet);padding:8px 0 8px 26px;margin:34px 0;font-size:19px;font-style:italic;color:#fff;line-height:1.6}
+.flow{display:flex;align-items:stretch;margin:32px 0;flex-wrap:wrap}
+.flow .step{flex:1;min-width:150px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center;font-size:14px;color:#c9d2e8}
+.flow .step .n{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:var(--green-lt);font-weight:700;font-size:13px;margin-bottom:10px}
+.flow .arr{align-self:center;color:var(--green-lt);font-size:22px;padding:0 6px}
+@media(max-width:640px){.flow .arr{display:none}.flow .step{min-width:100%;margin-bottom:8px}}
+
+</style>
+</head>
+<body>
+<nav><div class="nav-in">
+  <a class="logo" href="/"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo"/>Claim<span>Paid</span></a>
+  <div class="nav-links"><a href="/">Product</a><a href="/blog/">Blog</a><a class="btn btn-green btn-sm" href="/app/">Get started</a></div>
+</div></nav>
+
+<article><div class="wrap">
+<div class="crumb"><a href="/">Home</a> / <a href="/blog/">Blog</a> / Coordination of Benefits (COB): How It Affects Claims</div>
+<span class="tag">Coverage &amp; Eligibility</span>
+<h1>Coordination of Benefits (COB): How It Affects Claims</h1>
+<div class="byline">ClaimPaid · October 23, 2026 · 8 min read</div>
+<img class="hero-img" src="https://picsum.photos/seed/cp-coordination-of-benefits-guide-hero/1200/630" alt="Illustration for the coordination of benefits guide" loading="lazy" width="1200" height="630"/>
+
+<div class="answer">
+<div class="lbl">The short answer</div>
+<p>Coordination of benefits (COB) is the set of rules that determines which insurance pays first when a patient has more than one plan. The primary payer processes the claim first; the secondary payer considers the remainder. Common rules: the patient's own employer plan is primary over a spouse's plan, active-employee coverage beats retiree coverage, and for dependent children the 'birthday rule' (parent whose birthday comes first in the calendar year) usually decides. Wrong COB order is one of the most common — and most fixable — denial causes.</p>
+</div>
+
+<div class="prose">
+
+<p>When a patient carries two insurance plans, someone has to decide who pays first. That's coordination of benefits — and when the order is wrong, claims deny with CO-22 ("this care may be covered by another payer per coordination of benefits"), one of the most common denial codes in the industry. The good news: COB denials are almost always fixable. The bad news: they keep recurring until the coverage order in the patient's record is corrected.</p>
+
+<h2>Primary vs. secondary: who decides?</h2>
+<p>COB rules establish a payment order. The primary payer adjudicates the claim first and pays according to its benefits; the secondary payer then reviews what's left and pays per its own rules. Standard determination rules include:</p>
+<ul>
+<li><strong>Patient's own plan vs. dependent coverage:</strong> the plan covering the patient as the employee/subscriber is primary over a plan covering them as a dependent.</li>
+<li><strong>Active vs. retiree:</strong> coverage through current employment is primary over retiree coverage.</li>
+<li><strong>The birthday rule:</strong> for dependent children covered under both parents' plans, the parent whose birthday falls earlier in the calendar year (month and day only, not year) typically holds the primary plan.</li>
+<li><strong>Medicare secondary payer rules:</strong> for working aged, ESRD coordination periods, and other situations, federal rules dictate whether Medicare is primary or secondary — these override the commercial rules above.</li>
+<li><strong>Medicaid is always last:</strong> Medicaid is the payer of last resort by law. If a patient has any other coverage, Medicaid is secondary (or tertiary).</li>
+</ul>
+
+<div class="statbox"><div class="num">CO-22</div><div class="cap">The CARC code for COB denials — &#x27;This care may be covered by another payer.&#x27; One of the most common and most fixable denial reasons.</div></div>
+<h2>How COB problems show up in billing</h2>
+<p>COB failures surface in a few recognizable ways:</p>
+<ul>
+<li><strong>CO-22 denials:</strong> the payer believes another plan should have paid first. The fix is correcting the coverage order and rebilling — or billing the actual primary payer first.</li>
+<li><strong>Patient claims "I only have one insurance":</strong> patients often don't know about (or forget) secondary coverage — an old employer plan, a spouse's plan, auto insurance after an accident. Eligibility verification should probe for this; see our <a href="/blog/eligibility-verification-checklist/">eligibility checklist</a>.</li>
+<li><strong>Crossover misfires:</strong> for dual-eligible patients, wrong COB order breaks <a href="/blog/crossover-claims-explained/">crossover</a> — Medicare won't forward correctly if it thinks it's secondary.</li>
+<li><strong>Stale COB records:</strong> a patient changed jobs six months ago but the payer still shows the old plan as primary. Payers periodically send COB questionnaires to members; unanswered questionnaires can trigger denials.</li>
+</ul>
+
+<h2>Fixing a COB denial</h2>
+<ol>
+<li><strong>Confirm the actual coverage order.</strong> Call the patient if needed — ask specifically about other coverage: spouse's plan, former employer, auto or workers' comp related to the visit.</li>
+<li><strong>Update the patient's record</strong> with the correct primary/secondary order and effective dates.</li>
+<li><strong>Bill the primary payer first</strong> if the claim went to the wrong payer initially.</li>
+<li><strong>Rebill or appeal the secondary</strong> with the primary payer's remittance information attached.</li>
+<li><strong>Fix the root cause:</strong> if the payer's COB file is wrong, the patient may need to update it directly with the payer (often via a COB questionnaire or phone call). Until the payer's record is corrected, the denials will repeat.</li>
+</ol>
+
+<img class="mid-img" src="https://picsum.photos/seed/cp-coordination-of-benefits-guide-mid/1200/630" alt="Illustration of insurance coverage layers and payer order" loading="lazy" width="1200" height="630"/><div class="img-cap">Illustration of insurance coverage layers and payer order</div>
+<h2>Preventing COB denials</h2>
+<p>COB verification belongs in the registration workflow, not the denial workflow. Ask every patient about other insurance at every visit — coverage changes constantly, and "no changes" is an answer you need to hear explicitly. Real-time eligibility responses often include COB information; train front-desk staff to read it. The practices with the lowest COB denial rates treat "any other insurance?" as a mandatory question, every time.</p>
+
+<div class="faq">
+<h2>Frequently asked questions</h2>
+<div class="faq-item"><h3>What is coordination of benefits?</h3><p>Coordination of benefits (COB) is the set of rules determining which insurance plan pays first when a patient has more than one. The primary payer processes the claim first; the secondary payer then considers the remaining balance. Getting the order wrong causes CO-22 denials.</p></div><div class="faq-item"><h3>What is the birthday rule in insurance?</h3><p>For dependent children covered under both parents&#x27; health plans, the birthday rule says the parent whose birthday comes earlier in the calendar year (comparing month and day only) generally holds the primary plan. It&#x27;s one of the standard COB determination rules.</p></div><div class="faq-item"><h3>How do I fix a CO-22 coordination of benefits denial?</h3><p>Confirm the actual coverage order with the patient, correct the primary/secondary order in your records, bill the true primary payer first if needed, then rebill or appeal the secondary with the primary&#x27;s remittance attached. If the payer&#x27;s COB file is wrong, the patient usually must update it directly with the payer.</p></div><div class="faq-item"><h3>Is Medicaid always secondary?</h3><p>Yes — Medicaid is the payer of last resort by law. If a patient has any other health coverage, Medicaid is secondary (or tertiary) to it.</p></div><div class="faq-item"><h3>Why do COB denials keep happening for the same patient?</h3><p>Because the coverage order in the payer&#x27;s file is wrong and hasn&#x27;t been corrected. Until the patient updates their COB information with the payer (often via a questionnaire or phone call), every claim will hit the same denial. Fix the payer&#x27;s record, not just the claim.</p></div>
+</div>
+</div>
+
+<div class="cta">
+<h2>Stop losing revenue to denials</h2>
+<p>ClaimPaid tracks every denied claim through a structured appeal pipeline — deadlines, documentation, payer-specific appeal letters, and follow-up — so nothing slips through the cracks.</p>
+<a class="btn btn-green" href="/#pricing">See plans — from $199/mo →</a>
+</div>
+</div>
+</article>
+
+<footer><div class="foot">
+  <a class="logo" href="/" style="font-size:17px"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo" style="width:28px;height:28px"/>Claim<span>Paid</span></a>
+  <div class="foot-links"><a href="/blog/">Blog</a><a href="/legal/terms">Terms</a><a href="/legal/privacy">Privacy</a><a href="mailto:support@claimpaid.io">support@claimpaid.io</a></div>
+  <div>© 2026 ClaimPaid · Get your claims paid.</div>
+</div></footer>
+</body>
+</html>

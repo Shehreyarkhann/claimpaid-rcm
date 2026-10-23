@@ -46,6 +46,19 @@ In-depth, practical guides for medical billing teams (also at https://claimpaid.
 - **How to Write a Prior Authorization Appeal Letter** — https://claimpaid.io/blog/prior-authorization-appeal-letter/ — template outline, medical-necessity documentation, peer-to-peer review.
 - **What Is Claim Scrubbing?** — https://claimpaid.io/blog/what-is-claim-scrubbing/ — pre-submission claim validation, clean-claim rate, what scrubbers check.
 
+- **What Is a Good Clean Claim Rate? Benchmarks Explained** — https://claimpaid.io/blog/clean-claim-rate-benchmarks/ — clean claim rate formula, 90%/95% benchmarks, what drags it down, how to improve it.
+- **Denial Management KPIs Every Billing Team Should Track** — https://claimpaid.io/blog/denial-management-kpis/ — denial rate, overturn rate, days in A/R, net collection rate, cost to collect, aged A/R.
+- **What Are Crossover Claims? Medicare-Medicaid Billing Explained** — https://claimpaid.io/blog/crossover-claims-explained/ — COBA auto-forwarding for dual-eligible patients, when crossover doesn't fire, manual secondary billing.
+- **Coordination of Benefits (COB): How It Affects Claims** — https://claimpaid.io/blog/coordination-of-benefits-guide/ — primary vs secondary rules, birthday rule, fixing CO-22 denials, prevention.
+- **ERA vs EOB: What's the Difference?** — https://claimpaid.io/blog/era-vs-eob-difference/ — 835 electronic remittance advice vs paper EOB, auto-posting, ERA enrollment.
+- **Common Billing Modifiers (25, 59, 91, 76) Explained** — https://claimpaid.io/blog/medical-billing-modifiers-guide/ — modifier 25/59/91/76 meanings, when to use each, CO-97 bundling denials.
+- **Place of Service Codes: What Billers Need to Know** — https://claimpaid.io/blog/place-of-service-codes/ — POS codes 11/19/22/24/02/10, facility vs non-facility payment, POS denials.
+- **How Long Does Provider Credentialing Take?** — https://claimpaid.io/blog/provider-credentialing-timeline/ — 90-120 day timeline, CAQH, primary source verification, delay causes, how to speed it up.
+- **Patient Eligibility Verification Checklist** — https://claimpaid.io/blog/eligibility-verification-checklist/ — 10 pre-visit checks, real-time 270/271, preventing eligibility denials.
+- **Write-Off vs Adjustment vs Bad Debt: What's the Difference?** — https://claimpaid.io/blog/write-off-vs-adjustment/ — contractual adjustments, write-offs, bad debt — definitions, accounting, compliance guardrails.
+- **How to Fight a Timely Filing Denial** — https://claimpaid.io/blog/fight-timely-filing-denial/ — CO-29 appeals with 277CA proof, exception cases, prevention.
+- **RCM Software Buyer's Guide: What to Look For** — https://claimpaid.io/blog/rcm-software-buyers-guide/ — evaluation criteria — scrubbing, denial workflow, ERA, eligibility, reporting, integration, pricing.
+
 ## Optional
 
 - Developer API: https://claimpaid.io/ai/ (API keys, POST /api/v1/query)

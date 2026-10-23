@@ -4,13 +4,13 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>ClaimPaid Blog — Medical Billing & Denial Management Guides</title>
-<meta name="description" content="Practical guides on claim denials, appeals, timely filing limits, EDI, prior authorization, and claim scrubbing — written for medical billing teams."/>
+<meta name="description" content="Practical guides on claim denials, appeals, timely filing limits, EDI, prior auth, and claim scrubbing — for medical billing teams."/>
 <link rel="canonical" href="https://claimpaid.io/blog/"/>
 <meta name="robots" content="index, follow, max-image-preview:large"/>
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="ClaimPaid"/>
 <meta property="og:title" content="ClaimPaid Blog — Medical Billing & Denial Management Guides"/>
-<meta property="og:description" content="Practical guides on claim denials, appeals, timely filing limits, EDI, prior authorization, and claim scrubbing."/>
+<meta property="og:description" content="Practical guides on claim denials, appeals, timely filing, EDI, prior authorization, and claim scrubbing."/>
 <meta property="og:url" content="https://claimpaid.io/blog/"/>
 <meta property="og:image" content="https://claimpaid.io/claimpaid-icon.webp"/>
 <meta name="twitter:card" content="summary"/>
@@ -46,32 +46,46 @@ nav{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(14px);ba
 .btn-green{background:linear-gradient(135deg,#10b981,#059669);color:#04120c;box-shadow:0 8px 28px rgba(16,185,129,.35)}
 .btn-green:hover{transform:translateY(-3px);box-shadow:0 14px 40px rgba(16,185,129,.5)}
 .btn-sm{padding:10px 20px;font-size:14px}
-header.blog-hero{padding:150px 0 50px;text-align:center}
+header.blog-hero{padding:150px 0 40px;text-align:center}
 .blog-hero .kicker{display:inline-block;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--green-lt);border:1px solid rgba(16,185,129,.35);background:rgba(16,185,129,.08);padding:8px 18px;border-radius:100px;margin-bottom:22px}
 .blog-hero h1{font-size:clamp(36px,5vw,58px);font-weight:800;letter-spacing:-1.5px;margin-bottom:16px}
-.blog-hero p{color:var(--mut);font-size:17px;max-width:640px;margin:0 auto}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:22px;padding:20px 0 90px}
-.card{background:linear-gradient(160deg,rgba(16,185,129,.06),rgba(139,92,246,.04));border:1px solid var(--line);border-radius:18px;padding:28px;text-decoration:none;color:var(--txt);display:flex;flex-direction:column;transition:transform .3s,border-color .3s,box-shadow .3s}
+.blog-hero p{color:var(--mut);font-size:17px;max-width:640px;margin:0 auto 34px}
+.search-wrap{max-width:560px;margin:0 auto;position:relative}
+.search-wrap input{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px 20px 15px 48px;font-size:15.5px;color:var(--txt);outline:none;transition:border-color .25s}
+.search-wrap input:focus{border-color:rgba(16,185,129,.6)}
+.search-wrap input::placeholder{color:var(--mut)}
+.search-wrap .icon{position:absolute;left:17px;top:50%;transform:translateY(-50%);color:var(--mut);font-size:18px}
+.tabs{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:30px 0 8px}
+.tab{background:transparent;border:1px solid var(--line);color:var(--mut);font-size:13.5px;font-weight:600;padding:9px 18px;border-radius:100px;cursor:pointer;transition:all .25s;font-family:'Inter',sans-serif}
+.tab:hover{color:#fff;border-color:rgba(16,185,129,.5)}
+.tab.active{background:rgba(16,185,129,.14);border-color:rgba(16,185,129,.6);color:var(--green-lt)}
+.result-line{text-align:center;color:var(--mut);font-size:13.5px;margin:14px 0 0}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:22px;padding:24px 0 90px}
+.card{background:linear-gradient(160deg,rgba(16,185,129,.06),rgba(139,92,246,.04));border:1px solid var(--line);border-radius:18px;text-decoration:none;color:var(--txt);display:flex;flex-direction:column;transition:transform .3s,border-color .3s,box-shadow .3s;overflow:hidden}
 .card:hover{transform:translateY(-6px);border-color:rgba(16,185,129,.45);box-shadow:0 20px 50px rgba(16,185,129,.12)}
-.card .tag{display:inline-block;align-self:flex-start;font-size:11.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--green-lt);background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);padding:5px 12px;border-radius:100px;margin-bottom:16px}
+.card-img{width:100%;height:180px;object-fit:cover;display:block;background:var(--panel)}
+.card-body{padding:24px 26px 26px;display:flex;flex-direction:column;flex:1}
+.card .tag{display:inline-block;align-self:flex-start;font-size:11.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--green-lt);background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);padding:5px 12px;border-radius:100px;margin-bottom:14px}
 .card h2{font-size:20px;font-weight:700;letter-spacing:-.5px;line-height:1.35;margin-bottom:10px}
 .card p.excerpt{color:var(--mut);font-size:14.5px;flex:1;margin-bottom:18px}
 .card .meta{display:flex;gap:14px;font-size:12.5px;color:var(--mut)}
 .card .meta span::before{content:'• ';color:var(--green)}
 .card .meta span:first-child::before{content:''}
+#no-results{display:none;text-align:center;padding:60px 20px;color:var(--mut)}
+#no-results h2{font-size:24px;color:#fff;margin-bottom:10px}
 footer{border-top:1px solid var(--line);padding:40px 0;color:var(--mut);font-size:13.5px}
 .foot{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px}
 .foot a{color:var(--mut);text-decoration:none}
 .foot a:hover{color:var(--green-lt)}
 .foot-links{display:flex;gap:22px}
-@media(max-width:640px){.nav-links a:not(.btn){display:none}}
+@media(max-width:640px){.nav-links a:not(.btn){display:none}.tabs{justify-content:flex-start;overflow-x:auto;padding-bottom:6px}}
 </style>
 </head>
 <body>
 <nav><div class="wrap nav-in">
   <a class="logo" href="/"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo"/>Claim<span>Paid</span></a>
   <div class="nav-links">
-    <a href="/" >Product</a><a href="/blog/" class="active">Blog</a>
+    <a href="/">Product</a><a href="/blog/" class="active">Blog</a>
     <a class="btn btn-green btn-sm" href="/app/">Get started</a>
   </div>
 </div></nav>
@@ -80,58 +94,240 @@ footer{border-top:1px solid var(--line);padding:40px 0;color:var(--mut);font-siz
   <span class="kicker">ClaimPaid Blog</span>
   <h1>Guides that <span class="grad">get claims paid</span></h1>
   <p>Practical, no-fluff guides on denial management, appeals, timely filing, EDI, and revenue cycle operations — written for the billing teams who do the work.</p>
+  <div class="search-wrap">
+    <span class="icon">⌕</span>
+    <input id="blog-search" type="search" placeholder="Search guides — try &quot;denial&quot;, &quot;timely filing&quot;, &quot;ERA&quot;…" aria-label="Search articles"/>
+  </div>
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-topic="all">All articles</button><button class="tab" data-topic="Denials &amp; Appeals">Denials &amp; Appeals</button><button class="tab" data-topic="Filing &amp; Deadlines">Filing &amp; Deadlines</button><button class="tab" data-topic="EDI &amp; Payments">EDI &amp; Payments</button><button class="tab" data-topic="Getting Paid">Getting Paid</button><button class="tab" data-topic="Practice Operations">Practice Operations</button><button class="tab" data-topic="Guides">Guides</button>
+  </div>
+  <div class="result-line"><span id="result-count">18 articles</span></div>
 </div></header>
 
-<main><div class="wrap"><div class="cards">
+<main><div class="wrap">
+<div class="cards" id="cards">
 
-<a class="card" href="/blog/how-to-appeal-denied-claim/">
-  <span class="tag">Denial Management</span>
+<a class="card" href="/blog/how-to-appeal-denied-claim/" data-topic="Denials &amp; Appeals" data-title="How to Appeal a Denied Medical Claim: Step-by-Step" data-excerpt="A denied claim isn&#x27;t a lost claim. Follow this step-by-step appeal process — deadlines, documentation, and the follow-up cadence that gets denials overturned.">
+  <img class="card-img" src="https://picsum.photos/seed/cp-how-to-appeal-denied-claim-hero/1200/630" alt="How to Appeal a Denied Medical Claim: Step-by-Step" loading="lazy" width="1200" height="630"/>
+  <div class="card-body">
+  <span class="tag">Denials &amp; Appeals</span>
   <h2>How to Appeal a Denied Medical Claim: Step-by-Step</h2>
-  <p class="excerpt">A denied claim isn't a lost claim. Follow this step-by-step appeal process — deadlines, documentation, and the follow-up cadence that gets denials overturned.</p>
+  <p class="excerpt">A denied claim isn&#x27;t a lost claim. Follow this step-by-step appeal process — deadlines, documentation, and the follow-up cadence that gets denials overturned.</p>
   <div class="meta"><span>Oct 23, 2026</span><span>8 min read</span></div>
+  </div>
 </a>
-
-<a class="card" href="/blog/timely-filing-limits-by-payer-2026/">
-  <span class="tag">Timely Filing</span>
+<a class="card" href="/blog/timely-filing-limits-by-payer-2026/" data-topic="Filing &amp; Deadlines" data-title="Timely Filing Limits by Payer 2026: Deadline Guide" data-excerpt="Miss the filing window and the claim is uncollectible — no appeal. The submission deadlines for Aetna, Cigna, UHC, Anthem, Medicare, Humana, and more.">
+  <img class="card-img" src="https://picsum.photos/seed/cp-timely-filing-limits-by-payer-2026-hero/1200/630" alt="Timely Filing Limits by Payer 2026: Deadline Guide" loading="lazy" width="1200" height="630"/>
+  <div class="card-body">
+  <span class="tag">Filing &amp; Deadlines</span>
   <h2>Timely Filing Limits by Payer 2026: Deadline Guide</h2>
   <p class="excerpt">Miss the filing window and the claim is uncollectible — no appeal. The submission deadlines for Aetna, Cigna, UHC, Anthem, Medicare, Humana, and more.</p>
   <div class="meta"><span>Oct 23, 2026</span><span>7 min read</span></div>
+  </div>
 </a>
-
-<a class="card" href="/blog/top-claim-denial-reasons-fixes/">
-  <span class="tag">Denial Management</span>
+<a class="card" href="/blog/top-claim-denial-reasons-fixes/" data-topic="Denials &amp; Appeals" data-title="7 Most Common Claim Denial Reasons &amp; How to Fix Each" data-excerpt="Missing information, eligibility, prior auth, coding errors — the seven denial categories behind most lost revenue, with the exact fix for each.">
+  <img class="card-img" src="https://picsum.photos/seed/cp-top-claim-denial-reasons-fixes-hero/1200/630" alt="7 Most Common Claim Denial Reasons &amp; How to Fix Each" loading="lazy" width="1200" height="630"/>
+  <div class="card-body">
+  <span class="tag">Denials &amp; Appeals</span>
   <h2>7 Most Common Claim Denial Reasons &amp; How to Fix Each</h2>
   <p class="excerpt">Missing information, eligibility, prior auth, coding errors — the seven denial categories behind most lost revenue, with the exact fix for each.</p>
   <div class="meta"><span>Oct 23, 2026</span><span>9 min read</span></div>
+  </div>
 </a>
-
-<a class="card" href="/blog/837p-vs-835-explained/">
-  <span class="tag">EDI</span>
+<a class="card" href="/blog/837p-vs-835-explained/" data-topic="EDI &amp; Payments" data-title="837P vs 835 Explained: What Each EDI File Does" data-excerpt="One file sends claims out, the other brings payment answers back. A plain-English guide to the 837P, 835, 999, and 277CA — and how they fit together.">
+  <img class="card-img" src="https://picsum.photos/seed/cp-837p-vs-835-explained-hero/1200/630" alt="837P vs 835 Explained: What Each EDI File Does" loading="lazy" width="1200" height="630"/>
+  <div class="card-body">
+  <span class="tag">EDI &amp; Payments</span>
   <h2>837P vs 835 Explained: What Each EDI File Does</h2>
   <p class="excerpt">One file sends claims out, the other brings payment answers back. A plain-English guide to the 837P, 835, 999, and 277CA — and how they fit together.</p>
   <div class="meta"><span>Oct 23, 2026</span><span>6 min read</span></div>
+  </div>
 </a>
-
-<a class="card" href="/blog/prior-authorization-appeal-letter/">
-  <span class="tag">Prior Authorization</span>
+<a class="card" href="/blog/prior-authorization-appeal-letter/" data-topic="Denials &amp; Appeals" data-title="How to Write a Prior Authorization Appeal Letter" data-excerpt="Prior auth denials are overturned every day — when the letter makes the medical-necessity case properly. Structure, template outline, and what reviewers look for.">
+  <img class="card-img" src="https://picsum.photos/seed/cp-prior-authorization-appeal-letter-hero/1200/630" alt="How to Write a Prior Authorization Appeal Letter" loading="lazy" width="1200" height="630"/>
+  <div class="card-body">
+  <span class="tag">Denials &amp; Appeals</span>
   <h2>How to Write a Prior Authorization Appeal Letter</h2>
   <p class="excerpt">Prior auth denials are overturned every day — when the letter makes the medical-necessity case properly. Structure, template outline, and what reviewers look for.</p>
   <div class="meta"><span>Oct 23, 2026</span><span>8 min read</span></div>
+  </div>
 </a>
-
-<a class="card" href="/blog/what-is-claim-scrubbing/">
-  <span class="tag">Claims</span>
+<a class="card" href="/blog/what-is-claim-scrubbing/" data-topic="Getting Paid" data-title="What Is Claim Scrubbing? Clean Claims Explained" data-excerpt="A claim scrubber checks every claim for errors before it goes to the payer. How scrubbing works, what it catches, and why clean-claim rate is the metric that matters.">
+  <img class="card-img" src="https://picsum.photos/seed/cp-what-is-claim-scrubbing-hero/1200/630" alt="What Is Claim Scrubbing? Clean Claims Explained" loading="lazy" width="1200" height="630"/>
+  <div class="card-body">
+  <span class="tag">Getting Paid</span>
   <h2>What Is Claim Scrubbing? Clean Claims Explained</h2>
   <p class="excerpt">A claim scrubber checks every claim for errors before it goes to the payer. How scrubbing works, what it catches, and why clean-claim rate is the metric that matters.</p>
   <div class="meta"><span>Oct 23, 2026</span><span>6 min read</span></div>
+  </div>
 </a>
-
-</div></div></main>
+<a class="card" href="/blog/clean-claim-rate-benchmarks/" data-topic="Filing &amp; Deadlines" data-title="What Is a Good Clean Claim Rate?" data-excerpt="Clean claim rate benchmarks, the formula, and what actually moves the number — for billing teams.">
+  <img class="card-img" src="https://picsum.photos/seed/cp-clean-claim-rate-benchmarks-hero/1200/630" alt="What Is a Good Clean Claim Rate?" loading="lazy" width="1200" height="630"/>
+  <div class="card-body">
+  <span class="tag">Filing &amp; Deadlines</span>
+  <h2>What Is a Good Clean Claim Rate?</h2>
+  <p class="excerpt">Clean claim rate benchmarks, the formula, and what actually moves the number — for billing teams.</p>
+  <div class="meta"><span>Oct 23, 2026</span><span>7 min read</span></div>
+  </div>
+</a>
+<a class="card" href="/blog/denial-management-kpis/" data-topic="Denials &amp; Appeals" data-title="Denial Management KPIs Every Billing Team Should Track" data-excerpt="Denial rate, overturn rate, days in A/R, net collection rate — the KPI dashboard for denial management.">
+  <img class="card-img" src="https://picsum.photos/seed/cp-denial-management-kpis-hero/1200/630" alt="Denial Management KPIs Every Billing Team Should Track" loading="lazy" width="1200" height="630"/>
+  <div class="card-body">
+  <span class="tag">Denials &amp; Appeals</span>
+  <h2>Denial Management KPIs Every Billing Team Should Track</h2>
+  <p class="excerpt">Denial rate, overturn rate, days in A/R, net collection rate — the KPI dashboard for denial management.</p>
+  <div class="meta"><span>Oct 23, 2026</span><span>8 min read</span></div>
+  </div>
+</a>
+<a class="card" href="/blog/crossover-claims-explained/" data-topic="EDI &amp; Payments" data-title="What Are Crossover Claims? Medicare-Medicaid Billing Explained" data-excerpt="Crossover claims explained: how Medicare forwards claims to Medicaid automatically — and when it doesn&#x27;t.">
+  <img class="card-img" src="https://picsum.photos/seed/cp-crossover-claims-explained-hero/1200/630" alt="What Are Crossover Claims? Medicare-Medicaid Billing Explained" loading="lazy" width="1200" height="630"/>
+  <div class="card-body">
+  <span class="tag">EDI &amp; Payments</span>
+  <h2>What Are Crossover Claims? Medicare-Medicaid Billing Explained</h2>
+  <p class="excerpt">Crossover claims explained: how Medicare forwards claims to Medicaid automatically — and when it doesn&#x27;t.</p>
+  <div class="meta"><span>Oct 23, 2026</span><span>7 min read</span></div>
+  </div>
+</a>
+<a class="card" href="/blog/coordination-of-benefits-guide/" data-topic="EDI &amp; Payments" data-title="Coordination of Benefits (COB): How It Affects Claims" data-excerpt="COB determines which payer pays first. The rules, the birthday rule, and how to fix COB denials.">
+  <img class="card-img" src="https://picsum.photos/seed/cp-coordination-of-benefits-guide-hero/1200/630" alt="Coordination of Benefits (COB): How It Affects Claims" loading="lazy" width="1200" height="630"/>
+  <div class="card-body">
+  <span class="tag">EDI &amp; Payments</span>
+  <h2>Coordination of Benefits (COB): How It Affects Claims</h2>
+  <p class="excerpt">COB determines which payer pays first. The rules, the birthday rule, and how to fix COB denials.</p>
+  <div class="meta"><span>Oct 23, 2026</span><span>8 min read</span></div>
+  </div>
+</a>
+<a class="card" href="/blog/era-vs-eob-difference/" data-topic="EDI &amp; Payments" data-title="ERA vs EOB: What&#x27;s the Difference?" data-excerpt="ERA vs EOB — same payment answers, different formats. What billers need to know about the 835.">
+  <img class="card-img" src="https://picsum.photos/seed/cp-era-vs-eob-difference-hero/1200/630" alt="ERA vs EOB: What&#x27;s the Difference?" loading="lazy" width="1200" height="630"/>
+  <div class="card-body">
+  <span class="tag">EDI &amp; Payments</span>
+  <h2>ERA vs EOB: What&#x27;s the Difference?</h2>
+  <p class="excerpt">ERA vs EOB — same payment answers, different formats. What billers need to know about the 835.</p>
+  <div class="meta"><span>Oct 23, 2026</span><span>6 min read</span></div>
+  </div>
+</a>
+<a class="card" href="/blog/medical-billing-modifiers-guide/" data-topic="Practice Operations" data-title="Common Billing Modifiers (25, 59, 91, 76) Explained" data-excerpt="Modifiers 25, 59, 91, 76 — what they mean, when to append them, and how misuse triggers denials.">
+  <img class="card-img" src="https://picsum.photos/seed/cp-medical-billing-modifiers-guide-hero/1200/630" alt="Common Billing Modifiers (25, 59, 91, 76) Explained" loading="lazy" width="1200" height="630"/>
+  <div class="card-body">
+  <span class="tag">Practice Operations</span>
+  <h2>Common Billing Modifiers (25, 59, 91, 76) Explained</h2>
+  <p class="excerpt">Modifiers 25, 59, 91, 76 — what they mean, when to append them, and how misuse triggers denials.</p>
+  <div class="meta"><span>Oct 23, 2026</span><span>8 min read</span></div>
+  </div>
+</a>
+<a class="card" href="/blog/place-of-service-codes/" data-topic="Practice Operations" data-title="Place of Service Codes: What Billers Need to Know" data-excerpt="POS codes 11, 19, 22, 24 and more — what they mean, how they affect payment, and the denials they cause.">
+  <img class="card-img" src="https://picsum.photos/seed/cp-place-of-service-codes-hero/1200/630" alt="Place of Service Codes: What Billers Need to Know" loading="lazy" width="1200" height="630"/>
+  <div class="card-body">
+  <span class="tag">Practice Operations</span>
+  <h2>Place of Service Codes: What Billers Need to Know</h2>
+  <p class="excerpt">POS codes 11, 19, 22, 24 and more — what they mean, how they affect payment, and the denials they cause.</p>
+  <div class="meta"><span>Oct 23, 2026</span><span>7 min read</span></div>
+  </div>
+</a>
+<a class="card" href="/blog/provider-credentialing-timeline/" data-topic="Practice Operations" data-title="How Long Does Provider Credentialing Take?" data-excerpt="Provider credentialing typically takes 90-120 days. The stages, the paperwork, and how to avoid delays.">
+  <img class="card-img" src="https://picsum.photos/seed/cp-provider-credentialing-timeline-hero/1200/630" alt="How Long Does Provider Credentialing Take?" loading="lazy" width="1200" height="630"/>
+  <div class="card-body">
+  <span class="tag">Practice Operations</span>
+  <h2>How Long Does Provider Credentialing Take?</h2>
+  <p class="excerpt">Provider credentialing typically takes 90-120 days. The stages, the paperwork, and how to avoid delays.</p>
+  <div class="meta"><span>Oct 23, 2026</span><span>7 min read</span></div>
+  </div>
+</a>
+<a class="card" href="/blog/eligibility-verification-checklist/" data-topic="Practice Operations" data-title="Patient Eligibility Verification Checklist" data-excerpt="The 10-point eligibility checklist that prevents the most common preventable denials.">
+  <img class="card-img" src="https://picsum.photos/seed/cp-eligibility-verification-checklist-hero/1200/630" alt="Patient Eligibility Verification Checklist" loading="lazy" width="1200" height="630"/>
+  <div class="card-body">
+  <span class="tag">Practice Operations</span>
+  <h2>Patient Eligibility Verification Checklist</h2>
+  <p class="excerpt">The 10-point eligibility checklist that prevents the most common preventable denials.</p>
+  <div class="meta"><span>Oct 23, 2026</span><span>7 min read</span></div>
+  </div>
+</a>
+<a class="card" href="/blog/write-off-vs-adjustment/" data-topic="Getting Paid" data-title="Write-Off vs Adjustment vs Bad Debt: What&#x27;s the Difference?" data-excerpt="Contractual adjustments, write-offs, and bad debt — what each means and when each is appropriate.">
+  <img class="card-img" src="https://picsum.photos/seed/cp-write-off-vs-adjustment-hero/1200/630" alt="Write-Off vs Adjustment vs Bad Debt: What&#x27;s the Difference?" loading="lazy" width="1200" height="630"/>
+  <div class="card-body">
+  <span class="tag">Getting Paid</span>
+  <h2>Write-Off vs Adjustment vs Bad Debt: What&#x27;s the Difference?</h2>
+  <p class="excerpt">Contractual adjustments, write-offs, and bad debt — what each means and when each is appropriate.</p>
+  <div class="meta"><span>Oct 23, 2026</span><span>7 min read</span></div>
+  </div>
+</a>
+<a class="card" href="/blog/fight-timely-filing-denial/" data-topic="Denials &amp; Appeals" data-title="How to Fight a Timely Filing Denial" data-excerpt="CO-29 timely filing denials: how to prove on-time submission and when appeals actually work.">
+  <img class="card-img" src="https://picsum.photos/seed/cp-fight-timely-filing-denial-hero/1200/630" alt="How to Fight a Timely Filing Denial" loading="lazy" width="1200" height="630"/>
+  <div class="card-body">
+  <span class="tag">Denials &amp; Appeals</span>
+  <h2>How to Fight a Timely Filing Denial</h2>
+  <p class="excerpt">CO-29 timely filing denials: how to prove on-time submission and when appeals actually work.</p>
+  <div class="meta"><span>Oct 23, 2026</span><span>7 min read</span></div>
+  </div>
+</a>
+<a class="card" href="/blog/rcm-software-buyers-guide/" data-topic="Guides" data-title="RCM Software Buyer&#x27;s Guide: What to Look For" data-excerpt="Evaluating RCM software? The criteria that actually matter — scrubbing, denials, ERA, eligibility, reporting, integration.">
+  <img class="card-img" src="https://picsum.photos/seed/cp-rcm-software-buyers-guide-hero/1200/630" alt="RCM Software Buyer&#x27;s Guide: What to Look For" loading="lazy" width="1200" height="630"/>
+  <div class="card-body">
+  <span class="tag">Guides</span>
+  <h2>RCM Software Buyer&#x27;s Guide: What to Look For</h2>
+  <p class="excerpt">Evaluating RCM software? The criteria that actually matter — scrubbing, denials, ERA, eligibility, reporting, integration.</p>
+  <div class="meta"><span>Oct 23, 2026</span><span>9 min read</span></div>
+  </div>
+</a>
+</div>
+<div id="no-results">
+  <h2>No guides found</h2>
+  <p>Try a different search term or topic.</p>
+</div>
+</div></main>
 
 <footer><div class="wrap foot">
   <a class="logo" href="/" style="font-size:17px"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo" style="width:28px;height:28px"/>Claim<span>Paid</span></a>
   <div class="foot-links"><a href="/blog/">Blog</a><a href="/legal/terms">Terms</a><a href="/legal/privacy">Privacy</a><a href="mailto:support@claimpaid.io">support@claimpaid.io</a></div>
   <div>© 2026 ClaimPaid · Get your claims paid.</div>
 </div></footer>
+<script>
+
+function filterCards(cards, q, topic) {
+  q = (q || '').trim().toLowerCase();
+  var visible = 0;
+  cards.forEach(function(card) {
+    var hay = (card.title + ' ' + card.excerpt + ' ' + card.topic).toLowerCase();
+    var okQ = !q || hay.indexOf(q) !== -1;
+    var okT = topic === 'all' || card.topic === topic;
+    card.show = okQ && okT;
+    if (card.show) visible++;
+  });
+  return visible;
+}
+if (typeof module !== 'undefined') { module.exports = { filterCards: filterCards }; }
+
+(function() {
+  var input = document.getElementById('blog-search');
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+  var noResults = document.getElementById('no-results');
+  var countEl = document.getElementById('result-count');
+  var activeTopic = 'all';
+  function cardData() {
+    return Array.prototype.slice.call(document.querySelectorAll('.card')).map(function(el) {
+      return { title: el.dataset.title, excerpt: el.dataset.excerpt, topic: el.dataset.topic,
+               show: true, el: el };
+    });
+  }
+  function apply() {
+    var data = cardData();
+    var n = filterCards(data, input.value, activeTopic);
+    data.forEach(function(c) { c.el.style.display = c.show ? '' : 'none'; });
+    noResults.style.display = n ? 'none' : '';
+    countEl.textContent = n + ' article' + (n === 1 ? '' : 's');
+  }
+  input.addEventListener('input', apply);
+  tabs.forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      tabs.forEach(function(t) { t.classList.remove('active'); });
+      tab.classList.add('active');
+      activeTopic = tab.dataset.topic;
+      apply();
+    });
+  });
+  apply();
+})();
+
+</script>
 </body>
 </html>

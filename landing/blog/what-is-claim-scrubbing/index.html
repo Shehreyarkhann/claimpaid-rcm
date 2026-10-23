@@ -12,11 +12,11 @@
 <meta property="og:title" content="What Is Claim Scrubbing? Clean Claims Explained"/>
 <meta property="og:description" content="A claim scrubber checks every claim for errors before it goes to the payer. How scrubbing works, what it catches, and why clean-claim rate matters."/>
 <meta property="og:url" content="https://claimpaid.io/blog/what-is-claim-scrubbing/"/>
-<meta property="og:image" content="https://claimpaid.io/claimpaid-icon.webp"/>
+<meta property="og:image" content="https://picsum.photos/seed/cp-what-is-claim-scrubbing-hero/1200/630"/>
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="What Is Claim Scrubbing? Clean Claims Explained"/>
 <meta name="twitter:description" content="How claim scrubbers work, what they check, and why clean-claim rate is the metric that matters."/>
-<meta name="twitter:image" content="https://claimpaid.io/claimpaid-icon.webp"/>
+<meta name="twitter:image" content="https://picsum.photos/seed/cp-what-is-claim-scrubbing-hero/1200/630"/>
 <link rel="icon" type="image/webp" href="/claimpaid-icon.webp"/>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"Article","headline":"What Is Claim Scrubbing? Clean Claims Explained","datePublished":"2026-10-23","dateModified":"2026-10-23","author":{"@type":"Organization","name":"ClaimPaid","url":"https://claimpaid.io/"},"publisher":{"@type":"Organization","name":"ClaimPaid","url":"https://claimpaid.io/","logo":{"@type":"ImageObject","url":"https://claimpaid.io/claimpaid-icon.webp"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://claimpaid.io/blog/what-is-claim-scrubbing/"},"description":"What claim scrubbing is, how scrubbers validate claims before submission, and how clean-claim rates work."}
@@ -88,6 +88,20 @@ footer{border-top:1px solid var(--line);padding:40px 0;color:var(--mut);font-siz
 .foot a:hover{color:var(--green-lt)}
 .foot-links{display:flex;gap:22px}
 @media(max-width:640px){.nav-links a:not(.btn){display:none}table{font-size:13px}}
+
+.hero-img{width:100%;height:auto;aspect-ratio:1200/630;object-fit:cover;border-radius:18px;margin:8px 0 34px;border:1px solid var(--line);background:var(--panel)}
+.mid-img{width:100%;height:auto;aspect-ratio:1200/630;object-fit:cover;border-radius:16px;margin:30px 0 8px;border:1px solid var(--line);background:var(--panel)}
+.img-cap{font-size:13px;color:var(--mut);text-align:center;margin:0 0 28px}
+.statbox{background:linear-gradient(140deg,rgba(16,185,129,.14),rgba(139,92,246,.1));border:1px solid rgba(16,185,129,.4);border-radius:16px;padding:28px 30px;margin:34px 0;text-align:center}
+.statbox .num{font-family:'Sora',sans-serif;font-size:46px;font-weight:800;letter-spacing:-1px;background:linear-gradient(92deg,var(--green-lt),var(--violet-lt));-webkit-background-clip:text;background-clip:text;color:transparent}
+.statbox .cap{font-size:14px;color:var(--mut);margin-top:8px;max-width:560px;margin-left:auto;margin-right:auto}
+.pullquote{border-left:4px solid var(--violet);padding:8px 0 8px 26px;margin:34px 0;font-size:19px;font-style:italic;color:#fff;line-height:1.6}
+.flow{display:flex;align-items:stretch;margin:32px 0;flex-wrap:wrap}
+.flow .step{flex:1;min-width:150px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center;font-size:14px;color:#c9d2e8}
+.flow .step .n{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:var(--green-lt);font-weight:700;font-size:13px;margin-bottom:10px}
+.flow .arr{align-self:center;color:var(--green-lt);font-size:22px;padding:0 6px}
+@media(max-width:640px){.flow .arr{display:none}.flow .step{min-width:100%;margin-bottom:8px}}
+
 </style>
 </head>
 <body>
@@ -101,6 +115,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;color:var(--mut);font-siz
 <span class="tag">Claims</span>
 <h1>What Is Claim Scrubbing? Clean Claims Explained</h1>
 <div class="byline">ClaimPaid · October 23, 2026 · 6 min read</div>
+<img class="hero-img" src="https://picsum.photos/seed/cp-what-is-claim-scrubbing-hero/1200/630" alt="Illustration for the claim scrubbing guide" loading="lazy" width="1200" height="630"/>
 
 <div class="answer">
 <div class="lbl">The short answer</div>
@@ -181,6 +196,8 @@ footer{border-top:1px solid var(--line);padding:40px 0;color:var(--mut);font-siz
 </ul>
 <p>Each rule maps directly to a denial you've already seen on a remittance advice. That's the discipline: every denial pattern becomes a rule, and the rule prevents the next hundred instances.</p>
 
+<img class="mid-img" src="https://picsum.photos/seed/cp-what-is-claim-scrubbing-mid/1200/630" alt="Illustration of automated claim validation before submission" loading="lazy" width="1200" height="630"/><div class="img-cap">Illustration of automated claim validation before submission</div>
+<div class="statbox"><div class="num">15</div><div class="cap">Payer-aware rules in ClaimPaid’s claim scrubber — each one catching errors while they’re still cheap to fix.</div></div>
 <div class="faq">
 <h2>Frequently asked questions</h2>
 <div class="faq-item"><h3>What is claim scrubbing?</h3><p>Claim scrubbing is the automated validation of healthcare claims for errors before they are submitted to the payer. A scrubber checks data completeness, coding validity, payer-specific rules, and medical-necessity indicators, flagging problems so billers can fix them before submission.</p></div>

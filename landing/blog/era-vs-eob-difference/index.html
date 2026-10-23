@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ERA vs EOB: What&#x27;s the Difference? (835 Explained)</title>
+<meta name="description" content="ERA vs EOB explained: the electronic remittance advice (835) vs the paper explanation of benefits — same info, different formats."/>
+<link rel="canonical" href="https://claimpaid.io/blog/era-vs-eob-difference/"/>
+<meta name="robots" content="index, follow, max-image-preview:large"/>
+<meta property="og:type" content="article"/>
+<meta property="og:site_name" content="ClaimPaid"/>
+<meta property="og:title" content="ERA vs EOB: What&#x27;s the Difference? (835 Explained)"/>
+<meta property="og:description" content="ERA vs EOB — same payment answers, different formats. What billers need to know about the 835."/>
+<meta property="og:url" content="https://claimpaid.io/blog/era-vs-eob-difference/"/>
+<meta property="og:image" content="https://picsum.photos/seed/cp-era-vs-eob-difference-hero/1200/630"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="ERA vs EOB: What&#x27;s the Difference? (835 Explained)"/>
+<meta name="twitter:description" content="ERA vs EOB explained: the electronic remittance advice (835) vs the paper explanation of benefits — same info, different formats."/>
+<meta name="twitter:image" content="https://picsum.photos/seed/cp-era-vs-eob-difference-hero/1200/630"/>
+<link rel="icon" type="image/webp" href="/claimpaid-icon.webp"/>
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "Article", "headline": "ERA vs EOB: What's the Difference? (835 Explained)", "datePublished": "2026-10-23", "dateModified": "2026-10-23", "author": {"@type": "Organization", "name": "ClaimPaid", "url": "https://claimpaid.io/"}, "publisher": {"@type": "Organization", "name": "ClaimPaid", "url": "https://claimpaid.io/", "logo": {"@type": "ImageObject", "url": "https://claimpaid.io/claimpaid-icon.webp"}}, "mainEntityOfPage": {"@type": "WebPage", "@id": "https://claimpaid.io/blog/era-vs-eob-difference/"}, "image": "https://picsum.photos/seed/cp-era-vs-eob-difference-hero/1200/630", "description": "ERA vs EOB explained: the electronic remittance advice (835) vs the paper explanation of benefits \u2014 same info, different formats."}
+</script>
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "What is the difference between an ERA and an EOB?", "acceptedAnswer": {"@type": "Answer", "text": "An ERA (Electronic Remittance Advice, the 835 EDI file) is structured, machine-readable payment data delivered electronically. An EOB (Explanation of Benefits) is the human-readable paper or PDF version. Both communicate the same adjudication results \u2014 what was paid, denied, and why \u2014 but only the ERA can be auto-posted by software."}}, {"@type": "Question", "name": "What is an 835 file?", "acceptedAnswer": {"@type": "Answer", "text": "The 835 is the HIPAA-standard EDI transaction for the Electronic Remittance Advice. Payers send it to communicate claim payment and denial decisions in structured format, typically delivered through a clearinghouse to the provider's practice management system."}}, {"@type": "Question", "name": "Should I enroll in ERA, EFT, or both?", "acceptedAnswer": {"@type": "Answer", "text": "Both, and separately. EFT (electronic funds transfer) gets the money to your bank account fast; ERA enrollment gets the payment details to your system fast. Many practices enable EFT but never complete ERA enrollment \u2014 enroll in both, per payer."}}, {"@type": "Question", "name": "Can ERAs be posted automatically?", "acceptedAnswer": {"@type": "Answer", "text": "Yes \u2014 that's their main operational advantage. With auto-posting rules configured in the practice management system, 835s can post payments and adjustments without manual keying. Always maintain a daily exception report for ERAs that arrive but fail to post."}}, {"@type": "Question", "name": "Do patients get EOBs too?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. Payers send EOBs to patients describing the same adjudication, which is a frequent source of confused patient phone calls. The provider ERA/EOB and the patient EOB describe the same claim decision."}}]}
+</script>
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Home", "item": "https://claimpaid.io/"}, {"@type": "ListItem", "position": 2, "name": "Blog", "item": "https://claimpaid.io/blog/"}, {"@type": "ListItem", "position": 3, "name": "ERA vs EOB: What's the Difference?", "item": "https://claimpaid.io/blog/era-vs-eob-difference/"}]}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+
+:root{--navy:#0b1220;--navy2:#0f172a;--panel:#111c33;--green:#10b981;--green-lt:#34d399;--violet:#8b5cf6;--violet-lt:#a78bfa;--txt:#e8eefc;--mut:#93a0bd;--line:rgba(255,255,255,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--navy);color:var(--txt);font-family:'Inter',system-ui,sans-serif;line-height:1.75}
+h1,h2,h3{font-family:'Sora',sans-serif;line-height:1.3}
+.wrap{max-width:780px;margin:0 auto;padding:0 24px}
+.grad{background:linear-gradient(92deg,var(--green-lt),var(--violet-lt));-webkit-background-clip:text;background-clip:text;color:transparent}
+nav{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(14px);background:rgba(11,18,32,.85);border-bottom:1px solid var(--line)}
+.nav-in{max-width:1100px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:68px}
+.logo{display:flex;align-items:center;gap:10px;font-family:'Sora';font-weight:800;font-size:21px;letter-spacing:-.4px;text-decoration:none;color:var(--txt)}
+.logo img{width:34px;height:34px;border-radius:9px;box-shadow:0 0 18px rgba(16,185,129,.45)}
+.logo span{color:var(--green-lt)}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{color:var(--mut);text-decoration:none;font-size:14.5px;font-weight:500}
+.nav-links a:hover{color:#fff}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:15px;border-radius:12px;padding:13px 26px;text-decoration:none;border:none;transition:transform .25s,box-shadow .25s;cursor:pointer}
+.btn-green{background:linear-gradient(135deg,#10b981,#059669);color:#04120c;box-shadow:0 8px 28px rgba(16,185,129,.35)}
+.btn-green:hover{transform:translateY(-3px);box-shadow:0 14px 40px rgba(16,185,129,.5)}
+.btn-sm{padding:10px 20px;font-size:14px}
+article{padding:140px 0 60px}
+.crumb{font-size:13px;color:var(--mut);margin-bottom:18px}
+.crumb a{color:var(--green-lt);text-decoration:none}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--green-lt);background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);padding:5px 12px;border-radius:100px;margin-bottom:18px}
+article h1{font-size:clamp(30px,4.5vw,46px);font-weight:800;letter-spacing:-1.2px;margin-bottom:14px}
+.byline{color:var(--mut);font-size:14px;margin-bottom:34px}
+.answer{background:linear-gradient(160deg,rgba(16,185,129,.1),rgba(16,185,129,.03));border:1px solid rgba(16,185,129,.4);border-left:4px solid var(--green);border-radius:14px;padding:22px 26px;margin-bottom:38px}
+.answer .lbl{font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--green-lt);margin-bottom:10px}
+.answer p{font-size:16px;margin:0}
+.prose h2{font-size:26px;font-weight:700;letter-spacing:-.5px;margin:44px 0 16px}
+.prose h3{font-size:19px;font-weight:700;margin:30px 0 12px;color:#fff}
+.prose p{margin:0 0 18px;color:#c9d2e8}
+.prose ul,.prose ol{margin:0 0 20px 22px;color:#c9d2e8}
+.prose li{margin-bottom:10px}
+.prose strong{color:#fff}
+.prose a{color:var(--green-lt);text-decoration:underline;text-underline-offset:3px}
+table{width:100%;border-collapse:collapse;margin:24px 0;font-size:14.5px}
+th{background:rgba(16,185,129,.1);color:#fff;text-align:left;padding:12px 14px;font-family:'Sora';font-size:13.5px}
+td{padding:12px 14px;border-top:1px solid var(--line);color:#c9d2e8;vertical-align:top}
+tr:hover td{background:rgba(255,255,255,.02)}
+.faq{margin:44px 0}
+.faq-item{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 24px;margin-bottom:14px}
+.faq-item h3{font-size:16.5px;margin:0 0 8px;color:#fff}
+.faq-item p{margin:0;font-size:14.5px;color:#c9d2e8}
+.cta{background:linear-gradient(140deg,rgba(16,185,129,.14),rgba(139,92,246,.1));border:1px solid rgba(16,185,129,.4);border-radius:20px;padding:40px;text-align:center;margin:50px 0}
+.cta h2{font-size:26px;margin-bottom:12px}
+.cta p{color:var(--mut);margin-bottom:24px;max-width:520px;margin-left:auto;margin-right:auto}
+footer{border-top:1px solid var(--line);padding:40px 0;color:var(--mut);font-size:13.5px}
+.foot{max-width:1100px;margin:0 auto;padding:0 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px}
+.foot a{color:var(--mut);text-decoration:none}
+.foot a:hover{color:var(--green-lt)}
+.foot-links{display:flex;gap:22px}
+.note{font-size:13.5px;color:var(--mut);background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.3);border-radius:12px;padding:16px 20px;margin:26px 0}
+@media(max-width:640px){.nav-links a:not(.btn){display:none}table{font-size:13px}}
+
+
+.hero-img{width:100%;height:auto;aspect-ratio:1200/630;object-fit:cover;border-radius:18px;margin:8px 0 34px;border:1px solid var(--line);background:var(--panel)}
+.mid-img{width:100%;height:auto;aspect-ratio:1200/630;object-fit:cover;border-radius:16px;margin:30px 0 8px;border:1px solid var(--line);background:var(--panel)}
+.img-cap{font-size:13px;color:var(--mut);text-align:center;margin:0 0 28px}
+.statbox{background:linear-gradient(140deg,rgba(16,185,129,.14),rgba(139,92,246,.1));border:1px solid rgba(16,185,129,.4);border-radius:16px;padding:28px 30px;margin:34px 0;text-align:center}
+.statbox .num{font-family:'Sora',sans-serif;font-size:46px;font-weight:800;letter-spacing:-1px;background:linear-gradient(92deg,var(--green-lt),var(--violet-lt));-webkit-background-clip:text;background-clip:text;color:transparent}
+.statbox .cap{font-size:14px;color:var(--mut);margin-top:8px;max-width:560px;margin-left:auto;margin-right:auto}
+.pullquote{border-left:4px solid var(--violet);padding:8px 0 8px 26px;margin:34px 0;font-size:19px;font-style:italic;color:#fff;line-height:1.6}
+.flow{display:flex;align-items:stretch;margin:32px 0;flex-wrap:wrap}
+.flow .step{flex:1;min-width:150px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center;font-size:14px;color:#c9d2e8}
+.flow .step .n{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:var(--green-lt);font-weight:700;font-size:13px;margin-bottom:10px}
+.flow .arr{align-self:center;color:var(--green-lt);font-size:22px;padding:0 6px}
+@media(max-width:640px){.flow .arr{display:none}.flow .step{min-width:100%;margin-bottom:8px}}
+
+</style>
+</head>
+<body>
+<nav><div class="nav-in">
+  <a class="logo" href="/"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo"/>Claim<span>Paid</span></a>
+  <div class="nav-links"><a href="/">Product</a><a href="/blog/">Blog</a><a class="btn btn-green btn-sm" href="/app/">Get started</a></div>
+</div></nav>
+
+<article><div class="wrap">
+<div class="crumb"><a href="/">Home</a> / <a href="/blog/">Blog</a> / ERA vs EOB: What&#x27;s the Difference?</div>
+<span class="tag">EDI &amp; Payments</span>
+<h1>ERA vs EOB: What&#x27;s the Difference?</h1>
+<div class="byline">ClaimPaid · October 23, 2026 · 6 min read</div>
+<img class="hero-img" src="https://picsum.photos/seed/cp-era-vs-eob-difference-hero/1200/630" alt="Illustration for the ERA vs EOB comparison guide" loading="lazy" width="1200" height="630"/>
+
+<div class="answer">
+<div class="lbl">The short answer</div>
+<p>An ERA (Electronic Remittance Advice, the 835 EDI file) and an EOB (Explanation of Benefits, the paper or PDF document) communicate the same thing: how the payer adjudicated your claim — what was paid, what was denied, and why. The difference is format and usability. The ERA is structured data your practice management system can auto-post; the EOB is a human-readable document someone must read and key in manually.</p>
+</div>
+
+<div class="prose">
+
+<p>After you submit a claim, the payer answers with a remittance: what was paid, what was denied, what was adjusted, and why. That answer arrives in one of two forms — the ERA or the EOB — and understanding both (and which one you're actually getting) is fundamental to posting payments, working denials, and reconciling revenue.</p>
+
+<h2>Definitions</h2>
+<ul>
+<li><strong>ERA — Electronic Remittance Advice:</strong> the HIPAA-standard 835 EDI transaction. Structured, machine-readable data delivered electronically, usually through your clearinghouse.</li>
+<li><strong>EOB — Explanation of Benefits:</strong> the paper (or PDF) document — the familiar multi-page printout with patient, claim, and payment details in human-readable form. EOBs also go to patients, which is a common source of confusion; the provider version and the patient version describe the same adjudication.</li>
+</ul>
+<p>Same information, different containers. Our <a href="/blog/837p-vs-835-explained/">837P vs 835 guide</a> covers how the 835 fits into the full EDI cycle.</p>
+
+<div class="pullquote">The ERA and the EOB tell the same story. Only one of them lets your software read it.</div>
+<h2>The practical differences</h2>
+<table>
+<tr><th></th><th>ERA (835)</th><th>EOB (paper/PDF)</th></tr>
+<tr><td>Format</td><td>Structured EDI data</td><td>Human-readable document</td></tr>
+<tr><td>Delivery</td><td>Electronic, via clearinghouse</td><td>Mail or payer portal download</td></tr>
+<tr><td>Posting</td><td>Can auto-post to the PM system</td><td>Manual keying required</td></tr>
+<tr><td>Speed</td><td>Hours to days after adjudication</td><td>Days to weeks</td></tr>
+<tr><td>Denial codes</td><td>CARC/RARC codes in structured fields</td><td>Codes plus narrative text</td></tr>
+<tr><td>Reconciliation</td><td>Systematic, auditable</td><td>Labor-intensive</td></tr>
+</table>
+
+<h2>Why ERAs matter more than EOBs operationally</h2>
+<p>Auto-posting is the headline benefit: when 835s flow into the practice management system and post automatically, payment posting labor drops dramatically and posting errors fall with it. But the deeper value is in denial workflow — structured CARC/RARC codes can route denials to the right work queues automatically, which is how teams <a href="/blog/denial-management-kpis/">track denial KPIs</a> without drowning in paper.</p>
+<p>EOBs still matter. They're the document of record patients see, they're what you pull when an ERA is ambiguous, and for some payers or claim types they're still all you get. But every payer you can get ERAs from is a payer you should get ERAs from.</p>
+
+<h2>Getting set up for ERA delivery</h2>
+<ol>
+<li><strong>Enroll per payer.</strong> ERA enrollment is typically separate from EFT (electronic funds transfer) enrollment and separate from claim submission enrollment. Many practices have EFT turned on but never completed ERA enrollment — they're getting fast money with slow information.</li>
+<li><strong>Route through your clearinghouse.</strong> Your clearinghouse receives the 835s and delivers them to your PM system. Confirm the routing is active for each payer.</li>
+<li><strong>Configure auto-posting rules</strong> in the PM system: which adjustments post automatically, which require review, and what happens with unmapped codes.</li>
+<li><strong>Monitor unposted ERAs.</strong> An ERA that arrives but doesn't post is worse than a late EOB — it's invisible. Build a daily exception report.</li>
+</ol>
+
+<img class="mid-img" src="https://picsum.photos/seed/cp-era-vs-eob-difference-mid/1200/630" alt="Illustration of electronic payment data being processed" loading="lazy" width="1200" height="630"/><div class="img-cap">Illustration of electronic payment data being processed</div>
+<h2>Reading either one</h2>
+<p>Whether it's an ERA or an EOB, the anatomy is the same: claim identifiers, billed vs. allowed vs. paid amounts, adjustment reason codes (CARC) with remark codes (RARC), and patient responsibility. Learn to read the codes — our <a href="/blog/top-claim-denial-reasons-fixes/">denial reasons guide</a> covers the most common ones — and both documents become equally legible. The ERA just gets you there faster.</p>
+
+<div class="faq">
+<h2>Frequently asked questions</h2>
+<div class="faq-item"><h3>What is the difference between an ERA and an EOB?</h3><p>An ERA (Electronic Remittance Advice, the 835 EDI file) is structured, machine-readable payment data delivered electronically. An EOB (Explanation of Benefits) is the human-readable paper or PDF version. Both communicate the same adjudication results — what was paid, denied, and why — but only the ERA can be auto-posted by software.</p></div><div class="faq-item"><h3>What is an 835 file?</h3><p>The 835 is the HIPAA-standard EDI transaction for the Electronic Remittance Advice. Payers send it to communicate claim payment and denial decisions in structured format, typically delivered through a clearinghouse to the provider&#x27;s practice management system.</p></div><div class="faq-item"><h3>Should I enroll in ERA, EFT, or both?</h3><p>Both, and separately. EFT (electronic funds transfer) gets the money to your bank account fast; ERA enrollment gets the payment details to your system fast. Many practices enable EFT but never complete ERA enrollment — enroll in both, per payer.</p></div><div class="faq-item"><h3>Can ERAs be posted automatically?</h3><p>Yes — that&#x27;s their main operational advantage. With auto-posting rules configured in the practice management system, 835s can post payments and adjustments without manual keying. Always maintain a daily exception report for ERAs that arrive but fail to post.</p></div><div class="faq-item"><h3>Do patients get EOBs too?</h3><p>Yes. Payers send EOBs to patients describing the same adjudication, which is a frequent source of confused patient phone calls. The provider ERA/EOB and the patient EOB describe the same claim decision.</p></div>
+</div>
+</div>
+
+<div class="cta">
+<h2>Stop losing revenue to denials</h2>
+<p>ClaimPaid tracks every denied claim through a structured appeal pipeline — deadlines, documentation, payer-specific appeal letters, and follow-up — so nothing slips through the cracks.</p>
+<a class="btn btn-green" href="/#pricing">See plans — from $199/mo →</a>
+</div>
+</div>
+</article>
+
+<footer><div class="foot">
+  <a class="logo" href="/" style="font-size:17px"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo" style="width:28px;height:28px"/>Claim<span>Paid</span></a>
+  <div class="foot-links"><a href="/blog/">Blog</a><a href="/legal/terms">Terms</a><a href="/legal/privacy">Privacy</a><a href="mailto:support@claimpaid.io">support@claimpaid.io</a></div>
+  <div>© 2026 ClaimPaid · Get your claims paid.</div>
+</div></footer>
+</body>
+</html>
