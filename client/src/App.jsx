@@ -22,6 +22,8 @@ import Organization from './pages/Organization';
 import { Login, Signup, ForgotPassword, ResetPassword } from './pages/AuthPages';
 import SuperAdmin from './pages/SuperAdmin';
 import SupportPage from './pages/SupportPage';
+import Legal from './pages/Legal';
+import Compliance from './pages/Compliance';
 import { api } from './api';
 
 function AuthGate({ children }) {
@@ -137,8 +139,9 @@ function Workspace() {
       {page === 'authz' && <Authorizations />}
       {page === 'elig' && <Eligibility />}
       {page === 'audit' && <AuditLog />}
-      {page === 'billing' && <Billing defaultTrial={trialIntent} />}
+      {page === 'billing' && <Billing defaultTrial={trialIntent} onBaaRequired={() => go('compliance')} />}
       {page === 'org' && <Organization />}
+      {page === 'compliance' && <Compliance />}
       {page === 'letters' && <LetterTemplates />}
       {page === 'denials' && (
         <Denials
@@ -187,6 +190,12 @@ export default function App() {
         </ToastProvider>
       </AuthProvider>
     );
+  }
+  if (path === '/legal/terms') {
+    return <Legal doc="terms" />;
+  }
+  if (path === '/legal/privacy') {
+    return <Legal doc="privacy" />;
   }
   if (path === '/super' || path.startsWith('/super/')) {
     return (

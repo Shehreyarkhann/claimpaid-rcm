@@ -142,7 +142,7 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
   };
 
   if (!detail) return <Modal onClose={onClose}><div className="p-8"><Skeleton className="h-40 !bg-slate-700" /></div></Modal>;
-  const { org, users, claimsByStatus, openAppeals } = detail;
+  const { org, users, claimsByStatus, openAppeals, baa } = detail;
 
   return (
     <Modal onClose={onClose} wide>
@@ -182,6 +182,23 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
               {claimsByStatus.map((c) => <div key={c.status}>{c.status}: <strong className="text-white">{c.n}</strong></div>)}
             </div>
           </div>
+        </div>
+
+        <SectionTitle>BAA (HIPAA)</SectionTitle>
+        <div className="bg-slate-800 rounded-xl p-4 mb-6">
+          {baa ? (
+            <div className="grid sm:grid-cols-2 gap-x-6 gap-y-2 text-xs">
+              <div><span className="text-slate-500">Status </span><span className="badge badge-green ml-1">Signed {baa.baa_version}</span></div>
+              <div><span className="text-slate-500">Legal name </span><span className="text-slate-200">{baa.org_legal_name}</span></div>
+              <div><span className="text-slate-500">Signer </span><span className="text-slate-200">{baa.signed_by_name}{baa.signed_by_title ? `, ${baa.signed_by_title}` : ''}</span></div>
+              <div><span className="text-slate-500">Email </span><span className="text-slate-200">{baa.signed_by_email}</span></div>
+              <div><span className="text-slate-500">Signed </span><span className="text-slate-200">{baa.signed_at?.slice(0, 19).replace('T', ' ')}</span></div>
+              <div><span className="text-slate-500">IP </span><span className="text-slate-200 font-mono">{baa.ip_address || '—'}</span></div>
+              <div className="sm:col-span-2"><span className="text-slate-500">Text hash </span><span className="text-slate-200 font-mono break-all">{baa.text_hash?.slice(0, 32)}…</span></div>
+            </div>
+          ) : (
+            <p className="text-sm text-amber-300/90">Not signed — this workspace cannot activate a paid subscription until the BAA is signed.</p>
+          )}
         </div>
 
         <SectionTitle>Users</SectionTitle>
@@ -229,7 +246,7 @@ function ClientsTab() {
       <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl overflow-hidden">
         <table className="w-full tbl !text-slate-300">
           <thead><tr className="!text-slate-500">
-            <th>Workspace</th><th>Plan</th><th>Status</th><th className="!text-right">Users</th>
+            <th>Workspace</th><th>Plan</th><th>Status</th><th>BAA</th><th className="!text-right">Users</th>
             <th className="!text-right">Claims</th><th>Created</th>
           </tr></thead>
           <tbody>
@@ -238,6 +255,11 @@ function ClientsTab() {
                 <td className="font-medium text-white">{o.name} <span className="text-slate-500 text-xs">#{o.id}</span></td>
                 <td><span className={`badge ${PLAN_BADGE[o.plan] || 'badge-slate'}`}>{PLAN_LABEL[o.plan] || o.plan}</span></td>
                 <td><span className={`badge ${STATUS_BADGE[o.plan_status] || 'badge-slate'}`}>{o.plan_status}</span></td>
+                <td>
+                  {o.baa_version
+                    ? <span className="badge badge-green" title={`Signed ${o.baa_signed_at?.slice(0, 10)}`}>Signed {o.baa_version}</span>
+                    : <span className="badge badge-amber">Not signed</span>}
+                </td>
                 <td className="!text-right">{o.user_count}</td>
                 <td className="!text-right">{o.claim_count}</td>
                 <td className="text-slate-500 text-xs">{o.created_at?.slice(0, 10)}</td>

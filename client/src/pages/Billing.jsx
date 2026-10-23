@@ -18,7 +18,7 @@ const STATUS_BADGE = {
   canceled: 'badge-slate',
 };
 
-export default function Billing({ defaultTrial = false }) {
+export default function Billing({ defaultTrial = false, onBaaRequired }) {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(null);
@@ -67,6 +67,12 @@ export default function Billing({ defaultTrial = false }) {
       const { url } = await api.billingCheckout(plan, trial);
       window.location.href = url;
     } catch (e) {
+      if (String(e.message).includes('BAA_REQUIRED')) {
+        toast.error('Please sign the BAA first — required before activating a paid subscription.');
+        setBusy(null);
+        if (onBaaRequired) onBaaRequired();
+        return;
+      }
       toast.error(e.message);
       setBusy(null);
     }

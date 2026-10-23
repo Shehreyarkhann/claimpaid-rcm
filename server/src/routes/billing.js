@@ -1,6 +1,7 @@
 const express = require('express');
 const { db } = require('../db');
 const { authRequired, roleRequired } = require('../auth');
+const { baaSignedForOrg } = require('./legal');
 
 const router = express.Router();
 
@@ -104,6 +105,13 @@ router.get('/status', authRequired, (req, res) => {
 // ---- POST /api/billing/checkout — create a Checkout session (owner only) ----
 router.post('/checkout', authRequired, roleRequired('owner'), async (req, res) => {
   if (!billingConfigured(res)) return;
+  // HIPAA gate: a signed BAA is required before a paid subscription can be activated
+  if (!baaSignedForOrg(req.orgId)) {
+    return res.status(403).json({
+      error: 'BAA_REQUIRED',
+      message: 'Please sign the Business Associate Agreement first — it is required before activating a paid subscription. Go to Settings → Compliance.',
+    });
+  }
   const stripe = getStripe();
   const { plan, trial } = req.body || {};
   const planCfg = PLANS[plan];

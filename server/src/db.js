@@ -298,8 +298,7 @@ function initSchema() {
 
   // Super-admin support
   if (!columnExists('users', 'is_superadmin')) db.exec('ALTER TABLE users ADD COLUMN is_superadmin INTEGER NOT NULL DEFAULT 0');
-  if (!columnExists('demo_requests', 'notes')) db.exec('ALTER TABLE demo_requests ADD COLUMN notes TEXT DEFAULT \'\'');
-  db.exec(`
+  if (!columnExists('demo_requests', 'notes')) db.exec('ALTER TABLE demo_requests ADD COLUMN notes TEXT DEFAULT \'\'');  db.exec(`
     CREATE TABLE IF NOT EXISTS support_tickets (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       org_id INTEGER REFERENCES orgs(id),
@@ -314,6 +313,25 @@ function initSchema() {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE INDEX IF NOT EXISTS idx_tickets_status ON support_tickets(status);
+  `);
+
+  // BAA (HIPAA) electronic signatures — one per org per version
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS baa_signatures (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      org_legal_name TEXT NOT NULL,
+      signed_by_name TEXT NOT NULL,
+      signed_by_title TEXT,
+      signed_by_email TEXT NOT NULL,
+      signed_at TEXT NOT NULL,
+      ip_address TEXT,
+      baa_version TEXT NOT NULL,
+      text_hash TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(org_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_baa_org ON baa_signatures(org_id);
   `);
 
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_claims_org_number ON claims(org_id, claim_number)');

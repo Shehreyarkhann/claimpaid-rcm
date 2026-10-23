@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../auth';
+import { api } from '../api';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 
 const ICONS = {
@@ -84,6 +85,11 @@ const ICONS = {
       <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-4h6v4"/>
     </svg>
   ),
+  shield: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>
+    </svg>
+  ),
 };
 
 export default function Shell({ page, setPage, children, dueCount, authzAlertCount }) {
@@ -91,6 +97,15 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem('cp_sidebar') === 'collapsed'; } catch { return false; }
   });
+  const [baaSigned, setBaaSigned] = useState(null);
+  // Owners get a persistent nudge until the BAA is signed
+  useEffect(() => {
+    if (user?.role === 'owner') {
+      api.baaStatus().then((s) => setBaaSigned(!!s.signed)).catch(() => setBaaSigned(true));
+    } else {
+      setBaaSigned(true);
+    }
+  }, [user?.role]);
   const toggle = () => {
     setCollapsed((c) => {
       try { localStorage.setItem('cp_sidebar', c ? 'open' : 'collapsed'); } catch {}
@@ -116,6 +131,7 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
     ...(['owner', 'biller'].includes(user?.role) ? [{ id: 'letters', label: 'Letter Templates', icon: ICONS.letter }] : []),
     ...(user?.role === 'owner' ? [{ id: 'team', label: 'Team', icon: ICONS.team }] : []),
     ...(user?.role === 'owner' ? [{ id: 'audit', label: 'Audit Log', icon: ICONS.audit }] : []),
+    ...(user?.role === 'owner' ? [{ id: 'compliance', label: 'Compliance', icon: ICONS.shield }] : []),
     ...(user?.role === 'owner' ? [{ id: 'billing', label: 'Billing & Plan', icon: ICONS.billing }] : []),
   ];
 
@@ -191,12 +207,22 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
 
       {/* Main */}
       <div className={`flex-1 ${collapsed ? 'ml-[76px]' : 'ml-[248px]'} min-h-screen flex flex-col transition-all duration-200`}>
+        {baaSigned === false && (
+          <button onClick={() => setPage('compliance')}
+            className="mx-8 mt-5 rounded-xl bg-amber-50 border border-amber-300 px-5 py-3 flex items-center gap-3 text-left hover:bg-amber-100 transition max-w-[1400px] w-[calc(100%-4rem)] self-center">
+            <span className="text-amber-600 text-lg">⚠</span>
+            <span className="text-sm text-amber-900">
+              <strong>HIPAA compliance:</strong> sign your Business Associate Agreement to activate a paid plan and process PHI.
+              <span className="underline font-medium ml-1">Go to Compliance →</span>
+            </span>
+          </button>
+        )}
         <main className="flex-1 px-8 py-7 max-w-[1400px] w-full mx-auto">
           {children}
         </main>
         <footer className="px-8 pb-6 text-xs text-slate-400 max-w-[1400px] w-full mx-auto flex justify-between items-center">
           <span>ClaimPaid RCM · Your data is isolated to your organization</span>
-          <span>Part of <a href="https://claimpaid.io" target="_blank" rel="noreferrer" className="text-emerald-600 font-semibold hover:underline">ClaimPaid</a> · <a href="/support" className="text-slate-500 hover:text-slate-700 hover:underline">Support</a> · <a href="/ai/app/" className="text-violet-600 font-semibold hover:underline">ClaimPaid AI</a></span>
+          <span>Part of <a href="https://claimpaid.io" target="_blank" rel="noreferrer" className="text-emerald-600 font-semibold hover:underline">ClaimPaid</a> · <a href="/legal/terms" className="text-slate-500 hover:text-slate-700 hover:underline">Terms</a> · <a href="/legal/privacy" className="text-slate-500 hover:text-slate-700 hover:underline">Privacy</a> · <a href="/support" className="text-slate-500 hover:text-slate-700 hover:underline">Support</a> · <a href="/ai/app/" className="text-violet-600 font-semibold hover:underline">ClaimPaid AI</a></span>
         </footer>
       </div>
     </div>

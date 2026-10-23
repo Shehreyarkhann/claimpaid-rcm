@@ -63,8 +63,11 @@ router.get('/orgs', (req, res) => {
     SELECT o.id, o.name, o.plan, o.plan_status, o.stripe_customer_id, o.stripe_subscription_id,
            o.created_at,
            (SELECT COUNT(*) FROM user_orgs m WHERE m.org_id = o.id) AS user_count,
-           (SELECT COUNT(*) FROM claims c WHERE c.org_id = o.id) AS claim_count
-    FROM orgs o ORDER BY o.id DESC
+           (SELECT COUNT(*) FROM claims c WHERE c.org_id = o.id) AS claim_count,
+           b.baa_version, b.signed_at AS baa_signed_at
+    FROM orgs o
+    LEFT JOIN baa_signatures b ON b.org_id = o.id
+    ORDER BY o.id DESC
   `).all();
   res.json(rows);
 });
@@ -83,7 +86,8 @@ router.get('/orgs/:id', (req, res) => {
   const openAppeals = db.prepare(
     `SELECT COUNT(*) AS n FROM appeals WHERE org_id = ? AND status = 'open'`
   ).get(org.id).n;
-  res.json({ org, users, claimsByStatus, openAppeals });
+  const baa = db.prepare('SELECT * FROM baa_signatures WHERE org_id = ?').get(org.id) || null;
+  res.json({ org, users, claimsByStatus, openAppeals, baa });
 });
 
 router.patch('/orgs/:id/plan', (req, res) => {

@@ -109,6 +109,18 @@ export const api = {
   orgProfile: () => get('/api/org'),
   billingPortal: () =>
     authFetch('/api/billing/portal', { method: 'POST' }).then(handle),
+  // ---- Legal / BAA ----
+  legalDocuments: () =>
+    fetch('/api/legal/documents').then((r) => {
+      if (!r.ok) throw new Error('Could not load legal documents');
+      return r.json();
+    }),
+  baaStatus: () => get('/api/legal/baa/status'),
+  signBaa: (data) =>
+    authFetch('/api/legal/baa/sign', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).then(handle),
   // ---- Super-admin ----
   super: {
     overview: () => get('/api/super/overview'),
