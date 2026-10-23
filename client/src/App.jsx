@@ -14,6 +14,7 @@ import Playbook from './pages/Playbook';
 import Digest from './pages/Digest';
 import Authorizations from './pages/Authorizations';
 import Eligibility from './pages/Eligibility';
+import Transmission from './pages/Transmission';
 import AuditLog from './pages/AuditLog';
 import LetterTemplates from './pages/LetterTemplates';
 import AIAssistant from './pages/AIAssistant';
@@ -139,6 +140,7 @@ function Workspace() {
       {page === 'playbook' && <Playbook />}
       {page === 'authz' && <Authorizations />}
       {page === 'elig' && <Eligibility initialPrefill={deepLink?.prefill} onConsumed={() => setDeepLink(null)} />}
+      {page === 'transmit' && <Transmission />}
       {page === 'audit' && <AuditLog />}
       {page === 'billing' && <Billing defaultTrial={trialIntent} onBaaRequired={() => go('compliance')} />}
       {page === 'org' && <Organization />}

@@ -3,6 +3,7 @@ import { api } from '../api';
 import { PageHeader, Skeleton, useToast } from '../components/ui';
 import { useAuth } from '../auth';
 import EligibilityVendorSettings from '../components/EligibilityVendorSettings';
+import TransmitSettings from '../components/TransmitSettings';
 
 export default function Organization() {
   const { user } = useAuth();
@@ -108,6 +109,7 @@ export default function Organization() {
       {isOwner && org && (
         <div className="max-w-4xl mt-6">
           <EligibilityVendorSettings />
+          <TransmitSettings />
           <div className="card p-6 !border-rose-200 bg-rose-50/50">
             <h3 className="font-bold text-rose-900 mb-1">Danger zone</h3>
             <p className="text-sm text-rose-700/80 mb-4">

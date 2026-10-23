@@ -166,6 +166,28 @@ export const api = {
     reply: (id, body) =>
       authFetch(`/api/support/${id}/reply`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ body }) }).then(handle),
   },
+  transmission: {
+    transmittable: () => get('/api/transmission/transmittable'),
+    batches: () => get('/api/transmission/batches'),
+    batchDetail: (id) => get(`/api/transmission/batches/${id}`),
+    createBatch: (claim_ids) =>
+      authFetch('/api/transmission/batches', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ claim_ids }) }).then(handle),
+    generateBatch: (id) =>
+      authFetch(`/api/transmission/batches/${id}/generate`, { method: 'POST' }).then(handle),
+    transmitBatch: (id, data) =>
+      authFetch(`/api/transmission/batches/${id}/transmit`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(handle),
+    uploadAck: (id, file, type) => {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('type', type);
+      return authFetch(`/api/transmission/batches/${id}/ack`, { method: 'POST', body: fd }).then(handle);
+    },
+    deleteBatch: (id) =>
+      authFetch(`/api/transmission/batches/${id}`, { method: 'DELETE' }).then(handle),
+    getConfig: () => get('/api/transmission/config'),
+    saveConfig: (data) =>
+      authFetch('/api/transmission/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(handle),
+  },
   eligibility: {
     check: (data) =>
       authFetch('/api/eligibility/check', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(handle),

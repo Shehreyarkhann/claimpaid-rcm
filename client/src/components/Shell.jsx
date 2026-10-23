@@ -121,6 +121,7 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
     { id: 'denials', label: 'Denial Appeals', icon: ICONS.denials },
     { id: 'authz', label: 'Authorizations', icon: ICONS.authz, badge: authzAlertCount },
     { id: 'elig', label: 'Eligibility', icon: ICONS.elig },
+    { id: 'transmit', label: 'Transmission', icon: ICONS.send || ICONS.elig },
     { id: 'reports', label: 'Reports', icon: ICONS.reports },
     { id: 'playbook', label: 'Playbook', icon: ICONS.playbook },
     { id: 'ai', label: 'AI Assistant', icon: ICONS.ai },

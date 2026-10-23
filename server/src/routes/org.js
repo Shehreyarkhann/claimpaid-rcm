@@ -24,7 +24,7 @@ router.put('/', roleRequired('owner'), (req, res) => {
   res.json(db.prepare('SELECT id, name, created_at FROM orgs WHERE id = ?').get(req.orgId));
 });
 
-const FIELDS = ['billing_npi', 'billing_tax_id', 'billing_address', 'billing_city', 'billing_state', 'billing_zip', 'billing_phone', 'billing_email'];
+const FIELDS = ['billing_npi', 'billing_tax_id', 'billing_address', 'billing_city', 'billing_state', 'billing_zip', 'billing_phone', 'billing_email', 'edi_submitter_id', 'edi_receiver_id'];
 
 // --- Get org EDI settings ---
 router.get('/edi-settings', (req, res) => {

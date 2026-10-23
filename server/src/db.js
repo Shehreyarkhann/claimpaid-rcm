@@ -443,6 +443,65 @@ function initSchema() {
   if (!columnExists('orgs', 'eligibility_endpoint')) db.exec('ALTER TABLE orgs ADD COLUMN eligibility_endpoint TEXT');
   if (!columnExists('orgs', 'eligibility_api_key')) db.exec('ALTER TABLE orgs ADD COLUMN eligibility_api_key TEXT');
   if (!columnExists('orgs', 'eligibility_auth_scheme')) db.exec("ALTER TABLE orgs ADD COLUMN eligibility_auth_scheme TEXT NOT NULL DEFAULT 'Bearer'");
+
+  // ---- Electronic claim transmission (837P batches) ----
+  // Subscriber identity needed for valid 837P 2010BA loops.
+  if (!columnExists('claims', 'patient_dob')) db.exec('ALTER TABLE claims ADD COLUMN patient_dob TEXT');
+  if (!columnExists('claims', 'member_id')) db.exec('ALTER TABLE claims ADD COLUMN member_id TEXT');
+  // Per-claim transmission state.
+  if (!columnExists('claims', 'last_batch_id')) db.exec('ALTER TABLE claims ADD COLUMN last_batch_id INTEGER REFERENCES claim_batches(id)');
+  if (!columnExists('claims', 'x12_status')) db.exec("ALTER TABLE claims ADD COLUMN x12_status TEXT NOT NULL DEFAULT 'not_sent'");
+
+  // EDI envelope identity (extends the existing billing_* EDI columns).
+  if (!columnExists('orgs', 'edi_submitter_id')) db.exec('ALTER TABLE orgs ADD COLUMN edi_submitter_id TEXT');
+  if (!columnExists('orgs', 'edi_receiver_id')) db.exec('ALTER TABLE orgs ADD COLUMN edi_receiver_id TEXT');
+
+  // Transmission vendor config on the org.
+  // NOTE (honest posture): same as the eligibility keys — these columns live in
+  // the droplet SQLite file, which is NOT encrypted at rest. SFTP passwords and
+  // private keys stored here are protected by DB file permissions and app-level
+  // access control only. Rotate credentials at the clearinghouse if the DB file
+  // is ever exposed.
+  if (!columnExists('orgs', 'xmit_vendor')) db.exec("ALTER TABLE orgs ADD COLUMN xmit_vendor TEXT NOT NULL DEFAULT 'manual'");
+  if (!columnExists('orgs', 'xmit_sftp_host')) db.exec('ALTER TABLE orgs ADD COLUMN xmit_sftp_host TEXT');
+  if (!columnExists('orgs', 'xmit_sftp_port')) db.exec('ALTER TABLE orgs ADD COLUMN xmit_sftp_port INTEGER');
+  if (!columnExists('orgs', 'xmit_sftp_user')) db.exec('ALTER TABLE orgs ADD COLUMN xmit_sftp_user TEXT');
+  if (!columnExists('orgs', 'xmit_sftp_auth')) db.exec("ALTER TABLE orgs ADD COLUMN xmit_sftp_auth TEXT NOT NULL DEFAULT 'password'");
+  if (!columnExists('orgs', 'xmit_sftp_secret')) db.exec('ALTER TABLE orgs ADD COLUMN xmit_sftp_secret TEXT');
+  if (!columnExists('orgs', 'xmit_sftp_dir')) db.exec('ALTER TABLE orgs ADD COLUMN xmit_sftp_dir TEXT');
+  if (!columnExists('orgs', 'xmit_rest_endpoint')) db.exec('ALTER TABLE orgs ADD COLUMN xmit_rest_endpoint TEXT');
+  if (!columnExists('orgs', 'xmit_rest_api_key')) db.exec('ALTER TABLE orgs ADD COLUMN xmit_rest_api_key TEXT');
+  if (!columnExists('orgs', 'xmit_rest_auth_scheme')) db.exec("ALTER TABLE orgs ADD COLUMN xmit_rest_auth_scheme TEXT NOT NULL DEFAULT 'Bearer'");
+
+  // Claim batches: draft → generated → transmitted → acknowledged → accepted/rejected/partial
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS claim_batches (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      batch_number TEXT NOT NULL,
+      claim_ids TEXT NOT NULL DEFAULT '[]',
+      edi_text TEXT,
+      control_number TEXT,
+      status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','generated','transmitted','acknowledged','accepted','rejected','partial')),
+      vendor TEXT NOT NULL DEFAULT 'manual',
+      transmitted_at TEXT,
+      ack_raw_999 TEXT,
+      ack_raw_277ca TEXT,
+      created_by INTEGER REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_batches_number ON claim_batches(batch_number);
+    CREATE INDEX IF NOT EXISTS idx_batches_org ON claim_batches(org_id);
+  `);
+
+  // Interchange control-number sequence (one row per day; see edi/generate837p.js)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS edi_control_numbers (
+      date TEXT PRIMARY KEY,
+      last_seq INTEGER NOT NULL DEFAULT 0
+    );
+  `);
 }
 
 // Thin wrapper so route code keeps working with .prepare().get()/.all()/.run()

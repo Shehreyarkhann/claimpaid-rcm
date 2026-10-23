@@ -11,6 +11,8 @@ const FIELDS = [
   ['billing_zip', 'ZIP', '', false],
   ['billing_phone', 'Phone', '', false],
   ['billing_email', 'Email', 'Used in letter signatures', false],
+  ['edi_submitter_id', 'Submitter ID', 'ISA06/GS02 — from your clearinghouse, else your NPI', false],
+  ['edi_receiver_id', 'Receiver ID', 'ISA08/GS03 — your clearinghouse-assigned ID', false],
 ];
 
 export default function EdiSettings() {

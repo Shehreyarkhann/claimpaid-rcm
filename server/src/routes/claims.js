@@ -135,6 +135,8 @@ function validateClaimInput(orgId, body, isUpdate = false) {
   if (body.status !== undefined && !VALID_STATUSES.includes(body.status)) errors.push(`status must be one of: ${VALID_STATUSES.join(', ')}`);
   if (body.paid_amount !== undefined && (isNaN(Number(body.paid_amount)) || Number(body.paid_amount) < 0))
     errors.push('paid_amount must be a non-negative number');
+  if (body.patient_dob && !/^\d{4}-\d{2}-\d{2}$/.test(body.patient_dob.trim()))
+    errors.push('patient_dob must be YYYY-MM-DD');
   return errors;
 }
 
@@ -146,15 +148,16 @@ router.post('/', canWrite, (req, res) => {
 
   try {
     const result = db.prepare(`
-      INSERT INTO claims (org_id, claim_number, patient_name, payer_id, service_date, billed_amount, paid_amount, status, denial_reason, days_in_ar, cpt_codes, icd_codes, rendering_npi, rendering_provider)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO claims (org_id, claim_number, patient_name, payer_id, service_date, billed_amount, paid_amount, status, denial_reason, days_in_ar, cpt_codes, icd_codes, rendering_npi, rendering_provider, patient_dob, member_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(req.orgId, req.body.claim_number.trim(), req.body.patient_name.trim(),
       resolvePayerId(req.orgId, req.body.payer), req.body.service_date,
       Number(req.body.billed_amount), Number(req.body.paid_amount || 0),
       req.body.status || 'pending', req.body.denial_reason || null,
       daysBetween(req.body.service_date),
       req.body.cpt_codes?.trim() || null, req.body.icd_codes?.trim() || null,
-      req.body.rendering_npi?.trim() || null, req.body.rendering_provider?.trim() || null);
+      req.body.rendering_npi?.trim() || null, req.body.rendering_provider?.trim() || null,
+      req.body.patient_dob?.trim() || null, req.body.member_id?.trim() || null);
     const newId = Number(result.lastInsertRowid);
     logActivity(req.orgId, newId, req.user.id, 'created', `Claim ${req.body.claim_number.trim()} created`);
     res.status(201).json(db.prepare('SELECT c.*, p.name AS payer FROM claims c JOIN payers p ON p.id = c.payer_id WHERE c.id = ?').get(newId));
@@ -179,8 +182,13 @@ router.put('/:id', canWrite, (req, res) => {
   if (req.body.paid_amount !== undefined) { updates.push('paid_amount = ?'); params.push(Number(req.body.paid_amount)); }
   if (req.body.status !== undefined) { updates.push('status = ?'); params.push(req.body.status); }
   if (req.body.denial_reason !== undefined) { updates.push('denial_reason = ?'); params.push(req.body.denial_reason || null); }
-  for (const f of ['cpt_codes', 'icd_codes', 'rendering_npi', 'rendering_provider']) {
-    if (req.body[f] !== undefined) { updates.push(`${f} = ?`); params.push(req.body[f]?.trim() || null); }
+  for (const f of ['cpt_codes', 'icd_codes', 'rendering_npi', 'rendering_provider', 'patient_dob', 'member_id']) {
+    if (req.body[f] !== undefined) {
+      if (f === 'patient_dob' && req.body[f] && !/^\d{4}-\d{2}-\d{2}$/.test(req.body[f].trim())) {
+        return res.status(400).json({ error: 'patient_dob must be YYYY-MM-DD' });
+      }
+      updates.push(`${f} = ?`); params.push(req.body[f]?.trim() || null);
+    }
   }
   if (!updates.length) return res.status(400).json({ error: 'No fields to update' });
 

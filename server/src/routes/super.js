@@ -104,7 +104,26 @@ router.get('/orgs/:id', (req, res) => {
       `SELECT COUNT(*) AS n FROM eligibility_lookups WHERE org_id = ? AND created_at >= datetime('now', '-30 days')`
     ).get(org.id).n,
   } : null;
-  res.json({ org, users, claimsByStatus, openAppeals, baa, eligibility });
+  const batchTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='claim_batches'`).get();
+  const transmission = batchTable ? {
+    vendor: org.xmit_vendor || 'manual',
+    batches_30d: db.prepare(
+      `SELECT COUNT(*) AS n FROM claim_batches WHERE org_id = ? AND created_at >= datetime('now', '-30 days')`
+    ).get(org.id).n,
+    claims_transmitted_30d: db.prepare(
+      `SELECT COUNT(*) AS n FROM claims WHERE org_id = ? AND x12_status IN ('transmitted','accepted','rejected')
+       AND last_batch_id IN (SELECT id FROM claim_batches WHERE org_id = ? AND created_at >= datetime('now', '-30 days'))`
+    ).get(org.id, org.id).n,
+    acceptance_rate: (() => {
+      const r = db.prepare(
+        `SELECT SUM(CASE WHEN x12_status = 'accepted' THEN 1 ELSE 0 END) AS a,
+                SUM(CASE WHEN x12_status IN ('accepted','rejected') THEN 1 ELSE 0 END) AS t
+         FROM claims WHERE org_id = ? AND x12_status IN ('accepted','rejected')`
+      ).get(org.id);
+      return r.t ? Math.round((r.a / r.t) * 100) : null;
+    })(),
+  } : null;
+  res.json({ org, users, claimsByStatus, openAppeals, baa, eligibility, transmission });
 });
 
 router.patch('/orgs/:id/plan', (req, res) => {

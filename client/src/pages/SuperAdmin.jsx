@@ -144,7 +144,7 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
   };
 
   if (!detail) return <Modal onClose={onClose}><div className="p-8"><Skeleton className="h-40 !bg-slate-700" /></div></Modal>;
-  const { org, users, claimsByStatus, openAppeals, baa, eligibility } = detail;
+  const { org, users, claimsByStatus, openAppeals, baa, eligibility, transmission } = detail;
 
   return (
     <Modal onClose={onClose} wide>
@@ -218,6 +218,26 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
             </div>
           ) : (
             <p className="text-sm text-slate-500">No eligibility data.</p>
+          )}
+        </div>
+
+        <SectionTitle>Transmission</SectionTitle>
+        <div className="bg-slate-800 rounded-xl p-4 mb-6">
+          {transmission ? (
+            <div className="grid sm:grid-cols-3 gap-x-6 gap-y-2 text-xs">
+              <div><span className="text-slate-500">Vendor </span>
+                <span className={`badge ml-1 ${transmission.vendor === 'manual' ? 'badge-slate' : 'badge-green'}`}>
+                  {transmission.vendor}
+                </span></div>
+              <div><span className="text-slate-500">Batches (30d) </span>
+                <span className="text-white font-bold">{transmission.batches_30d}</span></div>
+              <div><span className="text-slate-500">Claims transmitted (30d) </span>
+                <span className="text-white font-bold">{transmission.claims_transmitted_30d}</span></div>
+              <div><span className="text-slate-500">Acceptance rate </span>
+                <span className="text-white font-bold">{transmission.acceptance_rate == null ? '—' : `${transmission.acceptance_rate}%`}</span></div>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">No transmission data.</p>
           )}
         </div>
 
