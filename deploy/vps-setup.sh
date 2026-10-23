@@ -128,6 +128,31 @@ sudo -u "${APP_USER}" bash -lc "
   cd '${AI_DIR}/server' && npm install --omit=dev --no-audit --no-fund
 "
 
+# ---------- render smoke test (fail-closed blank-screen guard) ----------
+echo "==> Render smoke test (blank-screen guard)"
+if [[ ! -d "$(npm root -g)/jsdom" ]]; then
+  echo "    installing jsdom (one-time, for smoke test)..."
+  npm install -g jsdom --no-audit --no-fund
+fi
+export NODE_PATH="$(npm root -g)${NODE_PATH:+:${NODE_PATH}}"
+SMOKE="${APP_DIR}/deploy/render-smoke-test.cjs"
+if [[ ! -f "${SMOKE}" ]]; then
+  echo "!! smoke test script missing at ${SMOKE} — refusing to deploy blind"
+  exit 1
+fi
+node "${SMOKE}" "${APP_DIR}/client/dist" "/app/" || {
+  echo ""
+  echo "!! RENDER SMOKE TEST FAILED — deploy aborted BEFORE restarting services."
+  echo "   The previous working build is still serving. Fix the frontend and re-run."
+  exit 1
+}
+node "${SMOKE}" "${AI_DIR}/client/dist" "/ai/app/" --ai || {
+  echo ""
+  echo "!! AI RENDER SMOKE TEST FAILED — deploy aborted BEFORE restarting services."
+  echo "   The previous working build is still serving. Fix the frontend and re-run."
+  exit 1
+}
+
 # ---------- .env (preserves existing secrets on re-run) ----------
 echo "==> Writing server/.env"
 if [[ ! -f "${APP_DIR}/server/.env" ]]; then
