@@ -69,4 +69,22 @@ function requireProduct(product) {
   };
 }
 
-module.exports = { signToken, authRequired, roleRequired, requireProduct, JWT_SECRET };
+
+// Super-admin gate: reads is_superadmin from the DB (not the JWT) so flag
+// changes take effect immediately. No org scoping — super-admins see everything.
+function superAdminRequired(req, res, next) {
+  // HARD LOCK: only the SUPERADMIN_EMAIL address may pass — checked against the
+  // live env var on every request. A flipped is_superadmin flag in the database
+  // alone can never grant access.
+  try {
+    const superEmail = (process.env.SUPERADMIN_EMAIL || '').trim().toLowerCase();
+    if (!superEmail) return res.status(403).json({ error: 'Super-admin access required' });
+    const row = db.prepare('SELECT email FROM users WHERE id = ?').get(req.user.id);
+    if (row && String(row.email).toLowerCase() === superEmail) return next();
+  } catch (e) {
+    console.error('superAdminRequired check failed:', e.message);
+  }
+  return res.status(403).json({ error: 'Super-admin access required' });
+}
+
+module.exports = { signToken, authRequired, roleRequired, requireProduct, superAdminRequired, JWT_SECRET };
