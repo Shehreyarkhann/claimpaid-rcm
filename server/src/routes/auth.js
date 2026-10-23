@@ -2,18 +2,66 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const { db } = require('../db');
 const { signToken, authRequired, roleRequired } = require('../auth');
+const {
+  passwordError,
+  clientIp,
+  rateLimit,
+  logAuthEvent,
+  isLocked,
+  recordFailedLogin,
+  resetLoginCounters,
+  seedOrgDefaults,
+} = require('../authSecurity');
+const { verifyGoogleIdToken } = require('../googleAuth');
 
 const router = express.Router();
 
+// --- Rate limiters (fixed-window, SQLite-backed) ---
+const loginIpLimit = rateLimit({
+  endpoint: 'login', limit: 10, windowSec: 900,
+  keyFn: (req) => `ip:${clientIp(req)}`, eventName: 'login_rate_limited',
+});
+const loginEmailLimit = rateLimit({
+  endpoint: 'login_email', limit: 5, windowSec: 900,
+  keyFn: (req) => (req.body && req.body.email ? `email:${String(req.body.email).trim().toLowerCase()}` : null),
+  eventName: 'login_rate_limited',
+});
+const signupIpLimit = rateLimit({
+  endpoint: 'signup', limit: 5, windowSec: 3600,
+  keyFn: (req) => `ip:${clientIp(req)}`, eventName: 'signup_rate_limited',
+});
+const forgotIpLimit = rateLimit({
+  endpoint: 'password_forgot', limit: 5, windowSec: 3600,
+  keyFn: (req) => `ip:${clientIp(req)}`, eventName: 'forgot_rate_limited',
+});
+const googleIpLimit = rateLimit({
+  endpoint: 'google', limit: 10, windowSec: 900,
+  keyFn: (req) => `ip:${clientIp(req)}`, eventName: 'google_rate_limited',
+});
+
+// Shared login response (token + safe user shape)
+function buildLoginResponse(user) {
+  // Super-admin bootstrap: the configured email is promoted on every login
+  // (case-insensitive). Reads SUPERADMIN_EMAIL at request time.
+  const superEmail = (process.env.SUPERADMIN_EMAIL || '').trim().toLowerCase();
+  if (superEmail && user.email && user.email.toLowerCase() === superEmail && !user.is_superadmin) {
+    db.prepare('UPDATE users SET is_superadmin = 1 WHERE id = ?').run(user.id);
+    user.is_superadmin = 1;
+  }
+
+  const safe = { id: user.id, org_id: user.org_id, email: user.email, name: user.name, role: user.role, is_superadmin: user.is_superadmin ? 1 : 0 };
+  const org = db.prepare('SELECT name FROM orgs WHERE id = ?').get(user.org_id);
+  return { token: signToken(safe), user: { ...safe, orgName: org ? org.name : '' } };
+}
+
 // --- Sign up: creates org + owner user ---
-router.post('/signup', (req, res) => {
+router.post('/signup', signupIpLimit, (req, res) => {
   const { orgName, name, email, password, plan } = req.body || {};
   if (!orgName || !name || !email || !password) {
     return res.status(400).json({ error: 'Organization name, name, email and password are required' });
   }
-  if (password.length < 8) {
-    return res.status(400).json({ error: 'Password must be at least 8 characters' });
-  }
+  const pwErr = passwordError(password);
+  if (pwErr) return res.status(400).json({ error: pwErr });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: 'Invalid email address' });
   }
@@ -35,31 +83,38 @@ router.post('/signup', (req, res) => {
     .run(userId, orgId, 'owner');
 
   // Seed default payers + filing rules for the new org
-  const defaultPayers = [
-    ['Aetna', 'Commercial', 120], ['Cigna', 'Commercial', 180], ['UnitedHealthcare', 'Commercial', 90],
-    ['Anthem BCBS', 'Commercial', 180], ['Medicare', 'Government', 365], ['Medicaid', 'Government', 90],
-    ['Humana', 'Commercial', 180], ['Self-Pay', 'Patient', 365],
-  ];
-  const ins = db.prepare('INSERT INTO payers (org_id, name, type) VALUES (?, ?, ?)');
-  const insRule = db.prepare('INSERT INTO payer_filing_rules (org_id, payer_id, filing_days) VALUES (?, ?, ?)');
-  for (const [n, t, days] of defaultPayers) {
-    const pid = Number(ins.run(orgId, n, t).lastInsertRowid);
-    insRule.run(orgId, pid, days);
-  }
+  seedOrgDefaults(orgId);
 
   const user = db.prepare('SELECT id, org_id, email, name, role FROM users WHERE id = ?').get(userId);
   res.status(201).json({ token: signToken(user), user });
 });
 
 // --- Login ---
-router.post('/login', async (req, res) => {
+router.post('/login', loginIpLimit, loginEmailLimit, async (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
+  const ip = clientIp(req);
 
   const user = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get(email.trim());
-  if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+  if (user && isLocked(user)) {
+    logAuthEvent({ userId: user.id, email: user.email, ip, event: 'login_lockout_attempt' });
+    return res.status(423).json({ error: 'Too many failed attempts. Try again in 15 minutes.' });
+  }
+
+  // Google-SSO accounts have no password — never let bcrypt touch the marker
+  const passwordOk = user && user.password_hash !== 'google-sso'
+    && bcrypt.compareSync(password, user.password_hash);
+  if (!passwordOk) {
+    if (user) {
+      const nowLocked = recordFailedLogin(user, ip);
+      if (nowLocked) {
+        return res.status(423).json({ error: 'Too many failed attempts. Try again in 15 minutes.' });
+      }
+    }
     return res.status(401).json({ error: 'Invalid email or password' });
   }
+
+  resetLoginCounters(user.id);
 
   // MFA: password was correct, but a second factor is required
   if (user.mfa_enabled) {
@@ -76,17 +131,73 @@ router.post('/login', async (req, res) => {
     }
   }
 
-  // Super-admin bootstrap: the configured email is promoted on every login
-  // (case-insensitive). Reads SUPERADMIN_EMAIL at request time.
-  const superEmail = (process.env.SUPERADMIN_EMAIL || '').trim().toLowerCase();
-  if (superEmail && user.email && user.email.toLowerCase() === superEmail && !user.is_superadmin) {
-    db.prepare('UPDATE users SET is_superadmin = 1 WHERE id = ?').run(user.id);
-    user.is_superadmin = 1;
+  res.json(buildLoginResponse(user));
+});
+
+// --- Google sign-in (Google Identity Services ID-token flow) ---
+router.post('/google', googleIpLimit, async (req, res) => {
+  const { idToken } = req.body || {};
+  if (!idToken) return res.status(400).json({ error: 'Google token is required' });
+  const ip = clientIp(req);
+
+  let claims;
+  try {
+    claims = await verifyGoogleIdToken(idToken);
+  } catch (e) {
+    logAuthEvent({ ip, event: 'google_failed', detail: e.message });
+    return res.status(e.status || 401).json({ error: e.message || 'Google sign-in failed' });
   }
 
-  const safe = { id: user.id, org_id: user.org_id, email: user.email, name: user.name, role: user.role, is_superadmin: user.is_superadmin ? 1 : 0 };
-  const org = db.prepare('SELECT name FROM orgs WHERE id = ?').get(user.org_id);
-  res.json({ token: signToken(safe), user: { ...safe, orgName: org ? org.name : '' } });
+  const email = String(claims.email).trim().toLowerCase();
+  let user = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get(email);
+
+  if (!user) {
+    // New Google user: create their workspace + owner account
+    const given = claims.given_name || String(claims.name || '').split(' ')[0] || email.split('@')[0];
+    const orgName = `${given}'s Workspace`;
+    const orgId = Number(db.prepare('INSERT INTO orgs (name) VALUES (?)').run(orgName).lastInsertRowid);
+    const userId = Number(
+      db.prepare(`INSERT INTO users (org_id, email, password_hash, name, role, email_verified)
+                  VALUES (?, ?, 'google-sso', ?, 'owner', 1)`)
+        .run(orgId, email, String(claims.name || email).trim()).lastInsertRowid
+    );
+    db.prepare('INSERT OR IGNORE INTO user_orgs (user_id, org_id, role) VALUES (?, ?, ?)')
+      .run(userId, orgId, 'owner');
+    seedOrgDefaults(orgId);
+    user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+    logAuthEvent({ userId, email, ip, event: 'google_signup' });
+  } else {
+    // Existing account: Google verified the email, so sign-in is allowed even
+    // if the account was originally created with a password — but log it.
+    logAuthEvent({
+      userId: user.id, email, ip,
+      event: user.password_hash === 'google-sso' ? 'google_login' : 'google_login_password_account',
+    });
+    resetLoginCounters(user.id);
+    db.prepare('UPDATE users SET email_verified = 1 WHERE id = ?').run(user.id);
+    user.email_verified = 1;
+  }
+
+  if (isLocked(user)) {
+    return res.status(423).json({ error: 'Too many failed attempts. Try again in 15 minutes.' });
+  }
+
+  // MFA: honor it for Google sign-ins too when enabled
+  if (user.mfa_enabled) {
+    try {
+      const { issueMfaToken, issueCode } = require('../mfa');
+      await issueCode(user.id, 'login');
+      return res.json({
+        mfaRequired: true,
+        mfaToken: issueMfaToken(user.id),
+        message: 'A verification code was sent to your email.',
+      });
+    } catch (e) {
+      return res.status(500).json({ error: 'Could not send verification code. Please try again.' });
+    }
+  }
+
+  res.json(buildLoginResponse(user));
 });
 
 // --- Current user ---
@@ -97,7 +208,7 @@ router.get('/me', authRequired, (req, res) => {
 });
 
 // --- Password reset: request ---
-router.post('/password/forgot', async (req, res) => {
+router.post('/password/forgot', forgotIpLimit, async (req, res) => {
   const { email } = req.body || {};
   // Always return success to prevent email enumeration
   const done = () => res.json({ sent: true, message: 'If an account exists for that email, a reset link is on its way.' });
@@ -132,7 +243,8 @@ router.post('/password/forgot', async (req, res) => {
 router.post('/password/reset', (req, res) => {
   const { token, password } = req.body || {};
   if (!token || !password) return res.status(400).json({ error: 'Token and new password are required' });
-  if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  const pwErr = passwordError(password);
+  if (pwErr) return res.status(400).json({ error: pwErr });
 
   const crypto = require('crypto');
   const tokenHash = crypto.createHash('sha256').update(String(token)).digest('hex');
@@ -180,7 +292,8 @@ router.post('/team', authRequired, roleRequired('owner'), (req, res) => {
   }
 
   if (!name || !password) return res.status(400).json({ error: 'Name and password are required for a new user' });
-  if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  const pwErr = passwordError(password);
+  if (pwErr) return res.status(400).json({ error: pwErr });
 
   const hash = bcrypt.hashSync(password, 10);
   const id = Number(

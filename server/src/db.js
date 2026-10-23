@@ -175,6 +175,9 @@ function initSchema() {
   `);
 
   // --- Migrations for existing databases ---
+  if (!columnExists('users', 'failed_attempts')) db.exec('ALTER TABLE users ADD COLUMN failed_attempts INTEGER NOT NULL DEFAULT 0');
+  if (!columnExists('users', 'locked_until')) db.exec('ALTER TABLE users ADD COLUMN locked_until TEXT');
+  if (!columnExists('users', 'email_verified')) db.exec('ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0');
   if (!columnExists('payers', 'org_id')) db.exec('ALTER TABLE payers ADD COLUMN org_id INTEGER REFERENCES orgs(id)');
   if (!columnExists('claims', 'org_id')) db.exec('ALTER TABLE claims ADD COLUMN org_id INTEGER REFERENCES orgs(id)');
   if (!columnExists('claims', 'last_touched_at')) db.exec('ALTER TABLE claims ADD COLUMN last_touched_at TEXT');
@@ -223,6 +226,28 @@ function initSchema() {
     );
     CREATE INDEX IF NOT EXISTS idx_audit_org ON audit_log(org_id);
     CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id);
+  `);
+
+  // Auth hardening: fixed-window rate limit buckets + auth security events
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS auth_rate_limits (
+      rl_key TEXT NOT NULL,
+      endpoint TEXT NOT NULL,
+      window_start_ms INTEGER NOT NULL,
+      count INTEGER NOT NULL DEFAULT 1,
+      PRIMARY KEY (rl_key, endpoint)
+    );
+    CREATE TABLE IF NOT EXISTS auth_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER REFERENCES users(id),
+      email TEXT,
+      ip TEXT,
+      event TEXT NOT NULL,
+      detail TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_authevents_event ON auth_events(event, created_at);
+    CREATE INDEX IF NOT EXISTS idx_authevents_user ON auth_events(user_id);
   `);
 
   // Eligibility verification log

@@ -45,6 +45,12 @@ if (orgCount === 0) {
   require('./seed.js');
 }
 
+// Public client config (Google OAuth client ID for the sign-in button;
+// null hides the button gracefully). No auth — contains nothing secret.
+app.get('/api/config', (req, res) => {
+  res.json({ googleClientId: process.env.GOOGLE_CLIENT_ID || null });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/claims', claimsRoutes);

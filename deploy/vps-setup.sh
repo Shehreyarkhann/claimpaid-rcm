@@ -58,6 +58,8 @@ STRIPE_PRICE_STARTER="${STRIPE_PRICE_STARTER:-}"
 STRIPE_PRICE_PRO="${STRIPE_PRICE_PRO:-}"
 STRIPE_WEBHOOK_SECRET="${STRIPE_WEBHOOK_SECRET:-}"
 APP_URL="${APP_URL:-https://${DOMAIN}}"
+# Google Sign-In (GIS ID-token flow). Leave empty to hide the Google button.
+GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID:-}"
 
 echo "==> ClaimPaid setup for ${DOMAIN}"
 
@@ -181,6 +183,7 @@ if [[ -f "${APP_DIR}/server/.env" ]]; then
   STRIPE_WEBHOOK_SECRET="$(keep_or STRIPE_WEBHOOK_SECRET "$(_get STRIPE_WEBHOOK_SECRET)")"
   APP_URL="$(keep_or APP_URL "$(_get APP_URL)")";             [[ -z "$APP_URL" ]] && APP_URL="https://${DOMAIN}"
   SUPERADMIN_EMAIL="$(keep_or SUPERADMIN_EMAIL "$(_get SUPERADMIN_EMAIL)")"
+  GOOGLE_CLIENT_ID="$(keep_or GOOGLE_CLIENT_ID "$(_get GOOGLE_CLIENT_ID)")"
   AI_DB_PATH="$(keep_or AI_DB_PATH "$(_get AI_DB_PATH)")";           [[ -z "$AI_DB_PATH" ]] && AI_DB_PATH="/opt/claimpaid-ai/server/askbase.db"
 fi
 cat > "${APP_DIR}/server/.env" <<EOF
@@ -202,6 +205,7 @@ STRIPE_PRICE_AI=${STRIPE_PRICE_AI:-}
 STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
 APP_URL=${APP_URL}
 SUPERADMIN_EMAIL=${SUPERADMIN_EMAIL:-}
+GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
 AI_DB_PATH=${AI_DB_PATH}
 EOF
 chmod 600 "${APP_DIR}/server/.env"

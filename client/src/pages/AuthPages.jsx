@@ -47,6 +47,75 @@ function Field({ label, ...props }) {
   );
 }
 
+// "Continue with Google" via Google Identity Services. Fetches the public
+// client ID from /api/config; if it's not configured (or GIS fails to load)
+// the button area renders nothing — no broken UI, no errors.
+function GoogleButton({ onCredential, text }) {
+  const btnRef = useRef(null);
+  const [clientId, setClientId] = useState(null);
+  const cbRef = useRef(onCredential);
+  cbRef.current = onCredential;
+
+  // 1. Fetch the public client ID. Nothing renders until we have one.
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/config')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((cfg) => {
+        if (!cancelled && cfg && cfg.googleClientId) setClientId(cfg.googleClientId);
+      })
+      .catch(() => { /* hide gracefully */ });
+    return () => { cancelled = true; };
+  }, []);
+
+  // 2. Once the container div is mounted, init GIS and render the button.
+  useEffect(() => {
+    if (!clientId || !btnRef.current) return;
+    let cancelled = false;
+    const loadGis = () =>
+      new Promise((resolve, reject) => {
+        if (window.google && window.google.accounts && window.google.accounts.id) return resolve();
+        const s = document.createElement('script');
+        s.src = 'https://accounts.google.com/gsi/client';
+        s.async = true;
+        s.defer = true;
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('gis-load-failed'));
+        document.head.appendChild(s);
+      });
+    loadGis()
+      .then(() => {
+        if (cancelled || !btnRef.current) return;
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: (resp) => {
+            if (resp && resp.credential) cbRef.current(resp.credential);
+          },
+        });
+        window.google.accounts.id.renderButton(btnRef.current, {
+          theme: 'outline',
+          size: 'large',
+          text: text || 'continue_with',
+          width: 320,
+        });
+      })
+      .catch(() => { /* hide gracefully */ });
+    return () => { cancelled = true; };
+  }, [clientId, text]);
+
+  if (!clientId) return null;
+  return (
+    <div>
+      <div className="flex items-center gap-3 my-1">
+        <div className="flex-1 h-px bg-slate-200" />
+        <span className="text-xs text-slate-400 font-medium">or</span>
+        <div className="flex-1 h-px bg-slate-200" />
+      </div>
+      <div ref={btnRef} className="flex justify-center" />
+    </div>
+  );
+}
+
 function MfaChallenge({ mfaToken, email, onBack }) {
   const { verifyMfa, resendMfa } = useAuth();
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
@@ -170,7 +239,7 @@ function MfaChallenge({ mfaToken, email, onBack }) {
 }
 
 export function Login({ goSignup, goForgot }) {
-  const { login } = useAuth();
+  const { login, googleLogin } = useAuth();
   const [email, setEmail] = useState('demo@pulsercm.com');
   const [password, setPassword] = useState('demo1234');
   const [error, setError] = useState(null);
@@ -182,6 +251,16 @@ export function Login({ goSignup, goForgot }) {
     setError(null); setBusy(true);
     try {
       const result = await login(email, password);
+      if (result?.mfaRequired) setMfaToken(result.mfaToken);
+    }
+    catch (err) { setError(err.message); }
+    finally { setBusy(false); }
+  };
+
+  const handleGoogle = async (idToken) => {
+    setError(null); setBusy(true);
+    try {
+      const result = await googleLogin(idToken);
       if (result?.mfaRequired) setMfaToken(result.mfaToken);
     }
     catch (err) { setError(err.message); }
@@ -210,6 +289,7 @@ export function Login({ goSignup, goForgot }) {
             </div>
           </div>
           <button className="btn btn-primary w-full !py-3" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
+          <GoogleButton onCredential={handleGoogle} text="continue_with" />
           <p className="text-sm text-slate-500 text-center">
             New to ClaimPaid? <button type="button" onClick={goSignup} className="text-emerald-600 font-semibold hover:underline">Create an account</button>
           </p>
@@ -223,7 +303,7 @@ export function Login({ goSignup, goForgot }) {
 }
 
 export function Signup({ goLogin }) {
-  const { signup } = useAuth();
+  const { signup, googleLogin } = useAuth();
   const [form, setForm] = useState({ orgName: '', name: '', email: '', password: '' });
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -233,6 +313,13 @@ export function Signup({ goLogin }) {
     e.preventDefault();
     setError(null); setBusy(true);
     try { await signup(form.orgName, form.name, form.email, form.password); }
+    catch (err) { setError(err.message); }
+    finally { setBusy(false); }
+  };
+
+  const handleGoogle = async (idToken) => {
+    setError(null); setBusy(true);
+    try { await googleLogin(idToken); }
     catch (err) { setError(err.message); }
     finally { setBusy(false); }
   };
@@ -250,8 +337,12 @@ export function Signup({ goLogin }) {
           <Field label="Company name" value={form.orgName} onChange={set('orgName')} placeholder="Acme Billing Services" required />
           <Field label="Your name" value={form.name} onChange={set('name')} placeholder="Jane Smith" required />
           <Field label="Work email" type="email" value={form.email} onChange={set('email')} placeholder="you@company.com" required />
-          <Field label="Password" type="password" value={form.password} onChange={set('password')} placeholder="Min. 8 characters" required />
+          <div>
+            <Field label="Password" type="password" value={form.password} onChange={set('password')} placeholder="8+ chars, upper, lower, number, symbol" required />
+            <p className="text-xs text-slate-400 mt-1.5">At least 8 characters with an uppercase letter, a lowercase letter, a number, and a symbol.</p>
+          </div>
           <button className="btn btn-primary w-full !py-3" disabled={busy}>{busy ? 'Creating…' : 'Create workspace'}</button>
+          <GoogleButton onCredential={handleGoogle} text="signup_with" />
           <p className="text-sm text-slate-500 text-center">
             Already have an account? <button type="button" onClick={goLogin} className="text-emerald-600 font-semibold hover:underline">Sign in</button>
           </p>
@@ -341,7 +432,7 @@ export function ResetPassword({ goLogin }) {
         <div className="w-full max-w-sm space-y-5">
           <div>
             <h2 className="text-2xl font-bold tracking-tight text-slate-900">Set a new password</h2>
-            <p className="text-sm text-slate-500 mt-1">Choose something strong — at least 8 characters</p>
+            <p className="text-sm text-slate-500 mt-1">At least 8 characters with an uppercase letter, a lowercase letter, a number, and a symbol</p>
           </div>
           {!token ? (
             <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">
@@ -354,7 +445,7 @@ export function ResetPassword({ goLogin }) {
           ) : (
             <form onSubmit={submit} className="space-y-5">
               {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}
-              <Field label="New password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min. 8 characters" required />
+              <Field label="New password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="8+ chars, upper, lower, number, symbol" required />
               <Field label="Confirm password" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Repeat it" required />
               <button className="btn btn-primary w-full !py-3" disabled={busy}>{busy ? 'Updating…' : 'Set new password'}</button>
             </form>
