@@ -20,6 +20,8 @@ import AIAssistant from './pages/AIAssistant';
 import Billing from './pages/Billing';
 import Organization from './pages/Organization';
 import { Login, Signup, ForgotPassword, ResetPassword } from './pages/AuthPages';
+import SuperAdmin from './pages/SuperAdmin';
+import SupportPage from './pages/SupportPage';
 import { api } from './api';
 
 function AuthGate({ children }) {
@@ -154,7 +156,47 @@ function Workspace() {
   );
 }
 
+
+function SuperAdminGate() {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+        <div className="text-slate-500 text-sm">Loading…</div>
+      </div>
+    );
+  }
+  if (!user) {
+    window.location.href = '/app/';
+    return null;
+  }
+  if (!user.is_superadmin) {
+    window.location.href = '/app/';
+    return null;
+  }
+  return <SuperAdmin />;
+}
+
 export default function App() {
+  const path = window.location.pathname;
+  if (path === '/support') {
+    return (
+      <AuthProvider>
+        <ToastProvider>
+          <SupportPage />
+        </ToastProvider>
+      </AuthProvider>
+    );
+  }
+  if (path === '/super' || path.startsWith('/super/')) {
+    return (
+      <AuthProvider>
+        <ToastProvider>
+          <SuperAdminGate />
+        </ToastProvider>
+      </AuthProvider>
+    );
+  }
   return (
     <AuthProvider>
       <ToastProvider>

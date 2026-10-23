@@ -109,6 +109,42 @@ export const api = {
   orgProfile: () => get('/api/org'),
   billingPortal: () =>
     authFetch('/api/billing/portal', { method: 'POST' }).then(handle),
+  // ---- Super-admin ----
+  super: {
+    overview: () => get('/api/super/overview'),
+    orgs: () => get('/api/super/orgs'),
+    orgDetail: (id) => get(`/api/super/orgs/${id}`),
+    setPlan: (id, plan, plan_status) =>
+      authFetch(`/api/super/orgs/${id}/plan`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan, plan_status }) }).then(handle),
+    deleteOrg: (id) =>
+      authFetch(`/api/super/orgs/${id}`, { method: 'DELETE' }).then(handle),
+    aiOrgs: () => get('/api/super/ai-orgs'),
+    users: (search = '') => get(`/api/super/users?${new URLSearchParams({ search })}`),
+    updateUser: (id, data) =>
+      authFetch(`/api/super/users/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(handle),
+    deleteUser: (id) =>
+      authFetch(`/api/super/users/${id}`, { method: 'DELETE' }).then(handle),
+    resetPassword: (id) =>
+      authFetch(`/api/super/users/${id}/reset-password`, { method: 'POST' }).then(handle),
+    subscriptions: () => get('/api/super/subscriptions'),
+    demos: () => get('/api/super/demos'),
+    updateDemo: (id, data) =>
+      authFetch(`/api/super/demos/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(handle),
+    tickets: () => get('/api/super/tickets'),
+    updateTicket: (id, data) =>
+      authFetch(`/api/super/tickets/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(handle),
+    tables: () => get('/api/super/tables'),
+    tableRows: (name, params = {}) => get(`/api/super/tables/${name}?${new URLSearchParams(params)}`),
+    insertRow: (name, data) =>
+      authFetch(`/api/super/tables/${name}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(handle),
+    updateRow: (name, id, data) =>
+      authFetch(`/api/super/tables/${name}/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(handle),
+    deleteRow: (name, id) =>
+      authFetch(`/api/super/tables/${name}/${id}`, { method: 'DELETE' }).then(handle),
+  },
+  submitSupport: (data) =>
+    fetch('/api/support', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+      .then((r) => r.json().then((b) => { if (!r.ok) throw new Error(b.error || 'Submit failed'); return b; })),
 };
 
 export const csvUrl = (path) => path; // auth via cookie-less; use fetch for authed CSV
@@ -132,4 +168,5 @@ export const fmtMoney2 = (n) =>
 export const fmtDate = (d) => {
   if (!d) return '—';
   return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
 };

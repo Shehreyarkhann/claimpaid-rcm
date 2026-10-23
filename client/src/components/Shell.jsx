@@ -196,7 +196,7 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
         </main>
         <footer className="px-8 pb-6 text-xs text-slate-400 max-w-[1400px] w-full mx-auto flex justify-between items-center">
           <span>ClaimPaid RCM · Your data is isolated to your organization</span>
-          <span>Part of <a href="https://claimpaid.io" target="_blank" rel="noreferrer" className="text-emerald-600 font-semibold hover:underline">ClaimPaid</a> · <a href="#" onClick={(e) => e.preventDefault()} title="Ask your payer policies anything" className="text-violet-600 font-semibold hover:underline">🤖 ClaimPaid AI</a></span>
+          <span>Part of <a href="https://claimpaid.io" target="_blank" rel="noreferrer" className="text-emerald-600 font-semibold hover:underline">ClaimPaid</a> · <a href="/support" className="text-slate-500 hover:text-slate-700 hover:underline">Support</a> · <a href="/ai/app/" className="text-violet-600 font-semibold hover:underline">ClaimPaid AI</a></span>
         </footer>
       </div>
     </div>

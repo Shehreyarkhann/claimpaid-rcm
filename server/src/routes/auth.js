@@ -76,7 +76,15 @@ router.post('/login', async (req, res) => {
     }
   }
 
-  const safe = { id: user.id, org_id: user.org_id, email: user.email, name: user.name, role: user.role };
+  // Super-admin bootstrap: the configured email is promoted on every login
+  // (case-insensitive). Reads SUPERADMIN_EMAIL at request time.
+  const superEmail = (process.env.SUPERADMIN_EMAIL || '').trim().toLowerCase();
+  if (superEmail && user.email && user.email.toLowerCase() === superEmail && !user.is_superadmin) {
+    db.prepare('UPDATE users SET is_superadmin = 1 WHERE id = ?').run(user.id);
+    user.is_superadmin = 1;
+  }
+
+  const safe = { id: user.id, org_id: user.org_id, email: user.email, name: user.name, role: user.role, is_superadmin: user.is_superadmin ? 1 : 0 };
   const org = db.prepare('SELECT name FROM orgs WHERE id = ?').get(user.org_id);
   res.json({ token: signToken(safe), user: { ...safe, orgName: org ? org.name : '' } });
 });
@@ -84,7 +92,8 @@ router.post('/login', async (req, res) => {
 // --- Current user ---
 router.get('/me', authRequired, (req, res) => {
   const org = db.prepare('SELECT name FROM orgs WHERE id = ?').get(req.orgId);
-  res.json({ ...req.user, orgName: org ? org.name : '' });
+  const flag = db.prepare('SELECT is_superadmin FROM users WHERE id = ?').get(req.user.id);
+  res.json({ ...req.user, orgName: org ? org.name : '', is_superadmin: flag && flag.is_superadmin === 1 ? 1 : 0 });
 });
 
 // --- Password reset: request ---
@@ -258,35 +267,15 @@ router.delete('/orgs/:id', authRequired, (req, res) => {
   if (!member) return res.status(404).json({ error: 'Workspace not found' });
   if (member.role !== 'owner') return res.status(403).json({ error: 'Only workspace owners can delete it' });
 
-  const tables = [
-    'claims', 'claim_activity', 'appeals', 'appeal_notes',
-    'auth_requests', 'auth_notes', 'eligibility_checks',
-    'payers', 'payer_filing_rules', 'payer_playbook',
-    'appeal_letter_templates', 'audit_log',
-  ];
-  // Suspend FK enforcement for the wipe (no-op inside a txn, so set it outside)
-  db.exec('PRAGMA foreign_keys = OFF');
-  db.exec('BEGIN');
+  // FK-safe wipe via shared helper (also covers custom rules, suggestions, tickets)
   try {
-    for (const t of tables) {
-      try { db.prepare(`DELETE FROM ${t} WHERE org_id = ?`).run(orgId); } catch {}
-    }
-    // Demo requests are not org-scoped; leave them.
-    db.prepare('DELETE FROM user_orgs WHERE org_id = ?').run(orgId);
-    db.prepare('DELETE FROM orgs WHERE id = ?').run(orgId);
-    db.exec('COMMIT');
+    require('../orgDelete').deleteOrg(orgId);
   } catch (e) {
-    db.exec('ROLLBACK');
-    db.exec('PRAGMA foreign_keys = ON');
     return res.status(500).json({ error: 'Delete failed: ' + e.message });
   }
-  db.exec('PRAGMA foreign_keys = ON');
 
   // Remove users left with no workspaces; move the requester elsewhere or log them out
-  const orphaned = db.prepare(
-    `SELECT u.id FROM users u LEFT JOIN user_orgs m ON m.user_id = u.id WHERE m.user_id IS NULL`
-  ).all();
-  for (const o of orphaned) db.prepare('DELETE FROM users WHERE id = ?').run(o.id);
+  // (orphan cleanup happens inside deleteOrg)
 
   const remaining = db.prepare(
     `SELECT o.id, o.name, m.role FROM user_orgs m JOIN orgs o ON o.id = m.org_id WHERE m.user_id = ? ORDER BY o.name`

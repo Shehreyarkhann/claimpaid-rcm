@@ -296,6 +296,26 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_rule_sugg_org ON rule_suggestions(org_id);
   `);
 
+  // Super-admin support
+  if (!columnExists('users', 'is_superadmin')) db.exec('ALTER TABLE users ADD COLUMN is_superadmin INTEGER NOT NULL DEFAULT 0');
+  if (!columnExists('demo_requests', 'notes')) db.exec('ALTER TABLE demo_requests ADD COLUMN notes TEXT DEFAULT \'\'');
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS support_tickets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER REFERENCES orgs(id),
+      user_id INTEGER REFERENCES users(id),
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      message TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','closed')),
+      internal_note TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_tickets_status ON support_tickets(status);
+  `);
+
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_claims_org_number ON claims(org_id, claim_number)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_claims_org ON claims(org_id)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_payers_org ON payers(org_id)');
@@ -315,6 +335,7 @@ function initSchema() {
   db.exec(`
     INSERT OR IGNORE INTO user_orgs (user_id, org_id, role)
     SELECT id, org_id, role FROM users
+    WHERE EXISTS (SELECT 1 FROM orgs WHERE orgs.id = users.org_id)
   `);
 }
 

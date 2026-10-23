@@ -21,6 +21,8 @@ const eligibilityRoutes = require('./routes/eligibility');
 const orgRoutes = require('./routes/org');
 const { billingRoutes, handleWebhook } = require('./routes/billing');
 const demoRoutes = require('./routes/demo');
+const superRoutes = require('./routes/super');
+const supportRoutes = require('./routes/support');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -56,6 +58,8 @@ app.use('/api/eligibility', eligibilityRoutes);
 app.use('/api/org', orgRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/demo', demoRoutes);
+app.use('/api/super', superRoutes);
+app.use('/api/support', supportRoutes);
 
 // Email-code MFA routes
 const { registerRoutes: registerMfaRoutes } = require('./mfa');
@@ -79,6 +83,13 @@ const clientDist = path.join(__dirname, '..', '..', 'client', 'dist');
 if (fs.existsSync(clientDist)) {
   app.use('/app', express.static(clientDist));
   app.get('/app/*', (req, res) => {
+    res.sendFile(path.join(clientDist, 'index.html'));
+  });
+  // Super-admin console + public support page live in the same SPA bundle
+  app.get('/super', (req, res) => {
+    res.sendFile(path.join(clientDist, 'index.html'));
+  });
+  app.get('/support', (req, res) => {
     res.sendFile(path.join(clientDist, 'index.html'));
   });
 }
