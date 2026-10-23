@@ -3,6 +3,7 @@
 // (https://www.googleapis.com/oauth2/v3/certs, cached in memory ~1h),
 // then validates aud/iss/exp/email_verified.
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 const CERTS_URL = 'https://www.googleapis.com/oauth2/v3/certs';
 const CERT_CACHE_MS = 3600_000;
@@ -13,11 +14,10 @@ let certCache = { keys: null, fetchedAt: 0 };
 let testCerts = null;
 function _setTestCerts(keys) { testCerts = keys; }
 
-function jwkToPem(jwk) {
-  // x5c[0] is the DER-encoded certificate (base64)
-  const derB64 = jwk.x5c[0];
-  const wrapped = derB64.replace(/(.{64})/g, '$1\n');
-  return `-----BEGIN CERTIFICATE-----\n${wrapped}\n-----END CERTIFICATE-----\n`;
+function jwkToPublicKey(jwk) {
+  // Google's JWKS omits x5c (confirmed 2026-10-23); build the RSA public key
+  // directly from the JWK's n/e instead of via a PEM certificate.
+  return crypto.createPublicKey({ key: { kty: jwk.kty, n: jwk.n, e: jwk.e }, format: 'jwk' });
 }
 
 async function getGoogleCerts() {
@@ -61,12 +61,12 @@ async function verifyGoogleIdToken(idToken) {
   } catch {
     fail(502, 'Could not verify Google token right now. Please try again.');
   }
-  const jwk = keys.find((k) => k.kid === decoded.header.kid && k.x5c && k.x5c[0]);
+  const jwk = keys.find((k) => k.kid === decoded.header.kid && k.n && k.e);
   if (!jwk) fail(401, 'Google signing key not found for this token. Please try signing in again.');
 
   let payload;
   try {
-    payload = jwt.verify(idToken, jwkToPem(jwk), { algorithms: ['RS256'] });
+    payload = jwt.verify(idToken, jwkToPublicKey(jwk), { algorithms: ['RS256'] });
   } catch {
     fail(401, 'Google token signature check failed. Please try signing in again.');
   }
