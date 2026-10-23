@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>837P vs 835 Explained: What Each EDI File Does</title>
+<meta name="description" content="837P vs 835: learn the difference between the healthcare claim submission file and the remittance advice file, plus 999 and 277CA acknowledgments."/>
+<link rel="canonical" href="https://claimpaid.io/blog/837p-vs-835-explained/"/>
+<meta name="robots" content="index, follow, max-image-preview:large"/>
+<meta property="og:type" content="article"/>
+<meta property="og:site_name" content="ClaimPaid"/>
+<meta property="og:title" content="837P vs 835 Explained: What Each EDI File Does"/>
+<meta property="og:description" content="One file sends claims out, the other brings payment answers back. A plain-English guide to the 837P, 835, 999, and 277CA."/>
+<meta property="og:url" content="https://claimpaid.io/blog/837p-vs-835-explained/"/>
+<meta property="og:image" content="https://claimpaid.io/claimpaid-icon.webp"/>
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="837P vs 835 Explained: What Each EDI File Does"/>
+<meta name="twitter:description" content="The 837P sends claims out. The 835 brings payment answers back. Plus 999 and 277CA acks explained."/>
+<meta name="twitter:image" content="https://claimpaid.io/claimpaid-icon.webp"/>
+<link rel="icon" type="image/webp" href="/claimpaid-icon.webp"/>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Article","headline":"837P vs 835 Explained: What Each EDI File Does","datePublished":"2026-10-23","dateModified":"2026-10-23","author":{"@type":"Organization","name":"ClaimPaid","url":"https://claimpaid.io/"},"publisher":{"@type":"Organization","name":"ClaimPaid","url":"https://claimpaid.io/","logo":{"@type":"ImageObject","url":"https://claimpaid.io/claimpaid-icon.webp"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://claimpaid.io/blog/837p-vs-835-explained/"},"description":"Plain-English guide to healthcare EDI: the 837P claim file, the 835 remittance file, and 999/277CA acknowledgments."}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"What is an 837P file?","acceptedAnswer":{"@type":"Answer","text":"The 837P is the standard electronic format for submitting professional (physician/supplier) healthcare claims to payers. The current HIPAA-mandated version is 005010X222A1. It carries patient, provider, diagnosis, procedure, and charge data for each claim."}},
+{"@type":"Question","name":"What is an 835 file?","acceptedAnswer":{"@type":"Answer","text":"The 835 is the Electronic Remittance Advice (ERA) — the payer's electronic response to your claims. It reports what was paid, what was denied, and why, using Claim Adjustment Reason Codes (CARCs) and Remittance Advice Remark Codes (RARCs)."}},
+{"@type":"Question","name":"What is the difference between 837P and 837I?","acceptedAnswer":{"@type":"Answer","text":"The 837P is for professional claims (physicians, suppliers, clinics billing on the CMS-1500/837P format). The 837I is for institutional claims (hospitals, facilities billing on the UB-04/837I format). They carry different data loops suited to each claim type."}},
+{"@type":"Question","name":"What is a 277CA acknowledgment?","acceptedAnswer":{"@type":"Answer","text":"The 277CA (Claim Acknowledgment) is the payer's confirmation that your 837 claim file was received and whether each claim was accepted into adjudication or rejected up front. It is your proof of timely submission — keep it for every batch."}}
+]}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://claimpaid.io/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://claimpaid.io/blog/"},{"@type":"ListItem","position":3,"name":"837P vs 835 Explained","item":"https://claimpaid.io/blog/837p-vs-835-explained/"}]}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{--navy:#0b1220;--navy2:#0f172a;--panel:#111c33;--green:#10b981;--green-lt:#34d399;--violet:#8b5cf6;--violet-lt:#a78bfa;--txt:#e8eefc;--mut:#93a0bd;--line:rgba(255,255,255,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--navy);color:var(--txt);font-family:'Inter',system-ui,sans-serif;line-height:1.75}
+h1,h2,h3{font-family:'Sora',sans-serif;line-height:1.3}
+.wrap{max-width:780px;margin:0 auto;padding:0 24px}
+nav{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(14px);background:rgba(11,18,32,.85);border-bottom:1px solid var(--line)}
+.nav-in{max-width:1100px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:68px}
+.logo{display:flex;align-items:center;gap:10px;font-family:'Sora';font-weight:800;font-size:21px;letter-spacing:-.4px;text-decoration:none;color:var(--txt)}
+.logo img{width:34px;height:34px;border-radius:9px;box-shadow:0 0 18px rgba(16,185,129,.45)}
+.logo span{color:var(--green-lt)}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{color:var(--mut);text-decoration:none;font-size:14.5px;font-weight:500}
+.nav-links a:hover{color:#fff}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:15px;border-radius:12px;padding:13px 26px;text-decoration:none;border:none;transition:transform .25s,box-shadow .25s;cursor:pointer}
+.btn-green{background:linear-gradient(135deg,#10b981,#059669);color:#04120c;box-shadow:0 8px 28px rgba(16,185,129,.35)}
+.btn-green:hover{transform:translateY(-3px);box-shadow:0 14px 40px rgba(16,185,129,.5)}
+.btn-sm{padding:10px 20px;font-size:14px}
+article{padding:140px 0 60px}
+.crumb{font-size:13px;color:var(--mut);margin-bottom:18px}
+.crumb a{color:var(--green-lt);text-decoration:none}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--green-lt);background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);padding:5px 12px;border-radius:100px;margin-bottom:18px}
+article h1{font-size:clamp(30px,4.5vw,46px);font-weight:800;letter-spacing:-1.2px;margin-bottom:14px}
+.byline{color:var(--mut);font-size:14px;margin-bottom:34px}
+.answer{background:linear-gradient(160deg,rgba(16,185,129,.1),rgba(16,185,129,.03));border:1px solid rgba(16,185,129,.4);border-left:4px solid var(--green);border-radius:14px;padding:22px 26px;margin-bottom:38px}
+.answer .lbl{font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--green-lt);margin-bottom:10px}
+.answer p{font-size:16px;margin:0}
+.prose h2{font-size:26px;font-weight:700;letter-spacing:-.5px;margin:44px 0 16px}
+.prose h3{font-size:19px;font-weight:700;margin:30px 0 12px;color:#fff}
+.prose p{margin:0 0 18px;color:#c9d2e8}
+.prose ul,.prose ol{margin:0 0 20px 22px;color:#c9d2e8}
+.prose li{margin-bottom:10px}
+.prose strong{color:#fff}
+.prose a{color:var(--green-lt);text-decoration:underline;text-underline-offset:3px}
+table{width:100%;border-collapse:collapse;margin:24px 0;font-size:14.5px}
+th{background:rgba(16,185,129,.1);color:#fff;text-align:left;padding:12px 14px;font-family:'Sora';font-size:13.5px}
+td{padding:12px 14px;border-top:1px solid var(--line);color:#c9d2e8;vertical-align:top}
+tr:hover td{background:rgba(255,255,255,.02)}
+.flow{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px 28px;margin:26px 0;font-size:15px;color:#c9d2e8}
+.flow .step{display:flex;gap:14px;margin-bottom:14px}
+.flow .step:last-child{margin-bottom:0}
+.flow .n{flex-shrink:0;width:32px;height:32px;border-radius:50%;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:var(--green-lt);font-family:'Sora';font-weight:700;display:flex;align-items:center;justify-content:center;font-size:14px}
+.faq{margin:44px 0}
+.faq-item{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 24px;margin-bottom:14px}
+.faq-item h3{font-size:16.5px;margin:0 0 8px;color:#fff}
+.faq-item p{margin:0;font-size:14.5px;color:#c9d2e8}
+.cta{background:linear-gradient(140deg,rgba(16,185,129,.14),rgba(139,92,246,.1));border:1px solid rgba(16,185,129,.4);border-radius:20px;padding:40px;text-align:center;margin:50px 0}
+.cta h2{font-size:26px;margin-bottom:12px}
+.cta p{color:var(--mut);margin-bottom:24px;max-width:520px;margin-left:auto;margin-right:auto}
+footer{border-top:1px solid var(--line);padding:40px 0;color:var(--mut);font-size:13.5px}
+.foot{max-width:1100px;margin:0 auto;padding:0 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px}
+.foot a{color:var(--mut);text-decoration:none}
+.foot a:hover{color:var(--green-lt)}
+.foot-links{display:flex;gap:22px}
+code{background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.25);border-radius:6px;padding:2px 8px;font-size:13.5px;color:var(--green-lt);font-family:ui-monospace,monospace}
+@media(max-width:640px){.nav-links a:not(.btn){display:none}table{font-size:13px}}
+</style>
+</head>
+<body>
+<nav><div class="nav-in">
+  <a class="logo" href="/"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo"/>Claim<span>Paid</span></a>
+  <div class="nav-links"><a href="/">Product</a><a href="/blog/">Blog</a><a class="btn btn-green btn-sm" href="/app/">Get started</a></div>
+</div></nav>
+
+<article><div class="wrap">
+<div class="crumb"><a href="/">Home</a> / <a href="/blog/">Blog</a> / 837P vs 835</div>
+<span class="tag">EDI</span>
+<h1>837P vs 835 Explained: What Each EDI File Does</h1>
+<div class="byline">ClaimPaid · October 23, 2026 · 6 min read</div>
+
+<div class="answer">
+<div class="lbl">The short answer</div>
+<p>The <strong>837P</strong> is the electronic file you send <em>to</em> the payer containing professional healthcare claims — patient, provider, diagnosis, procedure, and charge data. The <strong>835</strong> is the electronic remittance advice the payer sends <em>back</em> — what was paid, what was denied, and why, using standardized reason codes. Two acknowledgment files complete the loop: the <strong>999</strong> confirms the file structure was readable, and the <strong>277CA</strong> confirms each claim was accepted into adjudication.</p>
+</div>
+
+<div class="prose">
+<p>If you work in medical billing, these four numbers describe your entire revenue pipeline. The 837 goes out with your claims; the 835 comes back with your money and your denials. Understanding what each file does — and what can go wrong with each — is foundational to running a clean operation.</p>
+
+<h2>The 837P: claims going out</h2>
+<p>The 837P (P = Professional) is the HIPAA-mandated electronic format for physician and supplier claims — the electronic equivalent of the paper CMS-1500 form. The current version is <code>005010X222A1</code>. Each file contains one or more claims, and each claim carries structured "loops" of data: the billing provider, the rendering provider, the patient/subscriber, diagnoses (ICD-10), procedures (CPT/HCPCS), charges, and dates of service.</p>
+<p>Its sibling, the <strong>837I</strong> (Institutional), serves hospitals and facilities — the electronic UB-04. Same transaction family, different data loops suited to facility billing.</p>
+<p>Key facts about the 837P:</p>
+<ul>
+<li><strong>Direction:</strong> provider (or clearinghouse) → payer.</li>
+<li><strong>Control numbers</strong> (in the ISA/GS/ST envelopes) uniquely identify each file and must increment — duplicate control numbers cause rejections.</li>
+<li><strong>Balancing matters:</strong> line-item charges must sum to the claim total, and the transaction trailer counts must match the actual segments — structural errors here get the whole file rejected.</li>
+<li>Most practices send 837s through a <strong>clearinghouse</strong>, which validates and forwards them to each payer.</li>
+</ul>
+
+<h2>The 835: payment answers coming back</h2>
+<p>The 835 is the Electronic Remittance Advice (ERA) — the payer's itemized response to your claims. For every claim it reports: amount paid, adjustments, and the reason for each adjustment via <strong>Claim Adjustment Reason Codes (CARCs)</strong> with <strong>Remittance Advice Remark Codes (RARCs)</strong> adding detail. This is where denials arrive (see our guide to the <a href="/blog/top-claim-denial-reasons-fixes/">7 most common denial reasons</a>) and where your appeal workflow begins (see <a href="/blog/how-to-appeal-denied-claim/">how to appeal a denied claim</a>).</p>
+<ul>
+<li><strong>Direction:</strong> payer → provider.</li>
+<li>Drives <strong>payment posting</strong> — matching each payment and adjustment to the right claim and line.</li>
+<li>A single 835 can cover many claims and include both payments and zero-pay (denied) lines.</li>
+</ul>
+
+<h2>The acknowledgments: 999 and 277CA</h2>
+<p>Between the 837 going out and the 835 coming back, two acknowledgment files tell you whether your claims actually made it in:</p>
+<table>
+<tr><th>File</th><th>Full name</th><th>What it tells you</th></tr>
+<tr><td><strong>999</strong></td><td>Functional Acknowledgment</td><td>Whether the 837 file's <em>structure</em> was valid — accepted, accepted with errors, or rejected. A rejected 999 means fix the file and resend.</td></tr>
+<tr><td><strong>277CA</strong></td><td>Claim Acknowledgment</td><td>Per-claim status: accepted into the payer's adjudication system or rejected up front, with reason codes. This is your proof the payer received each claim.</td></tr>
+</table>
+<p>The 277CA deserves special attention: it is your <strong>proof of timely submission</strong>. If a payer later denies for <a href="/blog/timely-filing-limits-by-payer-2026/">timely filing</a>, the 277CA showing receipt within the window is your appeal evidence. Keep every acknowledgment.</p>
+
+<h2>How they fit together</h2>
+<div class="flow">
+<div class="step"><span class="n">1</span><span><strong>You build the 837P</strong> — claims are created, <a href="/blog/what-is-claim-scrubbing/" style="color:var(--green-lt)">scrubbed for errors</a>, and batched.</span></div>
+<div class="step"><span class="n">2</span><span><strong>Transmit to the payer</strong> — directly or via clearinghouse (SFTP, API, or manual upload).</span></div>
+<div class="step"><span class="n">3</span><span><strong>999 arrives</strong> — confirms the file was structurally readable.</span></div>
+<div class="step"><span class="n">4</span><span><strong>277CA arrives</strong> — confirms each claim entered adjudication (or was rejected, with reasons).</span></div>
+<div class="step"><span class="n">5</span><span><strong>835 arrives</strong> — payment and denial detail per claim. Post payments, work denials.</span></div>
+</div>
+
+<h2>What goes wrong (and how to catch it)</h2>
+<ul>
+<li><strong>File rejected at the 999:</strong> structural errors — bad control numbers, segment count mismatches, invalid envelopes. Fix and resend the batch.</li>
+<li><strong>Claims rejected at the 277CA:</strong> front-end rejections (bad member ID, provider not enrolled). These never entered adjudication — fix and resubmit quickly; the timely-filing clock is running.</li>
+<li><strong>835 never arrives:</strong> the claim may be stuck. Follow up with the payer using the claim's trace numbers.</li>
+<li><strong>835 adjustments you don't understand:</strong> look up the CARC/RARC combination — the codes are standardized precisely so you don't have to guess.</li>
+</ul>
+
+<h2>Inside the 837P: the loops that matter</h2>
+<p>An 837P file is organized into hierarchical "loops," each carrying a specific data set. You don't need to memorize them, but knowing the structure helps when debugging rejections:</p>
+<ul>
+<li><strong>1000A / 1000B:</strong> submitter and receiver identification — who sent the file and who it's for.</li>
+<li><strong>2010AA:</strong> billing provider — name, NPI, address, taxonomy. A mismatch here against the payer's enrollment records causes front-end rejections.</li>
+<li><strong>2010BA / 2010CA:</strong> subscriber (policyholder) and patient — member IDs, demographics. Most eligibility-related 277CA rejections trace to these loops.</li>
+<li><strong>2300:</strong> claim information — dates, place of service, diagnosis codes, claim amounts, prior authorization numbers.</li>
+<li><strong>2400:</strong> service lines — each CPT/HCPCS line with its own diagnosis pointers, modifiers, charges, and rendering provider.</li>
+<li><strong>SE trailer:</strong> segment counts that must exactly match the file contents — a common source of 999 rejections when hand-built files miscount.</li>
+</ul>
+
+<h2>Common 999 rejections and what they mean</h2>
+<p>When the 999 comes back rejected, the problem is structural, not clinical. The usual suspects:</p>
+<ul>
+<li><strong>Duplicate control numbers:</strong> the ISA13/GS06/ST02 identifiers must be unique per file. Resending a file with the same numbers looks like a duplicate submission.</li>
+<li><strong>Segment count mismatch:</strong> the SE trailer's count doesn't match the actual segments — often from a file builder bug.</li>
+<li><strong>Invalid envelopes:</strong> wrong sender/receiver IDs in the ISA segment, so the payer's system can't route the file.</li>
+<li><strong>Version mismatch:</strong> the GS08 version identifier doesn't match what the payer expects (should be 005010X222A1 for 837P).</li>
+</ul>
+<p>None of these involve medical judgment — they're plumbing. Fix the file generation and resend; the timely-filing clock is running from the date of service, not from when you get the plumbing right.</p>
+
+<h2>Reading an 835: payment posting basics</h2>
+<p>When the 835 arrives, each claim line carries the financial outcome in a standard structure worth understanding:</p>
+<ul>
+<li><strong>Paid amount vs. billed amount:</strong> the difference is explained by the adjustment codes that follow — never just "the payer short-paid us."</li>
+<li><strong>Adjustment group codes:</strong> CO (contractual obligation — you absorb it), PR (patient responsibility — billable to the patient), OA (other adjustments). Posting to the wrong bucket creates compliance problems.</li>
+<li><strong>CARC + RARC pairs:</strong> the reason code plus the remark code is the complete story. Post both to the claim record — your denial analytics depend on it.</li>
+<li><strong>Zero-pay lines:</strong> a line with $0 paid and a CARC is a denial, not a pending claim. Route it to the denial workflow immediately — see <a href="/blog/how-to-appeal-denied-claim/">how to appeal</a>.</li>
+</ul>
+<p>Clean payment posting is what turns the 835 from a confusing file into the data source your whole revenue cycle runs on.</p>
+
+<div class="faq">
+<h2>Frequently asked questions</h2>
+<div class="faq-item"><h3>What is an 837P file?</h3><p>The 837P is the standard electronic format for submitting professional (physician/supplier) healthcare claims to payers. The current HIPAA-mandated version is 005010X222A1. It carries patient, provider, diagnosis, procedure, and charge data for each claim.</p></div>
+<div class="faq-item"><h3>What is an 835 file?</h3><p>The 835 is the Electronic Remittance Advice (ERA) — the payer's electronic response to your claims. It reports what was paid, what was denied, and why, using Claim Adjustment Reason Codes (CARCs) and Remittance Advice Remark Codes (RARCs).</p></div>
+<div class="faq-item"><h3>What is the difference between 837P and 837I?</h3><p>The 837P is for professional claims (physicians, suppliers, clinics billing on the CMS-1500/837P format). The 837I is for institutional claims (hospitals, facilities billing on the UB-04/837I format). They carry different data loops suited to each claim type.</p></div>
+<div class="faq-item"><h3>What is a 277CA acknowledgment?</h3><p>The 277CA (Claim Acknowledgment) is the payer's confirmation that your 837 claim file was received and whether each claim was accepted into adjudication or rejected up front. It is your proof of timely submission — keep it for every batch.</p></div>
+</div>
+</div>
+
+<div class="cta">
+<h2>Real 837P generation and 835 posting</h2>
+<p>ClaimPaid generates validated 837P files, tracks every batch from draft to accepted, parses 999 and 277CA acknowledgments per claim, and imports 835 remittance files — the full EDI loop in one place.</p>
+<a class="btn btn-green" href="/#pricing">See plans — from $199/mo →</a>
+</div>
+</div>
+</article>
+
+<footer><div class="foot">
+  <a class="logo" href="/" style="font-size:17px"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo" style="width:28px;height:28px"/>Claim<span>Paid</span></a>
+  <div class="foot-links"><a href="/blog/">Blog</a><a href="/legal/terms">Terms</a><a href="/legal/privacy">Privacy</a><a href="mailto:support@claimpaid.io">support@claimpaid.io</a></div>
+  <div>© 2026 ClaimPaid · Get your claims paid.</div>
+</div></footer>
+</body>
+</html>

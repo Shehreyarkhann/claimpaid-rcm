@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>What Is Claim Scrubbing? Clean Claims Explained</title>
+<meta name="description" content="Claim scrubbing catches billing errors before submission. Learn how scrubbers work, what they check, and how clean-claim rates affect your revenue."/>
+<link rel="canonical" href="https://claimpaid.io/blog/what-is-claim-scrubbing/"/>
+<meta name="robots" content="index, follow, max-image-preview:large"/>
+<meta property="og:type" content="article"/>
+<meta property="og:site_name" content="ClaimPaid"/>
+<meta property="og:title" content="What Is Claim Scrubbing? Clean Claims Explained"/>
+<meta property="og:description" content="A claim scrubber checks every claim for errors before it goes to the payer. How scrubbing works, what it catches, and why clean-claim rate matters."/>
+<meta property="og:url" content="https://claimpaid.io/blog/what-is-claim-scrubbing/"/>
+<meta property="og:image" content="https://claimpaid.io/claimpaid-icon.webp"/>
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="What Is Claim Scrubbing? Clean Claims Explained"/>
+<meta name="twitter:description" content="How claim scrubbers work, what they check, and why clean-claim rate is the metric that matters."/>
+<meta name="twitter:image" content="https://claimpaid.io/claimpaid-icon.webp"/>
+<link rel="icon" type="image/webp" href="/claimpaid-icon.webp"/>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Article","headline":"What Is Claim Scrubbing? Clean Claims Explained","datePublished":"2026-10-23","dateModified":"2026-10-23","author":{"@type":"Organization","name":"ClaimPaid","url":"https://claimpaid.io/"},"publisher":{"@type":"Organization","name":"ClaimPaid","url":"https://claimpaid.io/","logo":{"@type":"ImageObject","url":"https://claimpaid.io/claimpaid-icon.webp"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://claimpaid.io/blog/what-is-claim-scrubbing/"},"description":"What claim scrubbing is, how scrubbers validate claims before submission, and how clean-claim rates work."}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"What is claim scrubbing?","acceptedAnswer":{"@type":"Answer","text":"Claim scrubbing is the automated validation of healthcare claims for errors before they are submitted to the payer. A scrubber checks data completeness, coding validity, payer-specific rules, and medical-necessity indicators, flagging problems so billers can fix them before submission."}},
+{"@type":"Question","name":"What is a clean claim?","acceptedAnswer":{"@type":"Answer","text":"A clean claim is one that passes through payer adjudication without needing correction — complete, accurate data, valid coding, and all payer requirements met. Clean claims are paid on the first pass, which is why the clean-claim rate is a core revenue cycle metric."}},
+{"@type":"Question","name":"What does a claim scrubber check?","acceptedAnswer":{"@type":"Answer","text":"Typical checks include: required fields present (member ID, NPI, dates, diagnosis pointers), valid CPT/ICD-10 codes and code combinations, NCCI bundling edits, payer-specific rules (modifiers, authorization requirements), and basic balancing of charges."}},
+{"@type":"Question","name":"Does claim scrubbing prevent all denials?","acceptedAnswer":{"@type":"Answer","text":"No. Scrubbing prevents administrative and coding denials — missing data, invalid codes, bundling errors — which are a large share of all denials. It cannot prevent medical-necessity denials, authorization denials for services never requested, or eligibility issues arising after submission."}}
+]}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://claimpaid.io/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://claimpaid.io/blog/"},{"@type":"ListItem","position":3,"name":"What Is Claim Scrubbing?","item":"https://claimpaid.io/blog/what-is-claim-scrubbing/"}]}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{--navy:#0b1220;--navy2:#0f172a;--panel:#111c33;--green:#10b981;--green-lt:#34d399;--violet:#8b5cf6;--violet-lt:#a78bfa;--txt:#e8eefc;--mut:#93a0bd;--line:rgba(255,255,255,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--navy);color:var(--txt);font-family:'Inter',system-ui,sans-serif;line-height:1.75}
+h1,h2,h3{font-family:'Sora',sans-serif;line-height:1.3}
+.wrap{max-width:780px;margin:0 auto;padding:0 24px}
+nav{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(14px);background:rgba(11,18,32,.85);border-bottom:1px solid var(--line)}
+.nav-in{max-width:1100px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:68px}
+.logo{display:flex;align-items:center;gap:10px;font-family:'Sora';font-weight:800;font-size:21px;letter-spacing:-.4px;text-decoration:none;color:var(--txt)}
+.logo img{width:34px;height:34px;border-radius:9px;box-shadow:0 0 18px rgba(16,185,129,.45)}
+.logo span{color:var(--green-lt)}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{color:var(--mut);text-decoration:none;font-size:14.5px;font-weight:500}
+.nav-links a:hover{color:#fff}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:15px;border-radius:12px;padding:13px 26px;text-decoration:none;border:none;transition:transform .25s,box-shadow .25s;cursor:pointer}
+.btn-green{background:linear-gradient(135deg,#10b981,#059669);color:#04120c;box-shadow:0 8px 28px rgba(16,185,129,.35)}
+.btn-green:hover{transform:translateY(-3px);box-shadow:0 14px 40px rgba(16,185,129,.5)}
+.btn-sm{padding:10px 20px;font-size:14px}
+article{padding:140px 0 60px}
+.crumb{font-size:13px;color:var(--mut);margin-bottom:18px}
+.crumb a{color:var(--green-lt);text-decoration:none}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--green-lt);background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);padding:5px 12px;border-radius:100px;margin-bottom:18px}
+article h1{font-size:clamp(30px,4.5vw,46px);font-weight:800;letter-spacing:-1.2px;margin-bottom:14px}
+.byline{color:var(--mut);font-size:14px;margin-bottom:34px}
+.answer{background:linear-gradient(160deg,rgba(16,185,129,.1),rgba(16,185,129,.03));border:1px solid rgba(16,185,129,.4);border-left:4px solid var(--green);border-radius:14px;padding:22px 26px;margin-bottom:38px}
+.answer .lbl{font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--green-lt);margin-bottom:10px}
+.answer p{font-size:16px;margin:0}
+.prose h2{font-size:26px;font-weight:700;letter-spacing:-.5px;margin:44px 0 16px}
+.prose h3{font-size:19px;font-weight:700;margin:30px 0 12px;color:#fff}
+.prose p{margin:0 0 18px;color:#c9d2e8}
+.prose ul,.prose ol{margin:0 0 20px 22px;color:#c9d2e8}
+.prose li{margin-bottom:10px}
+.prose strong{color:#fff}
+.prose a{color:var(--green-lt);text-decoration:underline;text-underline-offset:3px}
+table{width:100%;border-collapse:collapse;margin:24px 0;font-size:14.5px}
+th{background:rgba(16,185,129,.1);color:#fff;text-align:left;padding:12px 14px;font-family:'Sora';font-size:13.5px}
+td{padding:12px 14px;border-top:1px solid var(--line);color:#c9d2e8;vertical-align:top}
+tr:hover td{background:rgba(255,255,255,.02)}
+.metric{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px 28px;margin:26px 0;text-align:center}
+.metric .formula{font-family:'Sora';font-size:19px;font-weight:700;color:#fff;margin-bottom:8px}
+.metric p{font-size:14px;color:var(--mut);margin:0}
+.faq{margin:44px 0}
+.faq-item{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 24px;margin-bottom:14px}
+.faq-item h3{font-size:16.5px;margin:0 0 8px;color:#fff}
+.faq-item p{margin:0;font-size:14.5px;color:#c9d2e8}
+.cta{background:linear-gradient(140deg,rgba(16,185,129,.14),rgba(139,92,246,.1));border:1px solid rgba(16,185,129,.4);border-radius:20px;padding:40px;text-align:center;margin:50px 0}
+.cta h2{font-size:26px;margin-bottom:12px}
+.cta p{color:var(--mut);margin-bottom:24px;max-width:520px;margin-left:auto;margin-right:auto}
+footer{border-top:1px solid var(--line);padding:40px 0;color:var(--mut);font-size:13.5px}
+.foot{max-width:1100px;margin:0 auto;padding:0 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px}
+.foot a{color:var(--mut);text-decoration:none}
+.foot a:hover{color:var(--green-lt)}
+.foot-links{display:flex;gap:22px}
+@media(max-width:640px){.nav-links a:not(.btn){display:none}table{font-size:13px}}
+</style>
+</head>
+<body>
+<nav><div class="nav-in">
+  <a class="logo" href="/"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo"/>Claim<span>Paid</span></a>
+  <div class="nav-links"><a href="/">Product</a><a href="/blog/">Blog</a><a class="btn btn-green btn-sm" href="/app/">Get started</a></div>
+</div></nav>
+
+<article><div class="wrap">
+<div class="crumb"><a href="/">Home</a> / <a href="/blog/">Blog</a> / What Is Claim Scrubbing</div>
+<span class="tag">Claims</span>
+<h1>What Is Claim Scrubbing? Clean Claims Explained</h1>
+<div class="byline">ClaimPaid · October 23, 2026 · 6 min read</div>
+
+<div class="answer">
+<div class="lbl">The short answer</div>
+<p>Claim scrubbing is the automated checking of healthcare claims for errors <em>before</em> they're submitted to the payer. A scrubber validates required data, coding, payer-specific rules, and charge balancing — flagging problems so billers fix them pre-submission instead of fighting denials afterward. Claims that pass through adjudication without needing correction are "clean claims," and the clean-claim rate (clean claims ÷ total claims) is one of the most important metrics in revenue cycle management.</p>
+</div>
+
+<div class="prose">
+<p>Every denied claim costs money twice: once in the lost or delayed payment, and again in the labor to research, correct, and resubmit it. Claim scrubbing moves that work to the cheapest possible point — before the claim leaves your building. It's the single highest-leverage quality control in the billing workflow.</p>
+
+<h2>How a claim scrubber works</h2>
+<p>A scrubber runs each claim through a rules engine before transmission. Think of it as a pre-flight checklist with hundreds of items, executed in milliseconds. The typical flow:</p>
+<ol>
+<li><strong>Claim created</strong> — in your practice management system or billing software.</li>
+<li><strong>Scrubber validates</strong> — every rule runs; failures are flagged as errors (must fix) or warnings (review).</li>
+<li><strong>Biller corrects</strong> — flagged claims return to the work queue with specific, actionable messages.</li>
+<li><strong>Clean claims transmit</strong> — only claims passing all error-level rules go out in the <a href="/blog/837p-vs-835-explained/">837P batch</a>.</li>
+</ol>
+
+<h2>What scrubbers check</h2>
+<table>
+<tr><th>Category</th><th>What it validates</th><th>Example failures</th></tr>
+<tr><td><strong>Data completeness</strong></td><td>Every required field is present and formatted</td><td>Missing member ID, blank NPI, no diagnosis pointer</td></tr>
+<tr><td><strong>Code validity</strong></td><td>CPT/HCPCS and ICD-10 codes are valid and compatible</td><td>Deleted CPT code, diagnosis that doesn't support the procedure</td></tr>
+<tr><td><strong>Bundling edits</strong></td><td>NCCI procedure-to-procedure rules</td><td>E/M billed with a procedure without modifier 25</td></tr>
+<tr><td><strong>Payer-specific rules</strong></td><td>Individual payer requirements</td><td>Missing authorization flag, wrong place-of-service for the payer</td></tr>
+<tr><td><strong>Charge balancing</strong></td><td>Line items sum to the claim total</td><td>$150 + $200 billed as $400 total</td></tr>
+<tr><td><strong>Timely filing</strong></td><td>Claim is within the payer's window</td><td>Claim 88 days old for a 90-day payer — flagged urgent</td></tr>
+</table>
+
+<h2>Clean-claim rate: the metric that matters</h2>
+<div class="metric">
+<div class="formula">Clean-claim rate = clean claims ÷ total claims submitted</div>
+<p>A "clean claim" is one the payer adjudicates without requiring correction or additional information. Track it monthly, by payer — a dropping rate for one payer usually means a rule changed on their side.</p>
+</div>
+<p>Why it matters: every percentage point of clean-claim rate is fewer denials to work, faster payment, and less rework labor. Most of the <a href="/blog/top-claim-denial-reasons-fixes/">most common denial reasons</a> — missing information, coding errors, bundling — are exactly what scrubbing prevents. Scrubbing doesn't eliminate denials (medical necessity and authorization denials still need their own workflows), but it removes the preventable ones, which frees your team to work the denials that actually require judgment.</p>
+
+<h2>Scrubber vs. clearinghouse edits: what's the difference?</h2>
+<p>Clearinghouses also run claim edits — so why scrub first? Three reasons: <strong>speed</strong> (you catch errors in seconds, not after a clearinghouse round-trip), <strong>specificity</strong> (your scrubber's messages can reference your workflows, not generic rejections), and <strong>control</strong> (you decide which rules are errors vs. warnings). The clearinghouse is your second net, not your first.</p>
+
+<h2>What scrubbing can't do</h2>
+<p>Honest limits: scrubbing validates data and coding against rules — it can't verify that the documentation supports medical necessity, confirm an authorization exists with the payer, or fix eligibility that changed after submission. Those need eligibility verification, auth workflows, and clinical documentation review. A good operation runs all of them.</p>
+
+<h2>Two kinds of edits: syntax vs. payer intelligence</h2>
+<p>Not all scrubber rules are equal. Understanding the two layers helps you evaluate any scrubbing tool:</p>
+<ul>
+<li><strong>Syntax and format edits</strong> catch structural problems: invalid code formats, missing required fields, impossible dates, unbalanced charges. These are universal — a missing NPI is wrong for every payer.</li>
+<li><strong>Payer-specific intelligence</strong> catches the subtle stuff: this payer requires modifier 25 on E/M with procedures; that payer bundles these two codes; this plan needs an authorization flag on high-dollar imaging. This layer is what separates a basic scrubber from a valuable one — and it's built from denial history, which is why the best scrubbing rules are learned from real remittance data.</li>
+</ul>
+
+<h2>How to evaluate a claim scrubber</h2>
+<p>If you're choosing or auditing a scrubber, ask these questions:</p>
+<ul>
+<li><strong>How many rules, and are they editable?</strong> A fixed rule set goes stale as payers change requirements. You need to add your own payer-specific rules.</li>
+<li><strong>Errors vs. warnings:</strong> can you distinguish "this claim will definitely be denied" from "review this"? Blocking everything creates bottlenecks; blocking nothing defeats the purpose.</li>
+<li><strong>Does it learn?</strong> When a new denial pattern appears in your remittance files, how quickly can it become a scrubber rule? The tightest operations close this loop in days.</li>
+<li><strong>Clearinghouse coordination:</strong> the scrubber and clearinghouse should complement, not duplicate — your scrubber catches issues pre-transmission with your workflow context; the clearinghouse is the second net.</li>
+</ul>
+
+<h2>Where scrubbing sits in the workflow</h2>
+<p>Scrubbing is one layer in a prevention stack, and it works best alongside its neighbors:</p>
+<ol>
+<li><strong>Eligibility verification</strong> (before the visit) — is the patient covered, and by whom?</li>
+<li><strong>Authorization check</strong> (before the service) — is prior auth required and obtained?</li>
+<li><strong>Claim scrubbing</strong> (before submission) — is the claim data clean and coded correctly?</li>
+<li><strong>Transmission tracking</strong> (after submission) — did the payer acknowledge receipt? (See our <a href="/blog/837p-vs-835-explained/">837P vs 835 guide</a> on 999/277CA acknowledgments.)</li>
+<li><strong>Denial management</strong> (after adjudication) — for what scrubbing couldn't prevent. (See <a href="/blog/top-claim-denial-reasons-fixes/">denial reasons</a> and <a href="/blog/how-to-appeal-denied-claim/">appeals</a>.)</li>
+</ol>
+<p>Each layer catches what the others can't. Teams that run all five spend their time on exceptions and judgment calls — not on rework that a rules engine could have prevented.</p>
+
+<h2>Example scrubber rules in plain English</h2>
+<p>To make this concrete, here are the kinds of rules a working scrubber enforces every day:</p>
+<ul>
+<li><strong>"Diagnosis pointer required":</strong> every CPT line must point to at least one ICD-10 — a line with no pointer is a guaranteed CO-16.</li>
+<li><strong>"NCCI PTP edit":</strong> flags code pairs the National Correct Coding Initiative bundles, suggesting the correct modifier or removal.</li>
+<li><strong>"Auth required":</strong> for a configurable list of high-dollar CPTs, requires an authorization number on the claim before it can transmit.</li>
+<li><strong>"Timely filing watch":</strong> warns when a claim is within 10 days of the payer's filing deadline — see our <a href="/blog/timely-filing-limits-by-payer-2026/">timely filing guide</a>.</li>
+<li><strong>"Duplicate check":</strong> flags a claim matching a recently transmitted one on patient, date, and procedure — preventing duplicate denials.</li>
+</ul>
+<p>Each rule maps directly to a denial you've already seen on a remittance advice. That's the discipline: every denial pattern becomes a rule, and the rule prevents the next hundred instances.</p>
+
+<div class="faq">
+<h2>Frequently asked questions</h2>
+<div class="faq-item"><h3>What is claim scrubbing?</h3><p>Claim scrubbing is the automated validation of healthcare claims for errors before they are submitted to the payer. A scrubber checks data completeness, coding validity, payer-specific rules, and medical-necessity indicators, flagging problems so billers can fix them before submission.</p></div>
+<div class="faq-item"><h3>What is a clean claim?</h3><p>A clean claim is one that passes through payer adjudication without needing correction — complete, accurate data, valid coding, and all payer requirements met. Clean claims are paid on the first pass, which is why the clean-claim rate is a core revenue cycle metric.</p></div>
+<div class="faq-item"><h3>What does a claim scrubber check?</h3><p>Typical checks include: required fields present (member ID, NPI, dates, diagnosis pointers), valid CPT/ICD-10 codes and code combinations, NCCI bundling edits, payer-specific rules (modifiers, authorization requirements), and basic balancing of charges.</p></div>
+<div class="faq-item"><h3>Does claim scrubbing prevent all denials?</h3><p>No. Scrubbing prevents administrative and coding denials — missing data, invalid codes, bundling errors — which are a large share of all denials. It cannot prevent medical-necessity denials, authorization denials for services never requested, or eligibility issues arising after submission.</p></div>
+</div>
+</div>
+
+<div class="cta">
+<h2>Scrub every claim before it goes out</h2>
+<p>ClaimPaid's claim scrubber validates every claim against pre-billing rules — data, coding, bundling, payer requirements — so errors get fixed in seconds, not denied weeks later.</p>
+<a class="btn btn-green" href="/#pricing">See plans — from $199/mo →</a>
+</div>
+</div>
+</article>
+
+<footer><div class="foot">
+  <a class="logo" href="/" style="font-size:17px"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo" style="width:28px;height:28px"/>Claim<span>Paid</span></a>
+  <div class="foot-links"><a href="/blog/">Blog</a><a href="/legal/terms">Terms</a><a href="/legal/privacy">Privacy</a><a href="mailto:support@claimpaid.io">support@claimpaid.io</a></div>
+  <div>© 2026 ClaimPaid · Get your claims paid.</div>
+</div></footer>
+</body>
+</html>

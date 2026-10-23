@@ -35,6 +35,17 @@ Medical billing companies, independent billing services, hospital and physician 
 - Site: https://claimpaid.io/
 - ClaimPaid AI: https://claimpaid.io/ai/
 
+## Guides
+
+In-depth, practical guides for medical billing teams (also at https://claimpaid.io/blog/):
+
+- **How to Appeal a Denied Medical Claim: Step-by-Step** — https://claimpaid.io/blog/how-to-appeal-denied-claim/ — denial reason codes, appeal deadlines, documentation, letter structure, follow-up cadence.
+- **Timely Filing Limits by Payer 2026** — https://claimpaid.io/blog/timely-filing-limits-by-payer-2026/ — submission deadlines for Aetna, Cigna, UHC, Anthem, Medicare, Humana, NY Medicaid (verify against your payer contract).
+- **7 Most Common Claim Denial Reasons & How to Fix Each** — https://claimpaid.io/blog/top-claim-denial-reasons-fixes/ — CO-16, eligibility, CO-197, CO-96, CO-97, coding errors, CO-29, with fixes and prevention.
+- **837P vs 835 Explained** — https://claimpaid.io/blog/837p-vs-835-explained/ — the claim submission file vs the remittance advice file, plus 999 and 277CA acknowledgments.
+- **How to Write a Prior Authorization Appeal Letter** — https://claimpaid.io/blog/prior-authorization-appeal-letter/ — template outline, medical-necessity documentation, peer-to-peer review.
+- **What Is Claim Scrubbing?** — https://claimpaid.io/blog/what-is-claim-scrubbing/ — pre-submission claim validation, clean-claim rate, what scrubbers check.
+
 ## Optional
 
 - Developer API: https://claimpaid.io/ai/ (API keys, POST /api/v1/query)
