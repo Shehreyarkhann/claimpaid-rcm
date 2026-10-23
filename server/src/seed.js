@@ -50,6 +50,11 @@ function seed() {
   const billerId = Number(db.prepare(
     "INSERT INTO users (org_id, email, password_hash, name, role) VALUES (?, ?, ?, ?, 'biller')"
   ).run(orgId, 'biller@pulsercm.com', hash, 'Alex Biller').lastInsertRowid);
+  // Workspace memberships (required by authRequired — without these every
+  // API call 401s with "User no longer exists" on fresh installs)
+  const addMember = db.prepare('INSERT OR IGNORE INTO user_orgs (user_id, org_id, role) VALUES (?, ?, ?)');
+  addMember.run(ownerId, orgId, 'owner');
+  addMember.run(billerId, orgId, 'biller');
 
   const insertPayer = db.prepare('INSERT INTO payers (org_id, name, type) VALUES (?, ?, ?)');
   const payerIds = PAYERS.map((p) => Number(insertPayer.run(orgId, p.name, p.type).lastInsertRowid));

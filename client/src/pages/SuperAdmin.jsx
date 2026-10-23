@@ -312,7 +312,7 @@ function ClientsTab() {
   const [orgs, setOrgs] = useState(null);
   const [drawer, setDrawer] = useState(null);
   const load = () => api.super.orgs().then(setOrgs).catch((e) => toast.error(e.message));
-  useEffect(load, []);
+  useEffect(() => { load(); }, []);
 
   if (!orgs) return <Skeleton className="h-64 !bg-slate-800" />;
   return (
@@ -472,7 +472,7 @@ function UsersTab() {
   const [search, setSearch] = useState('');
   const [drawer, setDrawer] = useState(null);
   const load = () => api.super.users(search).then(setRows).catch((e) => toast.error(e.message));
-  useEffect(load, []);
+  useEffect(() => { load(); }, []);
 
   if (!rows) return <Skeleton className="h-64 !bg-slate-800" />;
   return (
@@ -554,7 +554,7 @@ function DemosTab() {
     setRows(r);
     setNotes(Object.fromEntries(r.map((x) => [x.id, x.notes || ''])));
   }).catch((e) => toast.error(e.message));
-  useEffect(load, []);
+  useEffect(() => { load(); }, []);
 
   const toggle = async (d) => {
     try {
@@ -630,7 +630,7 @@ function TicketDrawer({ ticketId, onClose, onChanged }) {
       setNote(d.ticket.internal_note || '');
     } catch (e) { toast.error(e.message); }
   };
-  useEffect(load, [ticketId]);
+  useEffect(() => { load(); }, [ticketId]);
 
   const sendReply = async () => {
     if (!reply.trim() || busy) return;
@@ -739,7 +739,7 @@ function SupportTab() {
   const [rows, setRows] = useState(null);
   const [openId, setOpenId] = useState(null);
   const load = () => api.super.tickets().then(setRows).catch((e) => toast.error(e.message));
-  useEffect(load, []);
+  useEffect(() => { load(); }, []);
 
   if (!rows) return <Skeleton className="h-64 !bg-slate-800" />;
   return (

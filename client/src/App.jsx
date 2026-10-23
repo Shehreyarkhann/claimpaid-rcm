@@ -27,6 +27,7 @@ import SupportPage from './pages/SupportPage';
 import Legal from './pages/Legal';
 import Compliance from './pages/Compliance';
 import { api } from './api';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function AuthGate({ children }) {
   const { user, loading } = useAuth();
@@ -126,6 +127,9 @@ function Workspace() {
   return (
     <>
     <Shell page={page} setPage={(p) => go(p)} dueCount={dueCount} authzAlertCount={authzAlertCount}>
+      {/* ErrorBoundary resets per tab (key) so a crashing tab shows a
+          recoverable card instead of blank-screening the whole app. */}
+      <ErrorBoundary key={page} fallbackLabel="This tab">
       {page === 'work' && (
         <MyWork
           onOpenAppeal={(appealId) => go('denials', { appealId })}
@@ -158,6 +162,7 @@ function Workspace() {
       {page === 'filing' && <FilingRules />}
       {page === 'team' && <Team />}
       {page === 'ai' && <AIAssistant />}
+      </ErrorBoundary>
     </Shell>
     <FloatingChat />
     </>

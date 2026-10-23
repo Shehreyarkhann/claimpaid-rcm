@@ -30,7 +30,7 @@ function ThreadView({ ticketId, onBack }) {
   const [error, setError] = useState(null);
 
   const load = () => api.support.thread(ticketId).then(setData).catch((e) => setError(e.message));
-  useEffect(load, [ticketId]);
+  useEffect(() => { load(); }, [ticketId]);
 
   const send = async () => {
     if (!reply.trim() || busy) return;
