@@ -315,6 +315,52 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_tickets_status ON support_tickets(status);
   `);
 
+  // Two-way helpdesk: staff<->customer replies
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS support_replies (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ticket_id INTEGER NOT NULL REFERENCES support_tickets(id) ON DELETE CASCADE,
+      author_type TEXT NOT NULL CHECK (author_type IN ('staff','customer')),
+      author_user_id INTEGER REFERENCES users(id),
+      body TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_replies_ticket ON support_replies(ticket_id);
+  `);
+
+  // Extend support_tickets: 'pending' status + SLA/priority tracking.
+  // SQLite cannot ALTER a CHECK constraint, so rebuild the table once (idempotent via column probe).
+  if (!columnExists('support_tickets', 'sla_due_at')) {
+    db.exec(`
+      CREATE TABLE support_tickets_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        org_id INTEGER REFERENCES orgs(id),
+        user_id INTEGER REFERENCES users(id),
+        name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        message TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','pending','closed')),
+        internal_note TEXT NOT NULL DEFAULT '',
+        priority TEXT NOT NULL DEFAULT 'normal' CHECK (priority IN ('low','normal','high','urgent')),
+        first_response_at TEXT,
+        last_activity_at TEXT,
+        sla_due_at TEXT,
+        customer_last_seen_at TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      INSERT INTO support_tickets_new
+        (id, org_id, user_id, name, email, subject, message, status, internal_note, created_at, updated_at, last_activity_at)
+        SELECT id, org_id, user_id, name, email, subject, message, status, internal_note, created_at, updated_at, updated_at
+        FROM support_tickets;
+      DROP TABLE support_tickets;
+      ALTER TABLE support_tickets_new RENAME TO support_tickets;
+      CREATE INDEX IF NOT EXISTS idx_tickets_status ON support_tickets(status);
+      UPDATE support_tickets SET sla_due_at = datetime(created_at, '+24 hours') WHERE sla_due_at IS NULL;
+    `);
+  }
+
   // BAA (HIPAA) electronic signatures — one per org per version
   db.exec(`
     CREATE TABLE IF NOT EXISTS baa_signatures (

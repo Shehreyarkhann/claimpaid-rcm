@@ -143,6 +143,9 @@ export const api = {
     updateDemo: (id, data) =>
       authFetch(`/api/super/demos/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(handle),
     tickets: () => get('/api/super/tickets'),
+    ticketDetail: (id) => get(`/api/super/tickets/${id}`),
+    replyTicket: (id, body) =>
+      authFetch(`/api/super/tickets/${id}/reply`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ body }) }).then(handle),
     updateTicket: (id, data) =>
       authFetch(`/api/super/tickets/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(handle),
     tables: () => get('/api/super/tables'),
@@ -157,6 +160,12 @@ export const api = {
   submitSupport: (data) =>
     fetch('/api/support', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
       .then((r) => r.json().then((b) => { if (!r.ok) throw new Error(b.error || 'Submit failed'); return b; })),
+  support: {
+    mine: () => get('/api/support/mine'),
+    thread: (id) => get(`/api/support/${id}`),
+    reply: (id, body) =>
+      authFetch(`/api/support/${id}/reply`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ body }) }).then(handle),
+  },
 };
 
 export const csvUrl = (path) => path; // auth via cookie-less; use fetch for authed CSV

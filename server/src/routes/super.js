@@ -43,6 +43,15 @@ router.get('/overview', (req, res) => {
 
   const open_demos = db.prepare('SELECT COUNT(*) AS n FROM demo_requests WHERE contacted = 0').get().n;
   const open_tickets = db.prepare("SELECT COUNT(*) AS n FROM support_tickets WHERE status = 'open'").get().n;
+  const overdue_tickets = db.prepare(
+    `SELECT COUNT(*) AS n FROM support_tickets
+     WHERE status IN ('open','pending') AND sla_due_at IS NOT NULL AND sla_due_at < datetime('now')`
+  ).get().n;
+  const avg_first_response_hours = db.prepare(
+    `SELECT AVG((julianday(first_response_at) - julianday(created_at)) * 24) AS h
+     FROM support_tickets
+     WHERE first_response_at IS NOT NULL AND created_at > datetime('now', '-30 days')`
+  ).get().h;
 
   let ai_orgs = 0;
   try {
@@ -54,7 +63,7 @@ router.get('/overview', (req, res) => {
     `SELECT id, name, plan, plan_status, created_at FROM orgs ORDER BY id DESC LIMIT 5`
   ).all();
 
-  res.json({ rcm_orgs, ai_orgs, total_users, mrr_cents, trialing, past_due, open_demos, open_tickets, recent_orgs });
+  res.json({ rcm_orgs, ai_orgs, total_users, mrr_cents, trialing, past_due, open_demos, open_tickets, overdue_tickets, avg_first_response_hours, recent_orgs });
 });
 
 // ================= CLIENTS (RCM orgs) =================
@@ -264,22 +273,68 @@ router.patch('/demos/:id', (req, res) => {
 // ================= SUPPORT TICKETS =================
 router.get('/tickets', (req, res) => {
   const rows = db.prepare(`
-    SELECT t.*, o.name AS org_name, u.name AS user_name
+    SELECT t.*, o.name AS org_name, u.name AS user_name,
+      (SELECT COUNT(*) FROM support_replies r WHERE r.ticket_id = t.id) AS reply_count,
+      (SELECT r2.author_type FROM support_replies r2
+        WHERE r2.ticket_id = t.id ORDER BY r2.created_at DESC, r2.id DESC LIMIT 1) AS latest_reply_author
     FROM support_tickets t
     LEFT JOIN orgs o ON o.id = t.org_id
     LEFT JOIN users u ON u.id = t.user_id
-    ORDER BY t.created_at DESC LIMIT 200
+    ORDER BY t.last_activity_at DESC, t.created_at DESC LIMIT 200
   `).all();
   res.json(rows);
 });
 
+// GET /api/super/tickets/:id — ticket + ordered thread + requester info (internal_note included: staff only)
+router.get('/tickets/:id', (req, res) => {
+  const t = db.prepare(`
+    SELECT t.*, o.name AS org_name, u.name AS user_name
+    FROM support_tickets t
+    LEFT JOIN orgs o ON o.id = t.org_id
+    LEFT JOIN users u ON u.id = t.user_id
+    WHERE t.id = ?
+  `).get(req.params.id);
+  if (!t) return res.status(404).json({ error: 'Not found' });
+  const replies = db.prepare(
+    `SELECT r.*, u.name AS author_name
+     FROM support_replies r LEFT JOIN users u ON u.id = r.author_user_id
+     WHERE r.ticket_id = ? ORDER BY r.created_at ASC, r.id ASC`
+  ).all(t.id);
+  res.json({ ticket: t, replies });
+});
+
+// POST /api/super/tickets/:id/reply — staff reply (marks first response; moves open -> pending)
+router.post('/tickets/:id/reply', (req, res) => {
+  const t = db.prepare('SELECT * FROM support_tickets WHERE id = ?').get(req.params.id);
+  if (!t) return res.status(404).json({ error: 'Not found' });
+  const body = typeof (req.body || {}).body === 'string' ? req.body.body.trim().slice(0, 4000) : '';
+  if (!body) return res.status(400).json({ error: 'Reply cannot be empty.' });
+
+  db.prepare(
+    `INSERT INTO support_replies (ticket_id, author_type, author_user_id, body)
+     VALUES (?, 'staff', ?, ?)`
+  ).run(t.id, req.user.id, body);
+  db.prepare(
+    `UPDATE support_tickets
+     SET last_activity_at = datetime('now'), updated_at = datetime('now'),
+         first_response_at = COALESCE(first_response_at, datetime('now')),
+         status = CASE WHEN status = 'open' THEN 'pending' ELSE status END
+     WHERE id = ?`
+  ).run(t.id);
+  res.status(201).json({ ok: true });
+});
+
 router.patch('/tickets/:id', (req, res) => {
-  const { status, internal_note } = req.body || {};
+  const { status, internal_note, priority } = req.body || {};
   const t = db.prepare('SELECT id FROM support_tickets WHERE id = ?').get(req.params.id);
   if (!t) return res.status(404).json({ error: 'Not found' });
   if (status !== undefined) {
-    if (!['open', 'closed'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
+    if (!['open', 'pending', 'closed'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
     db.prepare("UPDATE support_tickets SET status = ?, updated_at = datetime('now') WHERE id = ?").run(status, t.id);
+  }
+  if (priority !== undefined) {
+    if (!['low', 'normal', 'high', 'urgent'].includes(priority)) return res.status(400).json({ error: 'Invalid priority' });
+    db.prepare("UPDATE support_tickets SET priority = ?, updated_at = datetime('now') WHERE id = ?").run(priority, t.id);
   }
   if (typeof internal_note === 'string') {
     db.prepare("UPDATE support_tickets SET internal_note = ?, updated_at = datetime('now') WHERE id = ?").run(internal_note.slice(0, 4000), t.id);

@@ -53,6 +53,8 @@ function OverviewTab() {
     attention.push({ kind: 'Trial ending soon', detail: `${s.name} — ends ${s.current_period_end.slice(0, 10)}`, sev: 'amber' }));
   demos.filter((d) => !d.contacted).slice(0, 5).forEach((d) =>
     attention.push({ kind: 'Uncontacted demo', detail: `${d.company} — ${d.name}`, sev: 'blue' }));
+  tickets.filter((t) => t.status !== 'closed' && t.sla_due_at && new Date(t.sla_due_at.replace(' ', 'T') + 'Z') < new Date()).slice(0, 5).forEach((t) =>
+    attention.push({ kind: 'Overdue ticket', detail: `#${t.id} ${t.subject}`, sev: 'rose' }));
   tickets.filter((t) => t.status === 'open').slice(0, 5).forEach((t) =>
     attention.push({ kind: 'Open ticket', detail: `#${t.id} ${t.subject}`, sev: 'amber' }));
 
@@ -526,49 +528,134 @@ function DemosTab() {
 }
 
 /* ---------------- SUPPORT TICKETS ---------------- */
-function TicketModal({ ticket, onClose, onChanged }) {
+const TICKET_STATUS_BADGE = { open: 'badge-amber', pending: 'badge !bg-sky-500/15 !text-sky-300 !border-sky-500/30', closed: 'badge-green' };
+const PRIORITY_BADGE = {
+  low: 'badge-slate', normal: 'badge-blue', high: 'badge !bg-amber-500/15 !text-amber-300 !border-amber-500/30',
+  urgent: 'badge !bg-rose-500/15 !text-rose-300 !border-rose-500/30',
+};
+
+function slaStatus(t) {
+  if (!t || t.status === 'closed' || !t.sla_due_at) return 'ok';
+  const due = new Date(t.sla_due_at.replace(' ', 'T') + 'Z');
+  const hrs = (due - new Date()) / 3600000;
+  if (hrs < 0) return 'overdue';
+  if (hrs < 4) return 'due-soon';
+  return 'ok';
+}
+
+function TicketDrawer({ ticketId, onClose, onChanged }) {
   const toast = useToast();
-  const [note, setNote] = useState(ticket.internal_note || '');
+  const [data, setData] = useState(null);
+  const [reply, setReply] = useState('');
+  const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const setStatus = async (status) => {
+  const load = async () => {
+    try {
+      const d = await api.super.ticketDetail(ticketId);
+      setData(d);
+      setNote(d.ticket.internal_note || '');
+    } catch (e) { toast.error(e.message); }
+  };
+  useEffect(load, [ticketId]);
+
+  const sendReply = async () => {
+    if (!reply.trim() || busy) return;
     setBusy(true);
     try {
-      await api.super.updateTicket(ticket.id, { status, internal_note: note });
-      toast.success(status === 'closed' ? 'Ticket closed' : 'Ticket reopened');
-      onChanged(); onClose();
+      await api.super.replyTicket(ticketId, reply.trim());
+      setReply('');
+      toast.success('Reply sent');
+      await load(); onChanged();
     } catch (e) { toast.error(e.message); }
     finally { setBusy(false); }
   };
-  const saveNote = async () => {
+  const saveMeta = async (patch, msg) => {
     try {
-      await api.super.updateTicket(ticket.id, { internal_note: note });
-      toast.success('Note saved'); onChanged();
+      await api.super.updateTicket(ticketId, patch);
+      toast.success(msg || 'Saved');
+      await load(); onChanged();
     } catch (e) { toast.error(e.message); }
   };
 
   return (
     <Modal onClose={onClose} wide>
-      <div className="p-7 bg-slate-900 text-slate-200 rounded-2xl">
-        <div className="flex items-center gap-3 mb-1">
-          <span className={`badge ${ticket.status === 'open' ? 'badge-amber' : 'badge-green'}`}>{ticket.status}</span>
-          <span className="text-xs text-slate-500">#{ticket.id} · {ticket.created_at?.slice(0, 16).replace('T', ' ')}</span>
-        </div>
-        <h3 className="text-xl font-bold text-white mb-4">{ticket.subject}</h3>
-        <div className="text-sm text-slate-400 mb-1">{ticket.name} · {ticket.email}
-          {ticket.org_name && <span> · {ticket.org_name}</span>}
-        </div>
-        <div className="bg-slate-800 rounded-xl p-4 text-sm text-slate-200 whitespace-pre-wrap mb-5 mt-3">{ticket.message}</div>
-        <label className="label !text-slate-400">Internal note (only you see this)</label>
-        <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3}
-          className="input !bg-slate-800 !border-slate-700 !text-white mb-3" placeholder="Private note…" />
-        <div className="flex gap-2 flex-wrap">
-          <button onClick={saveNote} className="btn btn-dark !text-sm">Save note</button>
-          {ticket.status === 'open'
-            ? <button onClick={() => setStatus('closed')} disabled={busy} className="btn !bg-emerald-600 hover:!bg-emerald-700 !text-white !text-sm">Close ticket</button>
-            : <button onClick={() => setStatus('open')} disabled={busy} className="btn !bg-amber-600 hover:!bg-amber-700 !text-white !text-sm">Reopen</button>}
-          <button onClick={onClose} className="btn btn-ghost !text-slate-300 ml-auto">Close</button>
-        </div>
+      <div className="p-7 bg-slate-900 text-slate-200 rounded-2xl max-h-[85vh] overflow-y-auto">
+        {!data ? <Skeleton className="h-64 !bg-slate-800" /> : (() => {
+          const t = data.ticket;
+          const sla = slaStatus(t);
+          const firstRespHrs = t.first_response_at
+            ? ((new Date(t.first_response_at.replace(' ', 'T') + 'Z') - new Date(t.created_at.replace(' ', 'T') + 'Z')) / 3600000)
+            : null;
+          return (
+            <div>
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <span className={`badge ${TICKET_STATUS_BADGE[t.status] || 'badge-amber'}`}>{t.status}</span>
+                <span className={`badge ${PRIORITY_BADGE[t.priority] || 'badge-blue'}`}>{t.priority}</span>
+                {sla === 'overdue' && <span className="badge !bg-rose-500/15 !text-rose-300 !border-rose-500/30 font-bold">OVERDUE</span>}
+                {sla === 'due-soon' && <span className="badge !bg-amber-500/15 !text-amber-300 !border-amber-500/30">Due soon</span>}
+                <span className="text-xs text-slate-500 ml-auto">#{t.id} · {t.created_at?.slice(0, 16).replace('T', ' ')}</span>
+              </div>
+              <h3 className="text-xl font-bold text-white mb-1">{t.subject}</h3>
+              <div className="text-sm text-slate-400 mb-4">{t.name} · {t.email}{t.org_name && <span> · {t.org_name}</span>}</div>
+              <div className="text-xs text-slate-500 mb-5">
+                SLA due {t.sla_due_at?.slice(0, 16).replace('T', ' ')}
+                {firstRespHrs !== null && <span> · first response {firstRespHrs < 1 ? `${Math.round(firstRespHrs * 60)}m` : `${firstRespHrs.toFixed(1)}h`}</span>}
+              </div>
+
+              <div className="space-y-3 mb-6">
+                <div className="bg-slate-800 rounded-xl p-4">
+                  <div className="text-[11px] text-slate-500 mb-1">{t.name} · original message</div>
+                  <div className="text-sm text-slate-200 whitespace-pre-wrap">{t.message}</div>
+                </div>
+                {data.replies.map((r) => (
+                  <div key={r.id} className={`rounded-xl p-4 ${r.author_type === 'staff' ? 'bg-sky-950/40 border border-sky-800/50' : 'bg-slate-800'}`}>
+                    <div className="text-[11px] text-slate-500 mb-1">
+                      {r.author_type === 'staff' ? `Staff${r.author_name ? ` · ${r.author_name}` : ''}` : t.name} · {r.created_at?.slice(0, 16).replace('T', ' ')}
+                    </div>
+                    <div className="text-sm text-slate-200 whitespace-pre-wrap">{r.body}</div>
+                  </div>
+                ))}
+              </div>
+
+              <label className="label !text-slate-400">Reply to customer</label>
+              <textarea value={reply} onChange={(e) => setReply(e.target.value)} rows={3}
+                className="input !bg-slate-800 !border-slate-700 !text-white mb-3" placeholder="Write a reply… (sending moves the ticket to pending)" />
+              <button onClick={sendReply} disabled={busy || !reply.trim()} className="btn btn-primary !text-sm mb-6">
+                {busy ? 'Sending…' : 'Send reply'}
+              </button>
+
+              <div className="grid sm:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="label !text-slate-400">Status</label>
+                  <select value={t.status} onChange={(e) => saveMeta({ status: e.target.value }, `Status → ${e.target.value}`)}
+                    className="input !bg-slate-800 !border-slate-700 !text-white">
+                    <option value="open">open</option>
+                    <option value="pending">pending (waiting on customer)</option>
+                    <option value="closed">closed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="label !text-slate-400">Priority</label>
+                  <select value={t.priority} onChange={(e) => saveMeta({ priority: e.target.value }, `Priority → ${e.target.value}`)}
+                    className="input !bg-slate-800 !border-slate-700 !text-white">
+                    <option value="low">low</option>
+                    <option value="normal">normal</option>
+                    <option value="high">high</option>
+                    <option value="urgent">urgent</option>
+                  </select>
+                </div>
+              </div>
+              <label className="label !text-slate-400">Internal note <span className="text-rose-400/80">(never shown to the customer)</span></label>
+              <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3}
+                className="input !bg-slate-800 !border-slate-700 !text-white mb-3" placeholder="Private note…" />
+              <div className="flex gap-2 flex-wrap">
+                <button onClick={() => saveMeta({ internal_note: note }, 'Note saved')} className="btn btn-dark !text-sm">Save note</button>
+                <button onClick={onClose} className="btn btn-ghost !text-slate-300 ml-auto">Close</button>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </Modal>
   );
@@ -577,27 +664,46 @@ function TicketModal({ ticket, onClose, onChanged }) {
 function SupportTab() {
   const toast = useToast();
   const [rows, setRows] = useState(null);
-  const [open, setOpen] = useState(null);
+  const [openId, setOpenId] = useState(null);
   const load = () => api.super.tickets().then(setRows).catch((e) => toast.error(e.message));
   useEffect(load, []);
 
   if (!rows) return <Skeleton className="h-64 !bg-slate-800" />;
   return (
     <div>
-      {open && <TicketModal ticket={open} onClose={() => setOpen(null)} onChanged={load} />}
+      {openId && <TicketDrawer ticketId={openId} onClose={() => setOpenId(null)} onChanged={load} />}
       <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl overflow-hidden">
         <table className="w-full tbl !text-slate-300">
-          <thead><tr className="!text-slate-500"><th></th><th>Subject</th><th>From</th><th>Workspace</th><th>Received</th></tr></thead>
+          <thead><tr className="!text-slate-500"><th></th><th>Subject</th><th>From</th><th>Workspace</th><th>SLA</th><th>Replies</th><th>Received</th></tr></thead>
           <tbody>
-            {rows.map((t) => (
-              <tr key={t.id} onClick={() => setOpen(t)} className="cursor-pointer hover:!bg-slate-700/40">
-                <td><span className={`badge ${t.status === 'open' ? 'badge-amber' : 'badge-green'}`}>{t.status}</span></td>
-                <td className="font-medium text-white">#{t.id} {t.subject}</td>
-                <td className="text-slate-400 text-xs">{t.name} · {t.email}</td>
-                <td className="text-slate-400 text-xs">{t.org_name || '—'}</td>
-                <td className="text-slate-500 text-xs">{t.created_at?.slice(0, 16).replace('T', ' ')}</td>
-              </tr>
-            ))}
+            {rows.map((t) => {
+              const sla = slaStatus(t);
+              return (
+                <tr key={t.id} onClick={() => setOpenId(t.id)} className="cursor-pointer hover:!bg-slate-700/40">
+                  <td>
+                    <div className="flex gap-1 flex-wrap">
+                      <span className={`badge ${TICKET_STATUS_BADGE[t.status] || 'badge-amber'}`}>{t.status}</span>
+                      <span className={`badge ${PRIORITY_BADGE[t.priority] || 'badge-blue'}`}>{t.priority}</span>
+                    </div>
+                  </td>
+                  <td className="font-medium text-white">
+                    #{t.id} {t.subject}
+                    {t.latest_reply_author === 'customer' && t.status !== 'closed' && (
+                      <span className="ml-2 badge !bg-emerald-500/15 !text-emerald-300 !border-emerald-500/30">needs reply</span>
+                    )}
+                  </td>
+                  <td className="text-slate-400 text-xs">{t.name} · {t.email}</td>
+                  <td className="text-slate-400 text-xs">{t.org_name || '—'}</td>
+                  <td>
+                    {sla === 'overdue' && <span className="badge !bg-rose-500/15 !text-rose-300 !border-rose-500/30 font-bold">OVERDUE</span>}
+                    {sla === 'due-soon' && <span className="badge !bg-amber-500/15 !text-amber-300 !border-amber-500/30">Due soon</span>}
+                    {sla === 'ok' && <span className="text-slate-500 text-xs">{t.sla_due_at?.slice(5, 16).replace('T', ' ') || '—'}</span>}
+                  </td>
+                  <td className="text-slate-400 text-xs">{t.reply_count || 0}</td>
+                  <td className="text-slate-500 text-xs">{t.created_at?.slice(0, 16).replace('T', ' ')}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         {rows.length === 0 && <div className="p-8 text-center text-sm text-slate-500">No support tickets yet.</div>}
