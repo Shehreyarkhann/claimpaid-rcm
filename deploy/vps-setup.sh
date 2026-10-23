@@ -387,10 +387,10 @@ systemctl reload nginx
 
 # ---------- SSL ----------
 echo "==> Issuing Let's Encrypt certificate"
-certbot --nginx -d "${DOMAIN}" --non-interactive --agree-tos \
+certbot --nginx -d "${DOMAIN}" -d "www.${DOMAIN}" --non-interactive --agree-tos \
   --register-unsafely-without-email --redirect || {
   echo "!! certbot failed — check DNS, then run:"
-  echo "   certbot --nginx -d ${DOMAIN} --redirect"
+  echo "   certbot --nginx -d ${DOMAIN} -d www.${DOMAIN} --redirect"
 }
 
 # ---------- daily SQLite backups ----------
