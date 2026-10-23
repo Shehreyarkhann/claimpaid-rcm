@@ -558,6 +558,37 @@ function initSchema() {
   if (!columnExists('orgs', 'ehr_athena_client_secret')) db.exec('ALTER TABLE orgs ADD COLUMN ehr_athena_client_secret TEXT');
   if (!columnExists('orgs', 'ehr_athena_env')) db.exec("ALTER TABLE orgs ADD COLUMN ehr_athena_env TEXT NOT NULL DEFAULT 'preview'");
   if (!columnExists('orgs', 'ehr_athena_practice_id')) db.exec('ALTER TABLE orgs ADD COLUMN ehr_athena_practice_id TEXT');
+
+  // AI-assisted coding jobs: async LLM suggestion runs over clinical notes.
+  // Suggestions are NEVER auto-applied — a human must accept each code
+  // (coding_decisions) before anything touches a claim.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS coding_jobs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      claim_id INTEGER REFERENCES claims(id),
+      encounter_id INTEGER REFERENCES ehr_encounters(id),
+      note_text TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','processing','complete','failed')),
+      result_json TEXT,
+      error TEXT,
+      created_by INTEGER REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS coding_decisions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      job_id INTEGER NOT NULL REFERENCES coding_jobs(id) ON DELETE CASCADE,
+      code TEXT NOT NULL,
+      type TEXT NOT NULL CHECK (type IN ('CPT','ICD10')),
+      decision TEXT NOT NULL CHECK (decision IN ('accepted','rejected','modified')),
+      final_code TEXT,
+      in_library INTEGER NOT NULL DEFAULT 0,
+      decided_by INTEGER REFERENCES users(id),
+      decided_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_codingjobs_org ON coding_jobs(org_id, created_at);`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_codingdec_job ON coding_decisions(job_id);`);
 }
 
 // Thin wrapper so route code keeps working with .prepare().get()/.all()/.run()

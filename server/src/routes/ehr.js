@@ -233,6 +233,18 @@ router.get('/encounters', (req, res) => {
   res.json(rows);
 });
 
+// GET /api/ehr/encounters/:id — full encounter detail INCLUDING raw_payload
+// (the list strips it). Used by the AI code assist to build a coding note.
+router.get('/encounters/:id', (req, res) => {
+  const row = db.prepare(`
+    SELECT e.*, c.provider AS connection_provider
+    FROM ehr_encounters e JOIN ehr_connections c ON c.id = e.connection_id
+    WHERE e.id = ? AND e.org_id = ?
+  `).get(req.params.id, req.orgId);
+  if (!row) return res.status(404).json({ error: 'Encounter not found' });
+  res.json(parseEncounter(row));
+});
+
 // POST /api/ehr/encounters/:id/convert — owner/biller; creates a claim draft
 // via the SAME code path as the claims API (no duplication).
 router.post('/encounters/:id/convert', canWrite, (req, res) => {

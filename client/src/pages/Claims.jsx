@@ -3,6 +3,7 @@ import { useAuth, authFetch } from '../auth';
 import { api, fmtMoney2 } from '../api';
 import { Modal, EmptyState, PageHeader, Skeleton } from '../components/ui';
 import { useToast } from '../components/ui';
+import CodingAssistant from '../components/CodingAssistant';
 
 const STATUS_META = {
   paid: { label: 'Paid', badge: 'badge-green' },
@@ -28,6 +29,7 @@ export function FilingBadge({ days }) {
 }
 
 function ClaimModal({ claim, payers, onClose, onSaved, onCheckEligibility }) {
+  const [showCoding, setShowCoding] = useState(false);
   const toast = useToast();
   const [form, setForm] = useState(claim ? {
     claim_number: claim.claim_number, patient_name: claim.patient_name, payer: claim.payer,
@@ -60,8 +62,9 @@ function ClaimModal({ claim, payers, onClose, onSaved, onCheckEligibility }) {
   };
 
   return (
-    <Modal onClose={onClose}>
-      <div className="p-7">
+    <>
+      <Modal onClose={onClose}>
+        <div className="p-7">
         <h3 className="text-xl font-bold tracking-tight mb-5">{claim ? 'Edit claim' : 'Add claim'}</h3>
         {error && <div className="mb-4 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}
         <div className="grid grid-cols-2 gap-4">
@@ -88,7 +91,14 @@ function ClaimModal({ claim, payers, onClose, onSaved, onCheckEligibility }) {
             <input className="input" value={form.denial_reason} onChange={set('denial_reason')} placeholder="If denied…" /></div>
         </div>
         <div className="mt-5 pt-5 border-t border-slate-100">
-          <div className="text-sm font-semibold text-slate-700 mb-3">Coding <span className="font-normal text-slate-400">— used by the claim scrubber & 837 export</span></div>
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-sm font-semibold text-slate-700">Coding <span className="font-normal text-slate-400">— used by the claim scrubber & 837 export</span></div>
+            {claim && (
+              <button className="btn btn-sm btn-outline" onClick={() => setShowCoding(true)}>
+                ✨ AI code assist
+              </button>
+            )}
+          </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div><label className="label">CPT codes</label>
               <input className="input font-mono" value={form.cpt_codes} onChange={set('cpt_codes')} placeholder="99213, 97110" /></div>
@@ -128,6 +138,18 @@ function ClaimModal({ claim, payers, onClose, onSaved, onCheckEligibility }) {
         )}
       </div>
     </Modal>
+    {showCoding && claim && (
+      <CodingAssistant
+        claimId={claim.id}
+        onClose={() => setShowCoding(false)}
+        onApplied={(r) => {
+          if (r.claim) {
+            setForm((f) => ({ ...f, cpt_codes: r.claim.cpt_codes || '', icd_codes: r.claim.icd_codes || '' }));
+          }
+        }}
+      />
+    )}
+    </>
   );
 }
 

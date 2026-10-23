@@ -207,11 +207,19 @@ export const api = {
     athenaAuthorize: () => get('/api/ehr/athena/authorize'),
     sync: () => authFetch('/api/ehr/sync', { method: 'POST' }).then(handle),
     encounters: (status = 'new') => get(`/api/ehr/encounters?status=${status}`),
+    encounter: (id) => get(`/api/ehr/encounters/${id}`),
     convert: (id) => authFetch(`/api/ehr/encounters/${id}/convert`, { method: 'POST' }).then(handle),
     ignore: (id) => authFetch(`/api/ehr/encounters/${id}/ignore`, { method: 'POST' }).then(handle),
     getAthenaConfig: () => get('/api/ehr/athena/config'),
     saveAthenaConfig: (data) =>
       authFetch('/api/ehr/athena/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(handle),
+  },
+  coding: {
+    analyze: (data) =>
+      authFetch('/api/coding/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(handle),
+    job: (id) => get(`/api/coding/jobs/${id}`),
+    decide: (id, data) =>
+      authFetch(`/api/coding/jobs/${id}/decide`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(handle),
   },
 };
 

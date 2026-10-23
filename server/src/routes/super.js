@@ -132,7 +132,22 @@ router.get('/orgs/:id', (req, res) => {
       `SELECT COUNT(*) AS n FROM ehr_encounters WHERE org_id = ? AND synced_at >= datetime('now', '-30 days')`
     ).get(org.id).n,
   } : null;
-  res.json({ org, users, claimsByStatus, openAppeals, baa, eligibility, transmission, ehr });
+  const codingTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='coding_jobs'`).get();
+  const coding = codingTable ? {
+    jobs_30d: db.prepare(
+      `SELECT COUNT(*) AS n FROM coding_jobs WHERE org_id = ? AND created_at >= datetime('now', '-30 days')`
+    ).get(org.id).n,
+    acceptance_rate: (() => {
+      const r = db.prepare(
+        `SELECT SUM(CASE WHEN decision IN ('accepted','modified') THEN 1 ELSE 0 END) AS a,
+                COUNT(*) AS t
+         FROM coding_decisions d JOIN coding_jobs j ON j.id = d.job_id
+         WHERE j.org_id = ? AND j.created_at >= datetime('now', '-30 days')`
+      ).get(org.id);
+      return r.t ? Math.round((r.a / r.t) * 100) : null;
+    })(),
+  } : null;
+  res.json({ org, users, claimsByStatus, openAppeals, baa, eligibility, transmission, ehr, coding });
 });
 
 router.patch('/orgs/:id/plan', (req, res) => {

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../api';
 import { useAuth } from '../auth';
 import { useToast } from '../components/ui';
+import CodingAssistant from '../components/CodingAssistant';
 
 // EHR integration: pull encounters from the practice's EHR and convert them
 // into claim drafts. athenahealth is the live adapter; the demo provider
@@ -23,6 +24,38 @@ export default function Ehr({ onViewClaim }) {
   const [showAthenaSetup, setShowAthenaSetup] = useState(false);
   const [cfg, setCfg] = useState({ env: 'preview', practice_id: '', client_id: '', client_secret: '' });
   const [cfgMeta, setCfgMeta] = useState(null);
+  const [codingEncounter, setCodingEncounter] = useState(null);
+
+  // Open the AI code assist for an encounter: fetch the full detail (the
+  // inbox list strips raw_payload) and build a coding note from it.
+  const openCoding = async (e) => {
+    setBusy(`s${e.id}`);
+    try {
+      const full = await api.ehr.encounter(e.id);
+      setCodingEncounter(full);
+    } catch (err) { toast.error(err.message); }
+    finally { setBusy(null); }
+  };
+
+  // Build a coding note from the encounter's synced EHR data.
+  const encounterNote = (e) => {
+    const lines = [
+      `Patient: ${e.patient_first || ''} ${e.patient_last || ''}`.trim(),
+      e.patient_dob ? `DOB: ${e.patient_dob}` : null,
+      e.date_of_service ? `Date of service: ${e.date_of_service}` : null,
+      e.payer_name ? `Payer: ${e.payer_name}` : null,
+      e.rendering_provider ? `Rendering provider: ${e.rendering_provider}` : null,
+      (e.cpt_codes && e.cpt_codes.length) ? `EHR procedure codes: ${e.cpt_codes.join(', ')}` : null,
+      (e.icd_codes && e.icd_codes.length) ? `EHR diagnosis codes: ${e.icd_codes.join(', ')}` : null,
+    ].filter(Boolean);
+    let raw = '';
+    try {
+      const payload = typeof e.raw_payload === 'string' ? JSON.parse(e.raw_payload) : e.raw_payload;
+      raw = JSON.stringify(payload, null, 1).slice(0, 4000);
+    } catch { raw = String(e.raw_payload || '').slice(0, 4000); }
+    if (raw) lines.push(`EHR encounter detail:\n${raw}`);
+    return lines.join('\n');
+  };
 
   const load = () => {
     api.ehr.connections().then((d) => {
@@ -259,6 +292,9 @@ export default function Ehr({ onViewClaim }) {
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     {e.status === 'new' && canWrite && (
                       <>
+                        <button className="btn btn-sm btn-outline mr-1" onClick={() => openCoding(e)} disabled={busy === `s${e.id}`}>
+                          {busy === `s${e.id}` ? '…' : '✨ Suggest codes'}
+                        </button>
                         <button className="btn btn-sm btn-primary mr-1" onClick={() => convert(e.id)} disabled={busy === `c${e.id}`}>
                           {busy === `c${e.id}` ? '…' : 'Convert to claim'}
                         </button>
@@ -324,6 +360,13 @@ export default function Ehr({ onViewClaim }) {
             </div>
           </div>
         </div>
+      )}
+      {codingEncounter && (
+        <CodingAssistant
+          initialNote={encounterNote(codingEncounter)}
+          encounterId={codingEncounter.id}
+          onClose={() => setCodingEncounter(null)}
+        />
       )}
     </div>
   );

@@ -144,7 +144,7 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
   };
 
   if (!detail) return <Modal onClose={onClose}><div className="p-8"><Skeleton className="h-40 !bg-slate-700" /></div></Modal>;
-  const { org, users, claimsByStatus, openAppeals, baa, eligibility, transmission, ehr } = detail;
+  const { org, users, claimsByStatus, openAppeals, baa, eligibility, transmission, ehr, coding } = detail;
 
   return (
     <Modal onClose={onClose} wide>
@@ -258,6 +258,21 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
             </div>
           ) : (
             <p className="text-sm text-slate-500">No EHR data.</p>
+          )}
+        </div>
+
+        <SectionTitle>AI code assist</SectionTitle>
+        <div className="bg-slate-800 rounded-xl p-4 mb-6">
+          {coding ? (
+            <div className="grid sm:grid-cols-3 gap-x-6 gap-y-2 text-xs">
+              <div><span className="text-slate-500">Coding jobs (30d) </span>
+                <span className="text-white font-bold">{coding.jobs_30d}</span></div>
+              <div><span className="text-slate-500">Human acceptance rate </span>
+                <span className="text-white font-bold">{coding.acceptance_rate == null ? '—' : `${coding.acceptance_rate}%`}</span></div>
+              <div className="text-slate-500">Codes are never auto-applied — every accepted code was reviewed by a human.</div>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">No coding data.</p>
           )}
         </div>
 
