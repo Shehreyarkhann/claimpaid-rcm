@@ -26,8 +26,8 @@ router.post('/run', roleRequired('owner', 'biller'), (req, res) => {
   if (!claims.length) return res.status(404).json({ error: 'No matching claims found' });
 
   const results = scrubClaims(claims);
-  const stamp = db.prepare("UPDATE claims SET scrub_status = ?, scrubbed_at = datetime('now') WHERE id = ?");
-  for (const r of results) stamp.run(r.status, r.claim_id);
+  const stamp = db.prepare("UPDATE claims SET scrub_status = ?, scrubbed_at = datetime('now'), readiness_score = ? WHERE id = ?");
+  for (const r of results) stamp.run(r.status, r.score, r.claim_id);
 
   const summary = {
     total: results.length,

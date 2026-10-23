@@ -103,7 +103,68 @@ const RULES = [
       return dup ? `Possible duplicate of ${dup.claim_number} (same patient + service date).` : null;
     },
   },
+  {
+    id: 'AUTH-001', severity: 'warning', name: 'Authorization not verified',
+    check: (c) => {
+      // Warning only — not every service requires prior auth, so never block.
+      if (splitCodes(c.cpt_codes).length === 0) return null;
+      if (!c.id || c.id < 0 || !c.org_id) return null;
+      const ok = db.prepare(`
+        SELECT id FROM auth_requests
+        WHERE org_id = ? AND linked_claim_id = ? AND status = 'approved' LIMIT 1
+      `).get(c.org_id, c.id);
+      return ok ? null : 'No approved prior authorization linked — confirm payer requirements before submitting.';
+    },
+  },
+  {
+    id: 'ELG-001', severity: 'warning', name: 'Eligibility not verified',
+    check: (c) => {
+      if (!c.patient_name?.trim() || !c.payer_id || !c.org_id) return null;
+      const ok = db.prepare(`
+        SELECT id FROM eligibility_checks
+        WHERE org_id = ? AND patient_name = ? AND payer_id = ?
+          AND coverage_status = 'active'
+          AND date(created_at) >= date('now', '-30 days')
+        LIMIT 1
+      `).get(c.org_id, c.patient_name.trim(), c.payer_id);
+      return ok ? null : 'No active eligibility verification in the last 30 days.';
+    },
+  },
 ];
+
+function bandFor(score) {
+  if (score >= 90) return { band: 'ready', band_label: 'Ready to submit' };
+  if (score >= 70) return { band: 'review', band_label: 'Review recommended' };
+  return { band: 'blocked', band_label: 'Do not submit' };
+}
+
+function getCustomRules(orgId) {
+  if (!orgId) return [];
+  try {
+    return db.prepare(
+      'SELECT * FROM custom_scrub_rules WHERE org_id = ? AND is_active = 1'
+    ).all(orgId);
+  } catch (e) {
+    return [];
+  }
+}
+
+function applyCustomRules(claim, issues) {
+  const rules = getCustomRules(claim.org_id);
+  if (!rules.length) return;
+  const cpts = splitCodes(claim.cpt_codes);
+  const icds = splitCodes(claim.icd_codes);
+  for (const r of rules) {
+    try {
+      if (r.payer_id && Number(r.payer_id) !== Number(claim.payer_id)) continue;
+      if (r.cpt_code && !cpts.includes(r.cpt_code)) continue;
+      if (r.icd_code && !icds.includes(r.icd_code)) continue;
+      issues.push({ rule: 'CUSTOM', severity: r.severity, name: r.name, message: r.message });
+    } catch (e) {
+      console.error('Custom scrub rule failed:', e.message);
+    }
+  }
+}
 
 function scrubClaim(claim) {
   const issues = [];
@@ -115,13 +176,22 @@ function scrubClaim(claim) {
       console.error(`Scrub rule ${rule.id} failed:`, e.message);
     }
   }
+  try {
+    applyCustomRules(claim, issues);
+  } catch (e) {
+    console.error('Custom rules failed:', e.message);
+  }
   const errors = issues.filter((i) => i.severity === 'error').length;
   const warnings = issues.filter((i) => i.severity === 'warning').length;
+  // Readiness score: start at 100, -20 per error, -8 per warning, floor 0.
+  const score = Math.max(0, 100 - errors * 20 - warnings * 8);
+  const { band, band_label } = bandFor(score);
   return {
     claim_id: claim.id,
     claim_number: claim.claim_number,
     status: errors > 0 ? 'failed' : warnings > 0 ? 'warnings' : 'clean',
     errors, warnings, issues,
+    score, band, band_label,
   };
 }
 

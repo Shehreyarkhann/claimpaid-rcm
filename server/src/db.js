@@ -188,6 +188,7 @@ function initSchema() {
   if (!columnExists('claims', 'rendering_provider')) db.exec('ALTER TABLE claims ADD COLUMN rendering_provider TEXT');
   if (!columnExists('claims', 'scrub_status')) db.exec("ALTER TABLE claims ADD COLUMN scrub_status TEXT DEFAULT 'unscreened'");
   if (!columnExists('claims', 'scrubbed_at')) db.exec('ALTER TABLE claims ADD COLUMN scrubbed_at TEXT');
+  if (!columnExists('claims', 'readiness_score')) db.exec('ALTER TABLE claims ADD COLUMN readiness_score INTEGER');
 
   // Billing provider identity for 837 EDI (per org)
   if (!columnExists('orgs', 'billing_npi')) db.exec('ALTER TABLE orgs ADD COLUMN billing_npi TEXT');
@@ -259,6 +260,40 @@ function initSchema() {
       UNIQUE(org_id, category)
     );
     CREATE INDEX IF NOT EXISTS idx_letter_tpl_org ON appeal_letter_templates(org_id);
+  `);
+
+  // Denial-to-rule feedback loop: learned scrub rules + pending suggestions
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS custom_scrub_rules (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      name TEXT NOT NULL,
+      severity TEXT NOT NULL DEFAULT 'warning' CHECK (severity IN ('error','warning')),
+      payer_id INTEGER REFERENCES payers(id),
+      cpt_code TEXT,
+      icd_code TEXT,
+      message TEXT NOT NULL,
+      source TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('suggestion','manual')),
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_by INTEGER REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_custom_rules_org ON custom_scrub_rules(org_id);
+
+    CREATE TABLE IF NOT EXISTS rule_suggestions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      payer_id INTEGER REFERENCES payers(id),
+      denial_reason TEXT,
+      cpt_code TEXT,
+      icd_code TEXT,
+      occurrences INTEGER NOT NULL DEFAULT 0,
+      first_seen TEXT,
+      last_seen TEXT,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','accepted','dismissed')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_rule_sugg_org ON rule_suggestions(org_id);
   `);
 
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_claims_org_number ON claims(org_id, claim_number)');

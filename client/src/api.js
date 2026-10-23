@@ -22,6 +22,7 @@ export const api = {
   denialsByReason: () => get('/api/analytics/denials-by-reason'),
   payerMix: () => get('/api/analytics/payer-mix'),
   appealStats: () => get('/api/analytics/appeal-stats'),
+  claimQuality: () => get('/api/analytics/claim-quality'),
   claims: (params = {}) => get(`/api/claims?${new URLSearchParams(params)}`),
   payers: () => get('/api/claims/meta/payers'),
   createPayer: (data) =>
@@ -43,6 +44,22 @@ export const api = {
   filingRules: () => get('/api/filing/rules'),
   filingRisk: () => get('/api/filing/risk'),
   filingAtRisk: (days = 30) => get(`/api/filing/at-risk?days=${days}`),
+  // Scrub rules (denial-to-rule feedback loop)
+  ruleSuggestions: () => get('/api/rules/suggestions'),
+  analyzeDenials: () =>
+    authFetch('/api/rules/analyze', { method: 'POST' }).then(handle),
+  acceptSuggestion: (id) =>
+    authFetch(`/api/rules/suggestions/${id}/accept`, { method: 'POST' }).then(handle),
+  dismissSuggestion: (id) =>
+    authFetch(`/api/rules/suggestions/${id}/dismiss`, { method: 'POST' }).then(handle),
+  customRules: () => get('/api/rules/custom'),
+  createCustomRule: (data) =>
+    authFetch('/api/rules/custom', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).then(handle),
+  deleteCustomRule: (id) =>
+    authFetch(`/api/rules/custom/${id}`, { method: 'DELETE' }).then(handle),
   setFilingRule: (payerId, filing_days, notes) =>
     authFetch(`/api/filing/rules/${payerId}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -56,6 +73,7 @@ export const api = {
   reportFiling: () => get('/api/reports/filing-compliance'),
   // Playbook
   playbook: (params = {}) => get(`/api/playbook?${new URLSearchParams(params)}`),
+  payerStats: () => get('/api/playbook/payer-stats'),
   // ERA / Digest
   digest: () => get('/api/era/digest'),
   claimDetail: (id) => get(`/api/claims/${id}`),

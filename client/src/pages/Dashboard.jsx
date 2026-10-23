@@ -48,11 +48,12 @@ export default function Dashboard({ goDenials }) {
   const [due, setDue] = useState([]);
   const [appealStats, setAppealStats] = useState(null);
   const [filingRisk, setFilingRisk] = useState(null);
+  const [quality, setQuality] = useState(null);
 
   useEffect(() => {
-    Promise.all([api.kpis(), api.arAging(), api.revenueTrend(), api.denialsByReason(), api.payerMix(), api.dueFollowups(), api.appealStats(), api.filingRisk()])
-      .then(([k, a, t, d, p, du, as, fr]) => {
-        setKpis(k); setAging(a); setTrend(t); setDenials(d); setPayerMix(p); setDue(du); setAppealStats(as); setFilingRisk(fr);
+    Promise.all([api.kpis(), api.arAging(), api.revenueTrend(), api.denialsByReason(), api.payerMix(), api.dueFollowups(), api.appealStats(), api.filingRisk(), api.claimQuality()])
+      .then(([k, a, t, d, p, du, as, fr, q]) => {
+        setKpis(k); setAging(a); setTrend(t); setDenials(d); setPayerMix(p); setDue(du); setAppealStats(as); setFilingRisk(fr); setQuality(q);
       })
       .catch(console.error);
   }, []);
@@ -138,9 +139,56 @@ export default function Dashboard({ goDenials }) {
         </div>
       )}
 
+      {quality && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-slate-900 tracking-tight">Claim quality</h3>
+            <span className="text-xs text-slate-400">Prevention, measured</span>
+          </div>
+          {quality.total_claims === 0 ? (
+            <div className="card p-8 text-center text-sm text-slate-400">
+              Not enough data yet — add claims and run the scrubber to see quality metrics.
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <Kpi label="Paid without appeal" value={quality.first_pass_rate != null ? `${quality.first_pass_rate}%` : '—'}
+                  sub="of paid claims" accent="bg-emerald-400" />
+                <Kpi label="Denial rate" value={quality.denial_rate != null ? `${quality.denial_rate}%` : '—'}
+                  sub="of all claims" accent="bg-rose-400" />
+                <Kpi label="Avg readiness" value={quality.avg_readiness != null ? quality.avg_readiness : '—'}
+                  sub="0–100 scrub score" accent="bg-sky-400" />
+                <Kpi label="Claims scrubbed" value={quality.scrubbed_claims.toLocaleString()}
+                  sub="with a readiness score" accent="bg-violet-400" />
+              </div>
+              {quality.by_payer.length > 0 && (
+                <div className="card overflow-hidden">
+                  <table className="w-full tbl">
+                    <thead><tr><th>Payer</th><th className="!text-right">Claims</th><th className="!text-right">Denial rate</th><th className="!text-right">Avg days in A/R</th></tr></thead>
+                    <tbody>
+                      {quality.by_payer.map((r) => (
+                        <tr key={r.name}>
+                          <td className="font-medium">{r.name}</td>
+                          <td className="!text-right text-slate-500">{r.claims}</td>
+                          <td className="!text-right">
+                            <span className={`badge ${r.denial_rate >= 20 ? 'badge-rose' : r.denial_rate >= 10 ? 'badge-amber' : 'badge-green'}`}>
+                              {r.denial_rate}%
+                            </span>
+                          </td>
+                          <td className="!text-right text-slate-500">{r.avg_ar_days ?? '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
       <div className="grid lg:grid-cols-2 gap-5 mb-5">
-        <ChartCard title="Billed vs Collected" subtitle="Monthly revenue performance">
-          <ResponsiveContainer width="100%" height={280}>
+        <ChartCard title="Billed vs Collected" subtitle="Monthly revenue performance">          <ResponsiveContainer width="100%" height={280}>
             <BarChart data={trend} barGap={3}>
               <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />

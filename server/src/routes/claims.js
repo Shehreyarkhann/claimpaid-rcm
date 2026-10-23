@@ -32,7 +32,7 @@ router.get('/', (req, res) => {
   const rows = db.prepare(`
     SELECT c.id, c.claim_number, c.patient_name, p.name AS payer,
            c.service_date, c.billed_amount, c.paid_amount, c.status,
-           c.denial_reason, c.days_in_ar,
+           c.denial_reason, c.days_in_ar, c.readiness_score,
            ${FILING_SELECT}
     FROM claims c JOIN payers p ON p.id = c.payer_id
     ${FILING_JOIN}

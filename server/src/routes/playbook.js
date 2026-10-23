@@ -9,6 +9,53 @@ const canWrite = roleRequired('owner', 'biller');
 const CATEGORIES = ['billing', 'appeals', 'auth', 'contact', 'general'];
 const CAT_LABELS = { billing: 'Billing Tips', appeals: 'Appeals', auth: 'Prior Auth', contact: 'Contacts', general: 'General' };
 
+// --- Empirical payer profiles, computed from the org's own claims ---
+router.get('/payer-stats', (req, res) => {
+  const org = req.orgId;
+  const payers = db.prepare(`
+    SELECT p.id, p.name,
+      COUNT(c.id) AS total_claims,
+      COALESCE(SUM(CASE WHEN c.status = 'paid' THEN 1 ELSE 0 END), 0) AS paid_count,
+      COALESCE(SUM(CASE WHEN c.status = 'denied' THEN 1 ELSE 0 END), 0) AS denied_count,
+      ROUND(AVG(c.days_in_ar), 1) AS avg_ar_days
+    FROM payers p
+    LEFT JOIN claims c ON c.payer_id = p.id AND c.org_id = ?
+    WHERE p.org_id = ?
+    GROUP BY p.id, p.name
+    HAVING total_claims > 0
+    ORDER BY total_claims DESC
+  `).all(org, org);
+
+  const reasonsStmt = db.prepare(`
+    SELECT denial_reason, COUNT(*) AS n FROM claims
+    WHERE org_id = ? AND payer_id = ? AND status = 'denied'
+      AND denial_reason IS NOT NULL AND denial_reason != ''
+    GROUP BY denial_reason ORDER BY n DESC LIMIT 3
+  `);
+  const firstPassStmt = db.prepare(`
+    SELECT COUNT(*) AS n FROM claims c
+    WHERE c.org_id = ? AND c.payer_id = ? AND c.status = 'paid'
+      AND NOT EXISTS (SELECT 1 FROM appeals a WHERE a.claim_id = c.id AND a.org_id = ?)
+  `);
+
+  const out = payers.map((p) => {
+    const topReasons = reasonsStmt.all(org, p.id);
+    const firstPass = firstPassStmt.get(org, p.id, org).n;
+    return {
+      id: p.id,
+      name: p.name,
+      total_claims: p.total_claims,
+      paid_count: p.paid_count,
+      denied_count: p.denied_count,
+      denial_rate: p.total_claims ? Math.round((p.denied_count / p.total_claims) * 1000) / 10 : 0,
+      avg_ar_days: p.avg_ar_days,
+      top_denial_reasons: topReasons,
+      first_pass_rate: p.paid_count ? Math.round((firstPass / p.paid_count) * 1000) / 10 : null,
+    };
+  });
+  res.json(out);
+});
+
 // --- List playbook entries ---
 router.get('/', (req, res) => {
   const { category = '', payer = '', search = '' } = req.query;

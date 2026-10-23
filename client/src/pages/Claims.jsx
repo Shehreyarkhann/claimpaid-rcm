@@ -128,6 +128,25 @@ function ClaimModal({ claim, payers, onClose, onSaved }) {
   );
 }
 
+const BAND_BADGE = { ready: 'badge-green', review: 'badge-amber', blocked: 'badge-rose' };
+
+function bandForScore(score) {
+  if (score == null) return null;
+  if (score >= 90) return { band: 'ready', band_label: 'Ready to submit' };
+  if (score >= 70) return { band: 'review', band_label: 'Review recommended' };
+  return { band: 'blocked', band_label: 'Do not submit' };
+}
+
+function ScoreBadge({ score, band, band_label, compact }) {
+  const meta = band ? { band, band_label } : bandForScore(score);
+  if (score == null || !meta) return <span className="text-slate-300">—</span>;
+  return (
+    <span className={`badge ${BAND_BADGE[meta.band]}`} title={meta.band_label}>
+      {compact ? score : `${score} · ${meta.band_label}`}
+    </span>
+  );
+}
+
 function ScrubResultsModal({ result, onClose }) {
   const [filter, setFilter] = useState('all');
   const { summary, results } = result;
@@ -168,9 +187,12 @@ function ScrubResultsModal({ result, onClose }) {
             <div key={r.claim_id} className={`border rounded-xl p-4 ${r.status === 'failed' ? 'border-rose-200 bg-rose-50/40' : r.status === 'warnings' ? 'border-amber-200 bg-amber-50/40' : 'border-emerald-200 bg-emerald-50/40'}`}>
               <div className="flex items-center justify-between mb-2">
                 <span className="font-mono font-bold text-sm">{r.claim_number}</span>
-                <span className={`badge ${r.status === 'failed' ? 'badge-rose' : r.status === 'warnings' ? 'badge-amber' : 'badge-green'}`}>
-                  {r.status === 'clean' ? '✓ Clean' : `${r.errors} errors · ${r.warnings} warnings`}
-                </span>
+                <div className="flex items-center gap-2">
+                  <ScoreBadge score={r.score} band={r.band} band_label={r.band_label} />
+                  <span className={`badge ${r.status === 'failed' ? 'badge-rose' : r.status === 'warnings' ? 'badge-amber' : 'badge-green'}`}>
+                    {r.status === 'clean' ? '✓ Clean' : `${r.errors} errors · ${r.warnings} warnings`}
+                  </span>
+                </div>
               </div>
               {r.issues.map((iss, i) => (
                 <div key={i} className="flex gap-2.5 text-sm py-1">
@@ -387,7 +409,7 @@ export default function Claims() {
                 {canWrite && <th className="!pr-0 w-10"><input type="checkbox" checked={data.claims.length > 0 && selected.size === data.claims.length} onChange={toggleAll} className="rounded" /></th>}
                 <th>Claim #</th><th>Patient</th><th>Payer</th><th>Service date</th>
                 <th className="!text-right">Billed</th><th className="!text-right">Paid</th>
-                <th>Status</th><th>Filing deadline</th><th className="!text-right">Days in A/R</th>
+                <th>Status</th><th>Readiness</th><th>Filing deadline</th><th className="!text-right">Days in A/R</th>
                 {canWrite && <th className="!text-center">Actions</th>}
               </tr></thead>
               <tbody>
@@ -404,6 +426,7 @@ export default function Claims() {
                       <span className={`badge ${STATUS_META[c.status].badge}`}>{STATUS_META[c.status].label}</span>
                       {c.denial_reason && <div className="text-[11px] text-rose-600 mt-1">{c.denial_reason}</div>}
                     </td>
+                    <td><ScoreBadge score={c.readiness_score} compact /></td>
                     <td><FilingBadge days={c.days_until_filing} /></td>
                     <td className="!text-right text-slate-500">{c.days_in_ar}</td>
                     {canWrite && (

@@ -195,4 +195,40 @@ router.post('/escalate', (req, res) => {
   res.json({ escalated: bumped.length, escalated_ids: bumped, unappealed_denials: unappealed });
 });
 
+// --- Claim quality: first-pass rate, denial rate, readiness, payer breakdown ---
+router.get('/claim-quality', (req, res) => {
+  const org = req.orgId;
+  const total = db.prepare('SELECT COUNT(*) AS n FROM claims WHERE org_id = ?').get(org).n;
+  const paid = db.prepare("SELECT COUNT(*) AS n FROM claims WHERE org_id = ? AND status = 'paid'").get(org).n;
+  const paidNoAppeal = db.prepare(`
+    SELECT COUNT(*) AS n FROM claims c
+    WHERE c.org_id = ? AND c.status = 'paid'
+      AND NOT EXISTS (SELECT 1 FROM appeals a WHERE a.claim_id = c.id AND a.org_id = ?)
+  `).get(org, org).n;
+  const denied = db.prepare("SELECT COUNT(*) AS n FROM claims WHERE org_id = ? AND status = 'denied'").get(org).n;
+  const readiness = db.prepare(
+    'SELECT AVG(readiness_score) AS avg_score, COUNT(*) AS n FROM claims WHERE org_id = ? AND readiness_score IS NOT NULL'
+  ).get(org);
+  const byPayer = db.prepare(`
+    SELECT p.name,
+      COUNT(c.id) AS claims,
+      ROUND(100.0 * SUM(CASE WHEN c.status = 'denied' THEN 1 ELSE 0 END) / COUNT(c.id), 1) AS denial_rate,
+      ROUND(AVG(c.days_in_ar), 1) AS avg_ar_days
+    FROM claims c JOIN payers p ON p.id = c.payer_id
+    WHERE c.org_id = ?
+    GROUP BY p.id, p.name
+    ORDER BY claims DESC
+    LIMIT 6
+  `).all(org);
+
+  res.json({
+    total_claims: total,
+    first_pass_rate: paid ? round2((paidNoAppeal / paid) * 100) : null,
+    denial_rate: total ? round2((denied / total) * 100) : null,
+    avg_readiness: readiness.n ? Math.round(readiness.avg_score) : null,
+    scrubbed_claims: readiness.n,
+    by_payer: byPayer,
+  });
+});
+
 module.exports = router;
