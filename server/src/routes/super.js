@@ -96,7 +96,15 @@ router.get('/orgs/:id', (req, res) => {
     `SELECT COUNT(*) AS n FROM appeals WHERE org_id = ? AND status = 'open'`
   ).get(org.id).n;
   const baa = db.prepare('SELECT * FROM baa_signatures WHERE org_id = ?').get(org.id) || null;
-  res.json({ org, users, claimsByStatus, openAppeals, baa });
+  const eligTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='eligibility_lookups'`).get();
+  const eligibility = eligTable ? {
+    vendor: org.eligibility_vendor || 'demo',
+    configured: !!(org.eligibility_endpoint && org.eligibility_endpoint.trim()),
+    checks_30d: db.prepare(
+      `SELECT COUNT(*) AS n FROM eligibility_lookups WHERE org_id = ? AND created_at >= datetime('now', '-30 days')`
+    ).get(org.id).n,
+  } : null;
+  res.json({ org, users, claimsByStatus, openAppeals, baa, eligibility });
 });
 
 router.patch('/orgs/:id/plan', (req, res) => {

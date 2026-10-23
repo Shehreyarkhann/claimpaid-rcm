@@ -27,7 +27,7 @@ export function FilingBadge({ days }) {
   return <span className="text-xs text-slate-400">{days}d</span>;
 }
 
-function ClaimModal({ claim, payers, onClose, onSaved }) {
+function ClaimModal({ claim, payers, onClose, onSaved, onCheckEligibility }) {
   const toast = useToast();
   const [form, setForm] = useState(claim ? {
     claim_number: claim.claim_number, patient_name: claim.patient_name, payer: claim.payer,
@@ -101,6 +101,9 @@ function ClaimModal({ claim, payers, onClose, onSaved }) {
           </div>
         </div>
         <div className="mt-6 flex justify-end gap-2">
+          {claim && onCheckEligibility && (
+            <button onClick={() => onCheckEligibility(claim)} className="btn btn-outline mr-auto">⚡ Check eligibility</button>
+          )}
           <button onClick={onClose} className="btn btn-ghost">Cancel</button>
           <button onClick={save} disabled={saving} className="btn btn-primary">{saving ? 'Saving…' : claim ? 'Save changes' : 'Add claim'}</button>
         </div>
@@ -213,7 +216,7 @@ function ScrubResultsModal({ result, onClose }) {
   );
 }
 
-export default function Claims() {
+export default function Claims({ onCheckEligibility }) {
   const { user } = useAuth();
   const toast = useToast();
   const [data, setData] = useState(null);
@@ -329,7 +332,8 @@ export default function Claims() {
   return (
     <div>
       {modal && <ClaimModal claim={modal === 'add' ? null : modal} payers={payers}
-        onClose={() => setModal(null)} onSaved={() => { setModal(null); fetchClaims(); }} />}
+        onClose={() => setModal(null)} onSaved={() => { setModal(null); fetchClaims(); }}
+        onCheckEligibility={onCheckEligibility} />}
 
       <PageHeader
         title="Claims"

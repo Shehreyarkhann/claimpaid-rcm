@@ -144,7 +144,7 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
   };
 
   if (!detail) return <Modal onClose={onClose}><div className="p-8"><Skeleton className="h-40 !bg-slate-700" /></div></Modal>;
-  const { org, users, claimsByStatus, openAppeals, baa } = detail;
+  const { org, users, claimsByStatus, openAppeals, baa, eligibility } = detail;
 
   return (
     <Modal onClose={onClose} wide>
@@ -200,6 +200,24 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
             </div>
           ) : (
             <p className="text-sm text-amber-300/90">Not signed — this workspace cannot activate a paid subscription until the BAA is signed.</p>
+          )}
+        </div>
+
+        <SectionTitle>Eligibility</SectionTitle>
+        <div className="bg-slate-800 rounded-xl p-4 mb-6">
+          {eligibility ? (
+            <div className="grid sm:grid-cols-3 gap-x-6 gap-y-2 text-xs">
+              <div><span className="text-slate-500">Vendor </span>
+                <span className={`badge ml-1 ${eligibility.vendor === 'demo' ? 'badge-amber' : 'badge-green'}`}>
+                  {eligibility.vendor === 'demo' ? 'Demo (synthetic)' : 'Live REST'}
+                </span></div>
+              <div><span className="text-slate-500">Endpoint </span>
+                <span className="text-slate-200">{eligibility.configured ? 'Configured' : '—'}</span></div>
+              <div><span className="text-slate-500">Checks (30d) </span>
+                <span className="text-white font-bold">{eligibility.checks_30d}</span></div>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">No eligibility data.</p>
           )}
         </div>
 

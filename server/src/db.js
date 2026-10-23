@@ -401,6 +401,48 @@ function initSchema() {
     SELECT id, org_id, role FROM users
     WHERE EXISTS (SELECT 1 FROM orgs WHERE orgs.id = users.org_id)
   `);
+
+  // Real-time eligibility lookups (270/271-style vendor responses).
+  // Separate from eligibility_checks, which is the manual verification log (portal/phone).
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS eligibility_lookups (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      patient_first TEXT NOT NULL,
+      patient_last TEXT NOT NULL,
+      dob TEXT NOT NULL,
+      member_id TEXT NOT NULL,
+      payer TEXT NOT NULL,
+      date_of_service TEXT NOT NULL,
+      vendor TEXT NOT NULL DEFAULT 'demo',
+      coverage_active INTEGER,
+      plan_name TEXT,
+      plan_type TEXT,
+      group_number TEXT,
+      copay_primary REAL,
+      copay_specialist REAL,
+      deductible_individual REAL,
+      deductible_remaining REAL,
+      oop_max REAL,
+      effective_date TEXT,
+      term_date TEXT,
+      raw_request TEXT,
+      raw_response TEXT,
+      checked_by INTEGER REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_eliglookups_org ON eligibility_lookups(org_id, created_at);
+  `);
+
+  // Eligibility vendor config on the org (same column pattern as the EDI settings).
+  // NOTE (honest posture): these columns live in the same SQLite file as everything
+  // else on the droplet, which is NOT encrypted at rest. API keys stored here are
+  // protected by DB file permissions and app-level access control only — same as the
+  // rest of the app. Rotate the key at the vendor if the DB file is ever exposed.
+  if (!columnExists('orgs', 'eligibility_vendor')) db.exec("ALTER TABLE orgs ADD COLUMN eligibility_vendor TEXT NOT NULL DEFAULT 'demo'");
+  if (!columnExists('orgs', 'eligibility_endpoint')) db.exec('ALTER TABLE orgs ADD COLUMN eligibility_endpoint TEXT');
+  if (!columnExists('orgs', 'eligibility_api_key')) db.exec('ALTER TABLE orgs ADD COLUMN eligibility_api_key TEXT');
+  if (!columnExists('orgs', 'eligibility_auth_scheme')) db.exec("ALTER TABLE orgs ADD COLUMN eligibility_auth_scheme TEXT NOT NULL DEFAULT 'Bearer'");
 }
 
 // Thin wrapper so route code keeps working with .prepare().get()/.all()/.run()

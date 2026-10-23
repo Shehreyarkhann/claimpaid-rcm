@@ -166,6 +166,16 @@ export const api = {
     reply: (id, body) =>
       authFetch(`/api/support/${id}/reply`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ body }) }).then(handle),
   },
+  eligibility: {
+    check: (data) =>
+      authFetch('/api/eligibility/check', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(handle),
+    history: (limit = 50) => get(`/api/eligibility/history?limit=${limit}`),
+    lookup: (id) => get(`/api/eligibility/lookup/${id}`),
+    getConfig: () => get('/api/eligibility/config'),
+    mode: () => get('/api/eligibility/mode'),
+    saveConfig: (data) =>
+      authFetch('/api/eligibility/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(handle),
+  },
 };
 
 export const csvUrl = (path) => path; // auth via cookie-less; use fetch for authed CSV

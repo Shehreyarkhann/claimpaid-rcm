@@ -30,7 +30,7 @@ router.get('/', (req, res) => {
   const whereClause = `WHERE ${where.join(' AND ')}`;
   const total = db.prepare(`SELECT COUNT(*) AS n FROM claims c JOIN payers p ON p.id = c.payer_id ${whereClause}`).get(...params).n;
   const rows = db.prepare(`
-    SELECT c.id, c.claim_number, c.patient_name, p.name AS payer,
+    SELECT c.id, c.claim_number, c.patient_name, c.payer_id, p.name AS payer,
            c.service_date, c.billed_amount, c.paid_amount, c.status,
            c.denial_reason, c.days_in_ar, c.readiness_score,
            ${FILING_SELECT}

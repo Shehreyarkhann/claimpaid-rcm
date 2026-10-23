@@ -133,11 +133,12 @@ function Workspace() {
       )}
       {page === 'digest' && <Digest />}
       {page === 'dashboard' && <Dashboard goDenials={() => go('denials')} />}
-      {page === 'claims' && <Claims initialClaimId={deepLink?.claimId} onConsumed={() => setDeepLink(null)} />}
+      {page === 'claims' && <Claims initialClaimId={deepLink?.claimId} onConsumed={() => setDeepLink(null)}
+        onCheckEligibility={(claim) => go('elig', { prefill: { payerId: claim.payer_id, serviceDate: claim.service_date, patientName: claim.patient_name } })} />}
       {page === 'reports' && <Reports />}
       {page === 'playbook' && <Playbook />}
       {page === 'authz' && <Authorizations />}
-      {page === 'elig' && <Eligibility />}
+      {page === 'elig' && <Eligibility initialPrefill={deepLink?.prefill} onConsumed={() => setDeepLink(null)} />}
       {page === 'audit' && <AuditLog />}
       {page === 'billing' && <Billing defaultTrial={trialIntent} onBaaRequired={() => go('compliance')} />}
       {page === 'org' && <Organization />}

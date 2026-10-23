@@ -1,10 +1,28 @@
 const express = require('express');
 const { db } = require('../db');
 const { authRequired, roleRequired, requireProduct } = require('../auth');
+const { runCheck } = require('../eligibility/vendors');
 
 const router = express.Router();
 router.use(authRequired, requireProduct('rcm'));
 const canWrite = roleRequired('owner', 'biller');
+const ownerOnly = roleRequired('owner');
+
+const ELIG_VENDORS = ['demo', 'rest'];
+
+// Org's eligibility vendor config (columns on orgs; see db.js for the at-rest note)
+function orgEligConfig(orgId) {
+  const o = db.prepare(
+    `SELECT eligibility_vendor, eligibility_endpoint, eligibility_api_key, eligibility_auth_scheme
+     FROM orgs WHERE id = ?`
+  ).get(orgId) || {};
+  return {
+    vendor: ELIG_VENDORS.includes(o.eligibility_vendor) ? o.eligibility_vendor : 'demo',
+    endpoint: o.eligibility_endpoint || '',
+    api_key: o.eligibility_api_key || '',
+    auth_scheme: o.eligibility_auth_scheme || 'Bearer',
+  };
+}
 
 const STATUSES = ['active', 'inactive', 'unknown'];
 const STATUS_LABELS = { active: 'Active', inactive: 'Inactive', unknown: 'Not verified' };
@@ -49,6 +67,120 @@ router.get('/stats', (req, res) => {
     total: byStatus.reduce((a, r) => a + r.n, 0),
   });
 });
+
+// ================= REAL-TIME ELIGIBILITY (270/271-style) =================
+// Vendor-backed lookups stored in eligibility_lookups (separate from the manual
+// eligibility_checks log above). Until a real vendor is configured in Settings,
+// checks run against the `demo` vendor — responses are clearly labeled synthetic
+// and never presented as real.
+
+// --- Run a real-time check ---
+router.post('/check', canWrite, async (req, res) => {
+  const b = req.body || {};
+  // Accept payer_id (preferred, from the app's payer list) or a raw payer name
+  let payerName = (b.payer || '').trim();
+  if (b.payer_id) {
+    const p = db.prepare('SELECT name FROM payers WHERE id = ? AND org_id = ?').get(b.payer_id, req.orgId);
+    if (!p) return res.status(400).json({ error: 'Payer not found' });
+    payerName = p.name;
+  } else if (payerName) {
+    const p = db.prepare('SELECT id FROM payers WHERE org_id = ? AND LOWER(name) = LOWER(?)').get(req.orgId, payerName);
+    if (!p) return res.status(400).json({ error: 'Payer not found in your payer list' });
+    payerName = p.name;
+  }
+
+  const cfg = orgEligConfig(req.orgId);
+  let result;
+  try {
+    result = await runCheck(cfg.vendor, {
+      eligibility_endpoint: cfg.endpoint,
+      eligibility_api_key: cfg.api_key,
+      eligibility_auth_scheme: cfg.auth_scheme,
+    }, { ...b, payer: payerName });
+  } catch (e) {
+    // Validation errors -> 400; vendor failures -> 502 (never silently demo)
+    return res.status(e.status || 502).json({ error: e.message });
+  }
+
+  const demo = !!(result.raw_response && result.raw_response.demo);
+  const id = Number(db.prepare(`
+    INSERT INTO eligibility_lookups
+      (org_id, patient_first, patient_last, dob, member_id, payer, date_of_service,
+       vendor, coverage_active, plan_name, plan_type, group_number,
+       copay_primary, copay_specialist, deductible_individual, deductible_remaining,
+       oop_max, effective_date, term_date, raw_request, raw_response, checked_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    req.orgId, b.patient_first.trim(), b.patient_last.trim(), b.dob, b.member_id.trim(),
+    payerName, b.date_of_service, demo ? 'demo' : cfg.vendor,
+    result.coverage_active, result.plan_name, result.plan_type, result.group_number,
+    result.copay_primary, result.copay_specialist, result.deductible_individual,
+    result.deductible_remaining, result.oop_max, result.effective_date, result.term_date,
+    JSON.stringify(result.raw_request), JSON.stringify(result.raw_response), req.user.id,
+  ).lastInsertRowid);
+
+  const row = db.prepare('SELECT * FROM eligibility_lookups WHERE id = ?').get(id);
+  res.status(201).json({ ...row, demo });
+});
+
+// --- Lookup history (org-scoped, raw payloads excluded from the list) ---
+const LOOKUP_LIST_COLS = `l.id, l.org_id, l.patient_first, l.patient_last, l.dob, l.member_id, l.payer,
+  l.date_of_service, l.vendor, l.coverage_active, l.plan_name, l.plan_type, l.group_number,
+  l.copay_primary, l.copay_specialist, l.deductible_individual, l.deductible_remaining,
+  l.oop_max, l.effective_date, l.term_date, l.checked_by, l.created_at`;
+
+router.get('/history', (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+  const rows = db.prepare(`
+    SELECT ${LOOKUP_LIST_COLS}, u.name AS checked_by_name
+    FROM eligibility_lookups l LEFT JOIN users u ON u.id = l.checked_by
+    WHERE l.org_id = ? ORDER BY l.created_at DESC, l.id DESC LIMIT ?
+  `).all(req.orgId, limit);
+  res.json({ lookups: rows.map((r) => ({ ...r, demo: r.vendor === 'demo' })) });
+});
+
+// --- Lookup detail (includes raw request/response) ---
+router.get('/lookup/:id', (req, res) => {
+  const row = db.prepare('SELECT * FROM eligibility_lookups WHERE id = ? AND org_id = ?')
+    .get(req.params.id, req.orgId);
+  if (!row) return res.status(404).json({ error: 'Eligibility check not found' });
+  res.json({ ...row, demo: row.vendor === 'demo' });
+});
+
+// --- Vendor mode (any org member — powers the demo banner) ---
+router.get('/mode', (req, res) => {
+  const cfg = orgEligConfig(req.orgId);
+  res.json({ vendor: cfg.vendor, demo: cfg.vendor === 'demo' });
+});
+
+// --- Vendor config (owner only) ---
+router.get('/config', ownerOnly, (req, res) => {
+  res.json(orgEligConfig(req.orgId));
+});
+
+router.put('/config', ownerOnly, (req, res) => {
+  const b = req.body || {};
+  const vendor = (b.vendor || 'demo').trim();
+  if (!ELIG_VENDORS.includes(vendor)) return res.status(400).json({ error: 'Invalid vendor' });
+  const endpoint = (b.endpoint || '').trim();
+  const auth_scheme = (b.auth_scheme || 'Bearer').trim() || 'Bearer';
+  if (vendor === 'rest' && !endpoint) {
+    return res.status(400).json({ error: 'Endpoint URL is required for a custom REST vendor' });
+  }
+  if (endpoint && !/^https?:\/\//i.test(endpoint)) {
+    return res.status(400).json({ error: 'Endpoint must be an http(s) URL' });
+  }
+  const updates = ['eligibility_vendor = ?', 'eligibility_endpoint = ?', 'eligibility_auth_scheme = ?'];
+  const params = [vendor, endpoint || null, auth_scheme];
+  if (b.api_key !== undefined && b.api_key !== '') {
+    updates.push('eligibility_api_key = ?');
+    params.push(b.api_key);
+  }
+  params.push(req.orgId);
+  db.prepare(`UPDATE orgs SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+  res.json(orgEligConfig(req.orgId));
+});
+
 
 // --- Create ---
 router.post('/', canWrite, (req, res) => {

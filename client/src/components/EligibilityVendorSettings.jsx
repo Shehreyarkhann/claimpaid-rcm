@@ -1,0 +1,103 @@
+import { useState, useEffect } from 'react';
+import { api } from '../api';
+import { useToast } from './ui';
+
+// Owner-only: which eligibility vendor backs real-time checks.
+// Until a real vendor is configured, checks run against the clearly-labeled demo vendor.
+export default function EligibilityVendorSettings() {
+  const toast = useToast();
+  const [form, setForm] = useState({ vendor: 'demo', endpoint: '', api_key: '', auth_scheme: 'Bearer' });
+  const [keySet, setKeySet] = useState(false);
+  const [customHeader, setCustomHeader] = useState('');
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    api.eligibility.getConfig().then((c) => {
+      const preset = ['Bearer', 'Basic'].includes(c.auth_scheme) ? c.auth_scheme : 'custom';
+      setForm({ vendor: c.vendor || 'demo', endpoint: c.endpoint || '', api_key: '', auth_scheme: preset });
+      if (preset === 'custom') setCustomHeader(c.auth_scheme);
+      setKeySet(!!c.api_key);
+    }).catch(() => {});
+  }, []);
+
+  const save = async () => {
+    setError(null); setSaved(false); setBusy(true);
+    try {
+      const payload = {
+        vendor: form.vendor,
+        endpoint: form.endpoint.trim(),
+        auth_scheme: form.auth_scheme === 'custom' ? customHeader.trim() : form.auth_scheme,
+      };
+      if (form.api_key) payload.api_key = form.api_key;
+      await api.eligibility.saveConfig(payload);
+      setSaved(true);
+      setKeySet(!!form.api_key || keySet);
+      setForm((f) => ({ ...f, api_key: '' }));
+      toast.success('Eligibility vendor saved');
+    } catch (e) { setError(e.message); }
+    finally { setBusy(false); }
+  };
+
+  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+
+  return (
+    <div className="card p-6 mb-5">
+      <div className="flex items-center gap-2.5 mb-1">
+        <div className="text-xl">🩺</div>
+        <div className="font-semibold text-slate-900">Eligibility vendor</div>
+        {form.vendor === 'demo' && <span className="badge badge-amber">DEMO MODE — synthetic data</span>}
+      </div>
+      <p className="text-sm text-slate-500 mb-5 max-w-2xl leading-relaxed">
+        Real-time eligibility checks (270/271-style) run against this vendor. A real vendor requires a
+        clearinghouse account — e.g. pVerify, Eligible, Availity, or Change Healthcare — <strong>plus
+        payer enrollment</strong> for every payer you check against. Until then, checks use clearly-labeled
+        synthetic demo responses so the workflow is fully testable.
+      </p>
+      {error && <div className="mb-4 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}
+      {saved && <div className="mb-4 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">Vendor settings saved.</div>}
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label className="label">Vendor</label>
+          <select className="input" value={form.vendor} onChange={set('vendor')}>
+            <option value="demo">Demo (synthetic responses)</option>
+            <option value="rest">Custom REST API (pVerify / Eligible / Availity…)</option>
+          </select>
+        </div>
+        {form.vendor === 'rest' && (
+          <>
+            <div>
+              <label className="label">Endpoint URL *</label>
+              <input className="input" value={form.endpoint} onChange={set('endpoint')}
+                placeholder="https://api.vendor.com/v1/eligibility/check" />
+            </div>
+            <div>
+              <label className="label">API key {keySet && !form.api_key && <span className="text-emerald-600 font-normal">(saved — leave blank to keep)</span>}</label>
+              <input className="input" type="password" value={form.api_key} onChange={set('api_key')}
+                placeholder={keySet ? '••••••••' : 'Paste vendor API key'} autoComplete="new-password" />
+            </div>
+            <div>
+              <label className="label">Auth scheme</label>
+              <select className="input" value={form.auth_scheme} onChange={set('auth_scheme')}>
+                <option value="Bearer">Bearer token (Authorization header)</option>
+                <option value="Basic">Basic (base64 of key)</option>
+                <option value="custom">Custom header name…</option>
+              </select>
+            </div>
+            {form.auth_scheme === 'custom' && (
+              <div>
+                <label className="label">Header name</label>
+                <input className="input" value={customHeader} onChange={(e) => setCustomHeader(e.target.value)}
+                  placeholder="X-API-Key" />
+              </div>
+            )}
+          </>
+        )}
+      </div>
+      <div className="mt-5">
+        <button className="btn btn-primary" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save vendor'}</button>
+      </div>
+    </div>
+  );
+}
