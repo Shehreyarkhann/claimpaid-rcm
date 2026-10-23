@@ -339,7 +339,7 @@ cat > /etc/nginx/sites-available/claimpaid <<EOF
 # ClaimPaid — RCM app serves / (landing) and /app ; AI dashboard at /ai/
 server {
     listen 80;
-    server_name ${DOMAIN};
+    server_name ${DOMAIN} www.${DOMAIN};
 
     # certbot will add the 443 block on first run
     location / {
