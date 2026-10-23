@@ -31,11 +31,12 @@ function authRequired(req, res, next) {
     req.user = { id: member.id, email: member.email, name: member.name, role: member.role, org_id: member.org_id };
     req.orgId = member.org_id;
     // Attach subscription products so routes can gate by plan (ai plan => no RCM, etc.)
+    // Uses the effective status: an expired trial unlocks nothing.
     try {
-      const org = db.prepare('SELECT plan FROM orgs WHERE id = ?').get(member.org_id);
-      const { productsForPlan } = require('./routes/billing');
+      const org = db.prepare('SELECT plan, plan_status, trial_ends_at FROM orgs WHERE id = ?').get(member.org_id);
+      const { productsForOrg } = require('./routes/billing');
       req.plan = org?.plan || null;
-      req.products = productsForPlan(org?.plan);
+      req.products = productsForOrg(org);
     } catch {
       req.plan = null;
       req.products = { rcm: true, ai: true };

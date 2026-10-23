@@ -41,8 +41,8 @@ function daysBetween(dateStr) {
 function seed() {
   db.exec('DELETE FROM appeal_notes; DELETE FROM appeals; DELETE FROM claims; DELETE FROM payers; DELETE FROM users; DELETE FROM orgs;');
 
-  // Demo org + owner
-  const orgId = Number(db.prepare('INSERT INTO orgs (name) VALUES (?)').run('Demo Billing Co.').lastInsertRowid);
+  // Demo org + owner (marked onboarding-complete so the funnel never blocks demo)
+  const orgId = Number(db.prepare("INSERT INTO orgs (name, onboarding_completed_at) VALUES (?, datetime('now'))").run('Demo Billing Co.').lastInsertRowid);
   const hash = bcrypt.hashSync('demo1234', 10);
   const ownerId = Number(db.prepare(
     "INSERT INTO users (org_id, email, password_hash, name, role) VALUES (?, ?, ?, ?, 'owner')"

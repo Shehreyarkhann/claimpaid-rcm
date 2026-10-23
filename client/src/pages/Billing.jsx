@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { api } from '../api';
+import { useState, useEffect, useRef } from 'react';
+import { api, fmtMoney2 } from '../api';
 import { PageHeader, Skeleton } from '../components/ui';
 import { useToast } from '../components/ui';
 
@@ -11,26 +11,44 @@ const PLAN_META = {
   enterprise: { label: 'Enterprise', desc: 'Custom annual agreement' },
 };
 
-const STATUS_BADGE = {
+const STATUS_PILL = {
   trialing: 'badge-blue',
   active: 'badge-green',
   past_due: 'badge-amber',
+  expired: 'badge-rose',
   canceled: 'badge-slate',
 };
 
-export default function Billing({ defaultTrial = false, onBaaRequired }) {
+function statusLabel(s) {
+  if (s.plan_status === 'trialing') {
+    return s.trial_days_left > 0 ? `Free trial · ${s.trial_days_left} day${s.trial_days_left === 1 ? '' : 's'} left` : 'Free trial';
+  }
+  return { active: 'Active', past_due: 'Past due', expired: 'Trial ended', canceled: 'Canceled' }[s.plan_status]
+    || (s.plan_status || '').replace(/_/g, ' ');
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+export default function Billing({ onBaaRequired }) {
   const [status, setStatus] = useState(null);
+  const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(null);
-  const [trial, setTrial] = useState(defaultTrial);
+  const plansRef = useRef(null);
   const toast = useToast();
 
   const load = () => {
     setLoading(true);
-    api.billingStatus()
-      .then(setStatus)
-      .catch((e) => toast.error(e.message))
-      .finally(() => setLoading(false));
+    Promise.all([
+      api.billingStatus().catch((e) => { toast.error(e.message); return null; }),
+      api.billingInvoices().then((r) => r.invoices || []).catch(() => []),
+    ]).then(([s, inv]) => {
+      if (s) setStatus(s);
+      setInvoices(inv);
+    }).finally(() => setLoading(false));
   };
 
   useEffect(() => {
@@ -40,14 +58,16 @@ export default function Billing({ defaultTrial = false, onBaaRequired }) {
     const b = q.get('billing');
     if (b === 'success') {
       window.history.replaceState({}, '', '/app/');
-      // Give the webhook a moment to land, then toast based on the real status
+      // Give the webhook a moment to land, then confirm from the real status
       setTimeout(async () => {
         try {
           const s = await api.billingStatus();
           setStatus(s);
-          toast.success(s?.plan_status === 'trialing'
-            ? 'Free trial started — no charge for 30 days. Welcome to ClaimPaid!'
-            : 'Subscription activated — welcome to ClaimPaid!');
+          toast.success(
+            s?.plan_status === 'trialing'
+              ? "You're all set — your card will only be charged when your trial ends."
+              : 'Subscription activated — welcome to ClaimPaid!'
+          );
         } catch { /* load() below covers errors */ }
         setLoading(false);
       }, 2500);
@@ -64,7 +84,7 @@ export default function Billing({ defaultTrial = false, onBaaRequired }) {
   const checkout = async (plan) => {
     setBusy(plan);
     try {
-      const { url } = await api.billingCheckout(plan, trial);
+      const { url } = await api.billingCheckout(plan);
       window.location.href = url;
     } catch (e) {
       if (String(e.message).includes('BAA_REQUIRED')) {
@@ -100,53 +120,120 @@ export default function Billing({ defaultTrial = false, onBaaRequired }) {
 
   const planKey = status?.plan || 'trial';
   const meta = PLAN_META[planKey] || PLAN_META.trial;
-  const isActive = status?.plan_status === 'active';
+  const st = status?.plan_status || 'trialing';
+  const isTrialing = st === 'trialing';
+  const isActive = st === 'active';
+  const isPastDue = st === 'past_due';
+  const isExpired = st === 'expired';
   const hasCustomer = !!status?.has_customer;
   const plans = status?.plans || {};
+  const trialPct = isTrialing && status?.trial_days_left > 0
+    ? Math.min(100, Math.max(0, ((30 - status.trial_days_left) / 30) * 100))
+    : 0;
 
-  const planCard = (key, name, tagline, price, features, cta) => (
-    <div key={key} className={`card p-6 flex flex-col ${planKey === key && isActive ? 'ring-2 ring-emerald-500' : ''}`}>
-      <div className="flex items-center gap-2">
-        <div className="font-bold">{name}</div>
-        {key === 'pro' && <span className="text-[10px] font-bold bg-emerald-500 text-[#0b1220] px-2 py-0.5 rounded-full">MOST POPULAR</span>}
+  const planCard = (key, name, tagline, price, features) => {
+    const isCurrent = planKey === key && (isActive || isTrialing);
+    const available = plans[key]?.available;
+    return (
+      <div key={key} className={`card p-6 flex flex-col ${isCurrent ? 'ring-2 ring-emerald-500' : ''}`}>
+        <div className="flex items-center gap-2">
+          <div className="font-bold">{name}</div>
+          {key === 'pro' && <span className="text-[10px] font-bold bg-emerald-500 text-[#0b1220] px-2 py-0.5 rounded-full">MOST POPULAR</span>}
+        </div>
+        <div className="text-xs text-slate-500 mt-0.5">{tagline}</div>
+        <div className="text-3xl font-extrabold mt-3 tracking-tight">{price}</div>
+        <ul className="text-[13px] text-slate-600 mt-4 space-y-1.5 flex-1">
+          {features.map((f) => <li key={f}>✓ {f}</li>)}
+        </ul>
+        <div className="mt-5">
+          {isCurrent ? (
+            <span className="badge badge-green">Current plan</span>
+          ) : (
+            <button
+              className={`btn w-full ${key === 'ai' ? 'btn-outline' : 'btn-primary'}`}
+              disabled={busy === key || !available}
+              onClick={() => checkout(key)}
+              title={!available ? 'Not priced yet' : undefined}
+            >
+              {busy === key ? 'Redirecting…' : isExpired ? `Reactivate ${name}` : `Choose ${name}`}
+            </button>
+          )}
+        </div>
       </div>
-      <div className="text-xs text-slate-500 mt-0.5">{tagline}</div>
-      <div className="text-3xl font-extrabold mt-3 tracking-tight">{price}</div>
-      <ul className="text-[13px] text-slate-600 mt-4 space-y-1.5 flex-1">
-        {features.map((f) => <li key={f}>✓ {f}</li>)}
-      </ul>
-      <div className="mt-5">{cta}</div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <PageHeader title="Billing & Plan" subtitle="Manage your ClaimPaid subscription. Cancel anytime." />
 
-      {/* Current plan */}
+      {/* ── Expired paywall hero ── */}
+      {isExpired && (
+        <div className="rounded-3xl bg-[#0b1220] text-white p-8 text-center">
+          <div className="text-4xl mb-3">⏳</div>
+          <h2 className="text-2xl font-extrabold tracking-tight mb-2">Your trial has ended</h2>
+          <p className="text-slate-400 max-w-md mx-auto mb-6">
+            You were trying <span className="text-white font-semibold">{meta.label}</span> ({meta.desc}).
+            Reactivate to pick up right where you left off — your data is safe.
+          </p>
+          <button
+            className="btn btn-primary !px-8 !py-3 !text-base !rounded-2xl"
+            disabled={busy === planKey || !plans[planKey]?.available}
+            onClick={() => checkout(planKey)}
+          >
+            {busy === planKey ? 'Redirecting…' : `Reactivate ${meta.label} →`}
+          </button>
+          <p className="text-slate-500 text-sm mt-4">
+            Want a different plan? Pick one below — same 30-day terms apply from today.
+          </p>
+        </div>
+      )}
+
+      {/* ── Status card ── */}
       <div className="card p-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <div className="text-[11px] uppercase tracking-widest text-slate-500 mb-1">Current plan</div>
             <div className="text-xl font-bold tracking-tight">{meta.label}</div>
             <div className="text-sm text-slate-500 mt-0.5">{meta.desc}</div>
-            {status?.current_period_end && (
+            {isTrialing && status?.trial_ends_at && (
               <div className="text-xs text-slate-500 mt-2">
-                Renews {new Date(status.current_period_end).toLocaleDateString()}
+                Trial ends {fmtDate(status.trial_ends_at)} — add a payment method to keep {meta.label}.
+              </div>
+            )}
+            {(isActive || isPastDue) && status?.current_period_end && (
+              <div className="text-xs text-slate-500 mt-2">
+                Next invoice {fmtDate(status.current_period_end)}
               </div>
             )}
           </div>
           <div className="flex items-center gap-3">
-            <span className={`badge ${STATUS_BADGE[status?.plan_status] || STATUS_BADGE.trialing}`}>
-              {(status?.plan_status || 'trialing').replace('_', ' ').toUpperCase()}
-            </span>
-            {hasCustomer && (
+            <span className={`badge ${STATUS_PILL[st] || STATUS_PILL.trialing}`}>{statusLabel(status)}</span>
+            {isTrialing && (
+              <button className="btn btn-primary" disabled={busy === planKey} onClick={() => checkout(planKey)}>
+                {busy === planKey ? 'Redirecting…' : 'Add payment method'}
+              </button>
+            )}
+            {(isActive || isPastDue) && hasCustomer && (
               <button className="btn btn-ghost" disabled={busy === 'portal'} onClick={openPortal}>
-                {busy === 'portal' ? 'Opening…' : 'Manage subscription'}
+                {busy === 'portal' ? 'Opening…' : isPastDue ? 'Update payment method' : 'Manage billing'}
               </button>
             )}
           </div>
         </div>
+        {isTrialing && status?.trial_days_left > 0 && (
+          <div className="mt-5">
+            <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500"
+                style={{ width: `${trialPct}%` }}
+              />
+            </div>
+            <div className="text-xs text-slate-500 mt-1.5">
+              Day {30 - status.trial_days_left + 1} of your 30-day free trial · No card on file · Cancel anytime by simply not adding one
+            </div>
+          </div>
+        )}
         {!status?.stripe_configured && (
           <div className="mt-4 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
             Online checkout isn't enabled on this server yet — contact us to activate your plan.
@@ -154,49 +241,69 @@ export default function Billing({ defaultTrial = false, onBaaRequired }) {
         )}
       </div>
 
-      {/* Plan picker */}
+      {/* ── Plan picker ── */}
       {!isActive && (
-        <button
-          onClick={() => setTrial((t) => !t)}
-          className={`w-full flex items-center gap-4 rounded-2xl border-2 px-5 py-4 text-left transition ${
-            trial ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-white hover:border-slate-300'
-          }`}
-        >
-          <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition ${
-            trial ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-300 text-transparent'
-          }`}>✓</span>
-          <span>
-            <span className="block font-semibold text-slate-900">Start with 1 month free</span>
-            <span className="block text-sm text-slate-500">No charge today — your selected plan begins automatically after 30 days. Cancel anytime during the trial.</span>
-          </span>
-        </button>
+        <>
+          <div ref={plansRef} className="flex items-center justify-between">
+            <h3 className="font-bold text-slate-900">
+              {isExpired ? 'Or switch plans' : isTrialing ? 'Compare plans' : 'Plans'}
+            </h3>
+            {isTrialing && (
+              <span className="text-xs text-slate-500">Switching keeps your remaining trial days</span>
+            )}
+          </div>
+          <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
+            {planCard('starter', 'RCM Starter', 'For small billing teams', <><>$199</><span className="text-sm font-normal text-slate-500">/mo</span></>,
+              ['Full RCM platform', 'Timely filing radar + 13-rule scrubber', 'Auto appeal letters (8 categories)', '835 import / 837P export', 'Up to 3 team seats'])}
+            {planCard('pro', 'RCM Pro + AI', 'For teams serious about denial recovery', <><>$499</><span className="text-sm font-normal text-slate-500">/mo</span></>,
+              ['Everything in Starter', 'ClaimPaid AI — embedded tab + quick-chat', 'Payer Policy Handbook, pre-loaded', 'Autopilot crawling + Teach-it loop', 'Denial pattern analytics', 'Unlimited team seats'])}
+            {planCard('ai', 'ClaimPaid AI', 'Just the AI assistant', <><>$99</><span className="text-sm font-normal text-slate-500">/mo</span></>,
+              ['Private AI chat over your documents', 'Cited answers, grounded in your KB', 'Unlimited knowledge bases', 'Public share links + embed widget', 'Your data never leaves our servers'])}
+            <div className="card p-6 flex flex-col">
+              <div className="font-bold">Enterprise</div>
+              <div className="text-xs text-slate-500 mt-0.5">For large billing companies & MSOs</div>
+              <div className="text-3xl font-extrabold mt-3 tracking-tight">Custom</div>
+              <ul className="text-[13px] text-slate-600 mt-4 space-y-1.5 flex-1">
+                {['Everything in Pro + AI', 'Multi-org management + SSO', 'Custom KB training on your contracts', 'Dedicated success manager', 'SLA + priority support'].map((f) => <li key={f}>✓ {f}</li>)}
+              </ul>
+              <div className="mt-5">
+                <button className="btn btn-ghost w-full"
+                  onClick={() => { window.location.href = 'mailto:hello@claimpaid.io?subject=ClaimPaid Enterprise'; }}>
+                  Talk to us
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
-      <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
-        {planCard('starter', 'RCM Starter', 'For small billing teams', <><>$199</><span className="text-sm font-normal text-slate-500">/mo</span></>,
-          ['Full RCM platform', 'Timely filing radar + 13-rule scrubber', 'Auto appeal letters (8 categories)', '835 import / 837P export', 'Up to 3 team seats'],
-          planKey === 'starter' && isActive
-            ? <span className="badge badge-green">Current plan</span>
-            : <button className="btn btn-primary w-full" disabled={busy === 'starter' || !plans.starter?.available}
-                onClick={() => checkout('starter')}>{busy === 'starter' ? 'Redirecting…' : trial ? 'Start free trial' : 'Choose Starter'}</button>)}
-        {planCard('pro', 'RCM Pro + AI', 'For teams serious about denial recovery', <><>$499</><span className="text-sm font-normal text-slate-500">/mo</span></>,
-          ['Everything in Starter', 'ClaimPaid AI — embedded tab + quick-chat', 'Payer Policy Handbook, pre-loaded', 'Autopilot crawling + Teach-it loop', 'Denial pattern analytics', 'Unlimited team seats'],
-          planKey === 'pro' && isActive
-            ? <span className="badge badge-green">Current plan</span>
-            : <button className="btn btn-primary w-full" disabled={busy === 'pro' || !plans.pro?.available}
-                onClick={() => checkout('pro')}>{busy === 'pro' ? 'Redirecting…' : trial ? 'Start free trial' : 'Choose Pro + AI'}</button>)}
-        {planCard('ai', 'ClaimPaid AI', 'Just the AI assistant', <><>$99</><span className="text-sm font-normal text-slate-500">/mo</span></>,
-          ['Private AI chat over your documents', 'Cited answers, grounded in your KB', 'Unlimited knowledge bases', 'Public share links + embed widget', 'Your data never leaves our servers'],
-          planKey === 'ai' && isActive
-            ? <span className="badge badge-green">Current plan</span>
-            : <button className="btn btn-outline w-full" disabled={busy === 'ai' || !plans.ai?.available}
-                onClick={() => checkout('ai')}>{busy === 'ai' ? 'Redirecting…' : trial ? 'Start free trial' : 'Choose AI only'}</button>)}
-        {planCard('enterprise', 'Enterprise', 'For large billing companies & MSOs', 'Custom',
-          ['Everything in Pro + AI', 'Multi-org management + SSO', 'Custom KB training on your contracts', 'Dedicated success manager', 'SLA + priority support'],
-          <button className="btn btn-ghost w-full"
-            onClick={() => { window.location.href = 'mailto:hello@claimpaid.io?subject=ClaimPaid Enterprise'; }}>
-            Talk to us
-          </button>)}
-      </div>
+
+      {/* ── Invoices ── */}
+      {invoices.length > 0 && (
+        <div className="card p-6">
+          <h3 className="font-bold text-slate-900 mb-4">Invoices</h3>
+          <div className="divide-y divide-slate-100">
+            {invoices.map((inv) => (
+              <div key={inv.number} className="flex items-center justify-between py-3 gap-4">
+                <div>
+                  <div className="text-sm font-semibold text-slate-900">{inv.number}</div>
+                  <div className="text-xs text-slate-500">{fmtDate(inv.date)} · {inv.currency}</div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={`badge ${inv.status === 'paid' ? 'badge-green' : inv.status === 'open' ? 'badge-amber' : 'badge-slate'}`}>
+                    {(inv.status || '').toUpperCase()}
+                  </span>
+                  <span className="text-sm font-bold text-slate-900 w-20 text-right">{fmtMoney2(inv.amount / 100)}</span>
+                  {inv.pdf && (
+                    <a href={inv.pdf} target="_blank" rel="noreferrer" className="btn btn-ghost !px-3 !py-1.5 !text-xs">
+                      PDF
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <p className="text-xs text-slate-500">
         Payments are processed securely by Stripe. We never see or store your card details.

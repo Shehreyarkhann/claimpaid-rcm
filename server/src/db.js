@@ -210,6 +210,15 @@ function initSchema() {
   if (!columnExists('orgs', 'stripe_subscription_id')) db.exec('ALTER TABLE orgs ADD COLUMN stripe_subscription_id TEXT');
   if (!columnExists('orgs', 'current_period_end')) db.exec('ALTER TABLE orgs ADD COLUMN current_period_end TEXT');
 
+  // Onboarding funnel + real 30-day trials
+  if (!columnExists('orgs', 'onboarding_completed_at')) db.exec('ALTER TABLE orgs ADD COLUMN onboarding_completed_at TEXT');
+  if (!columnExists('orgs', 'onboarding_data')) db.exec('ALTER TABLE orgs ADD COLUMN onboarding_data TEXT');
+  if (!columnExists('orgs', 'trial_started_at')) db.exec('ALTER TABLE orgs ADD COLUMN trial_started_at TEXT');
+  if (!columnExists('orgs', 'trial_ends_at')) db.exec('ALTER TABLE orgs ADD COLUMN trial_ends_at TEXT');
+  // Backfill: existing paying customers and the demo org skip the onboarding funnel
+  db.exec(`UPDATE orgs SET onboarding_completed_at = datetime('now') WHERE onboarding_completed_at IS NULL
+           AND (stripe_subscription_id IS NOT NULL OR name = 'Demo Billing Co.')`);
+
   // HIPAA audit log — who accessed what PHI and when
   db.exec(`
     CREATE TABLE IF NOT EXISTS audit_log (

@@ -28,6 +28,30 @@ import Legal from './pages/Legal';
 import Compliance from './pages/Compliance';
 import { api } from './api';
 import ErrorBoundary from './components/ErrorBoundary';
+import OnboardingWizard from './components/OnboardingWizard';
+
+// Trial-expired owners land here: Billing handles reactivation,
+// Compliance covers the BAA step if checkout demands it.
+function ExpiredScreen() {
+  const [view, setView] = useState('billing');
+  return (
+    <div className="min-h-screen bg-[#f1f5f9]">
+      <div className="bg-amber-500/15 border-b border-amber-500/30 px-6 py-3 text-center text-sm text-amber-900">
+        Your 30-day trial has ended — reactivate your plan below to continue. Your data is safe.
+      </div>
+      {view === 'billing' ? (
+        <Billing onBaaRequired={() => setView('compliance')} />
+      ) : (
+        <div className="p-6 max-w-4xl mx-auto">
+          <button onClick={() => setView('billing')} className="text-sm text-slate-500 hover:text-slate-800 mb-4">
+            ← Back to billing
+          </button>
+          <Compliance />
+        </div>
+      )}
+    </div>
+  );
+}
 
 function AuthGate({ children }) {
   const { user, loading } = useAuth();
@@ -39,15 +63,25 @@ function AuthGate({ children }) {
     if (new URLSearchParams(window.location.search).get('plan')) return 'signup';
     return 'login';
   });
-  const [products, setProducts] = useState(null);
+  const [billing, setBilling] = useState(null);
+  const [onboarding, setOnboarding] = useState(null);
+  // Landing pricing CTA (?plan=pro) preselects the plan in the onboarding wizard
+  const [planIntent] = useState(() => {
+    const p = new URLSearchParams(window.location.search).get('plan');
+    return p === 'starter' || p === 'pro' || p === 'ai' ? p : null;
+  });
 
   useEffect(() => {
     if (user) {
       api.billingStatus()
-        .then((s) => setProducts(s.products || { rcm: true, ai: true }))
-        .catch(() => setProducts({ rcm: true, ai: true }));
+        .then(setBilling)
+        .catch(() => setBilling({ products: { rcm: true, ai: true } }));
+      api.onboardingStatus()
+        .then(setOnboarding)
+        .catch(() => setOnboarding({ needed: false }));
     } else {
-      setProducts(null);
+      setBilling(null);
+      setOnboarding(null);
     }
   }, [user]);
 
@@ -70,8 +104,27 @@ function AuthGate({ children }) {
       : <Signup goLogin={() => setMode('login')} />;
   }
 
+  // New owners go through the onboarding funnel before anything else
+  if (onboarding?.needed) {
+    return (
+      <OnboardingWizard
+        orgName={onboarding.orgName || ''}
+        initialPlan={planIntent || onboarding.plan}
+        onComplete={() => {
+          window.history.replaceState({}, '', '/app/');
+          window.location.reload();
+        }}
+      />
+    );
+  }
+
+  // Expired trial: paywall. Billing handles reactivation; Compliance covers the BAA step.
+  if (billing?.plan_status === 'expired') {
+    return <ExpiredScreen />;
+  }
+
   // AI-only subscribers don't get the RCM dashboard — point them at the AI app
-  if (products && products.rcm === false) {
+  if (billing && billing.products?.rcm === false) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0b1220] px-6">
         <div className="max-w-md w-full text-center">
@@ -90,10 +143,8 @@ function AuthGate({ children }) {
 }
 
 function Workspace() {
-  // Trial intent from landing pricing (?plan=pro&trial=1) — pre-checks the trial toggle on Billing
-  const [trialIntent] = useState(() => new URLSearchParams(window.location.search).get('trial') === '1');
   const [page, setPage] = useState(() => {
-    // After landing-page pricing CTA signup (?plan=...), drop them on Billing
+    // After landing-page pricing CTA (?plan=...) for existing users, drop them on Billing
     const q = new URLSearchParams(window.location.search);
     const plan = q.get('plan');
     if (plan === 'starter' || plan === 'pro' || plan === 'ai') {
@@ -148,7 +199,7 @@ function Workspace() {
       {page === 'transmit' && <Transmission />}
       {page === 'ehr' && <Ehr onViewClaim={(claimId) => go('claims', { claimId })} />}
       {page === 'audit' && <AuditLog />}
-      {page === 'billing' && <Billing defaultTrial={trialIntent} onBaaRequired={() => go('compliance')} />}
+      {page === 'billing' && <Billing onBaaRequired={() => go('compliance')} />}
       {page === 'org' && <Organization />}
       {page === 'compliance' && <Compliance />}
       {page === 'letters' && <LetterTemplates />}

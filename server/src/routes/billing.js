@@ -49,6 +49,33 @@ function productsForPlan(plan) {
   }
 }
 
+// Effective plan status: an app-side trial whose end date has passed is 'expired'.
+// Legacy trialing orgs with no trial_ends_at (pre-onboarding) keep 'trialing' —
+// the migration never strands an existing org behind a paywall.
+function getEffectivePlanStatus(org) {
+  if (!org) return 'trialing';
+  const raw = org.plan_status || 'trialing';
+  if (raw === 'trialing' && org.trial_ends_at) {
+    if (new Date(org.trial_ends_at).getTime() <= Date.now()) return 'expired';
+  }
+  return raw;
+}
+
+// Products for an org, honoring trial expiry: an expired trial unlocks nothing.
+function productsForOrg(org) {
+  if (getEffectivePlanStatus(org) === 'expired') return { rcm: false, ai: false };
+  return productsForPlan(org?.plan);
+}
+
+// Whole days of app trial remaining, for Stripe's trial_period_days so billing
+// starts exactly when the app trial ends. 0 = no trial time left.
+function getTrialPeriodDays(org) {
+  if (getEffectivePlanStatus(org) !== 'trialing' || !org?.trial_ends_at) return 0;
+  const msLeft = new Date(org.trial_ends_at).getTime() - Date.now();
+  if (msLeft <= 0) return 0;
+  return Math.max(1, Math.ceil(msLeft / 86400000));
+}
+
 function planFromPriceId(priceId) {
   if (priceId && priceId === process.env.STRIPE_PRICE_STARTER) return 'starter';
   if (priceId && priceId === process.env.STRIPE_PRICE_PRO) return 'pro';
@@ -83,23 +110,34 @@ async function getOrCreateCustomer(stripe, org, ownerEmail) {
   return customer;
 }
 
-// ---- GET /api/billing/status — current plan for this org ----
-router.get('/status', authRequired, (req, res) => {
-  const org = getOrg(req.orgId);
-  if (!org) return res.status(404).json({ error: 'Organization not found' });
-  res.json({
+// Full billing status payload for an org (shared by /status and onboarding).
+function billingStatusFor(org) {
+  const effStatus = getEffectivePlanStatus(org);
+  const trialEndsAt = org.trial_ends_at || null;
+  const msLeft = trialEndsAt ? new Date(trialEndsAt).getTime() - Date.now() : 0;
+  return {
     plan: org.plan || 'trial',
-    plan_status: org.plan_status || 'trialing',
+    plan_status: effStatus,
+    trial_ends_at: trialEndsAt,
+    trial_days_left: msLeft > 0 ? Math.ceil(msLeft / 86400000) : 0,
+    is_trialing: effStatus === 'trialing',
     current_period_end: org.current_period_end || null,
     has_customer: !!org.stripe_customer_id,
     stripe_configured: !!process.env.STRIPE_SECRET_KEY,
-    products: productsForPlan(org.plan),
+    products: productsForOrg(org),
     plans: {
       starter: { name: PLANS.starter.name, amount: PLANS.starter.amount, available: !!PLANS.starter.priceId },
       pro: { name: PLANS.pro.name, amount: PLANS.pro.amount, available: !!PLANS.pro.priceId },
       ai: { name: PLANS.ai.name, amount: PLANS.ai.amount, available: !!PLANS.ai.priceId },
     },
-  });
+  };
+}
+
+// ---- GET /api/billing/status — current plan for this org ----
+router.get('/status', authRequired, (req, res) => {
+  const org = getOrg(req.orgId);
+  if (!org) return res.status(404).json({ error: 'Organization not found' });
+  res.json(billingStatusFor(org));
 });
 
 // ---- POST /api/billing/checkout — create a Checkout session (owner only) ----
@@ -113,7 +151,7 @@ router.post('/checkout', authRequired, roleRequired('owner'), async (req, res) =
     });
   }
   const stripe = getStripe();
-  const { plan, trial } = req.body || {};
+  const { plan } = req.body || {};
   const planCfg = PLANS[plan];
   if (!planCfg) return res.status(400).json({ error: 'Unknown plan. Choose starter, pro, or ai.' });
   if (!planCfg.priceId) {
@@ -125,6 +163,10 @@ router.post('/checkout', authRequired, roleRequired('owner'), async (req, res) =
   if (org.stripe_subscription_id && org.plan_status === 'active' && org.plan === plan) {
     return res.status(400).json({ error: `You are already on ${planCfg.name}.` });
   }
+  // App-side trial: no card was taken, so carry the remaining trial days into
+  // Stripe — billing starts exactly when the 30-day trial ends. Expired or no
+  // trial => charge starts immediately.
+  const trial_period_days = getTrialPeriodDays(org);
 
   try {
     const customer = await getOrCreateCustomer(stripe, org, req.user.email);
@@ -140,8 +182,7 @@ router.post('/checkout', authRequired, roleRequired('owner'), async (req, res) =
       metadata: { org_id: String(org.id), plan },
       subscription_data: {
         metadata: { org_id: String(org.id), plan },
-        // 1-month free trial: no charge today, billing starts automatically after 30 days
-        ...(trial ? { trial_period_days: 30 } : {}),
+        ...(trial_period_days > 0 ? { trial_period_days } : {}),
       },
       allow_promotion_codes: true,
     });
@@ -174,6 +215,31 @@ router.post('/portal', authRequired, roleRequired('owner'), async (req, res) => 
   }
 });
 
+// ---- GET /api/billing/invoices — last 12 invoices (owner only) ----
+router.get('/invoices', authRequired, roleRequired('owner'), async (req, res) => {
+  const stripe = getStripe();
+  const org = getOrg(req.orgId);
+  if (!org) return res.status(404).json({ error: 'Organization not found' });
+  // Graceful when billing isn't set up: the UI hides the section
+  if (!stripe || !org.stripe_customer_id) return res.json({ invoices: [] });
+  try {
+    const list = await stripe.invoices.list({ customer: org.stripe_customer_id, limit: 12 });
+    res.json({
+      invoices: (list.data || []).map((inv) => ({
+        number: inv.number || inv.id,
+        date: inv.created ? new Date(inv.created * 1000).toISOString() : null,
+        amount: inv.amount_due ?? inv.amount_paid ?? 0,
+        currency: (inv.currency || 'usd').toUpperCase(),
+        status: inv.status,
+        pdf: inv.invoice_pdf || null,
+      })),
+    });
+  } catch (e) {
+    console.error('Stripe invoices error:', e.message);
+    res.status(502).json({ error: 'Could not load invoices. Please try again.' });
+  }
+});
+
 // ---- Webhook handler (mounted with express.raw in index.js) ----
 async function handleWebhook(req, res) {
   const stripe = getStripe();
@@ -201,16 +267,20 @@ async function handleWebhook(req, res) {
           : session.subscription?.id;
         // Use the subscription's real status: 'trialing' when a free trial was taken
         let planStatus = 'active';
+        let trialEndsAt = null;
         if (subscriptionId) {
           try {
             const sub = await stripe.subscriptions.retrieve(subscriptionId);
             planStatus = sub.status;
+            // Keep the app trial clock in sync with Stripe's so both agree
+            if (sub.trial_end) trialEndsAt = new Date(sub.trial_end * 1000).toISOString();
           } catch (e) { console.error('Billing: could not fetch subscription status:', e.message); }
         }
         db.prepare(`UPDATE orgs SET plan = ?, plan_status = ?,
+                    trial_ends_at = COALESCE(?, trial_ends_at),
                     stripe_customer_id = COALESCE(stripe_customer_id, ?),
                     stripe_subscription_id = ? WHERE id = ?`)
-          .run(plan, planStatus, String(session.customer), subscriptionId || null, orgId);
+          .run(plan, planStatus, trialEndsAt, String(session.customer), subscriptionId || null, orgId);
         console.log(`Billing: org ${orgId} subscribed to ${plan} (${planStatus})`);
       }
     } else if (event.type === 'customer.subscription.updated') {
@@ -219,9 +289,11 @@ async function handleWebhook(req, res) {
       const priceId = sub.items?.data?.[0]?.price?.id;
       const plan = planFromPriceId(priceId) || sub.metadata?.plan;
       if (orgId) {
+        const trialEndsAt = sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null;
         db.prepare(`UPDATE orgs SET plan = COALESCE(?, plan), plan_status = ?,
+                    trial_ends_at = COALESCE(?, trial_ends_at),
                     current_period_end = ?, stripe_subscription_id = ? WHERE id = ?`)
-          .run(plan || null, sub.status,
+          .run(plan || null, sub.status, trialEndsAt,
                sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
                sub.id, orgId);
         console.log(`Billing: org ${orgId} subscription updated -> ${sub.status}`);
@@ -242,4 +314,4 @@ async function handleWebhook(req, res) {
   }
 }
 
-module.exports = { billingRoutes: router, handleWebhook, PLANS, productsForPlan };
+module.exports = { billingRoutes: router, handleWebhook, PLANS, productsForPlan, productsForOrg, getEffectivePlanStatus, getTrialPeriodDays, billingStatusFor };

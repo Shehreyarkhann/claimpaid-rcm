@@ -83,10 +83,17 @@ export const api = {
   authzDetail: (id) => get(`/api/authz/${id}`),
   authzFindForClaim: (claimId) => get(`/api/authz/find-for-claim/${claimId}`),
   billingStatus: () => get('/api/billing/status'),
-  billingCheckout: (plan, trial = false) =>
+  billingCheckout: (plan) =>
     authFetch('/api/billing/checkout', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan, trial }),
+      body: JSON.stringify({ plan }),
+    }).then(handle),
+  billingInvoices: () => get('/api/billing/invoices'),
+  onboardingStatus: () => get('/api/onboarding/status'),
+  onboardingComplete: (data) =>
+    authFetch('/api/onboarding/complete', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
     }).then(handle),
   myOrgs: () => get('/api/auth/orgs'),
   createOrg: (name) =>

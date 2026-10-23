@@ -27,6 +27,7 @@ const { legalRoutes } = require('./routes/legal');
 const transmissionRoutes = require('./routes/transmission');
 const ehrRoutes = require('./routes/ehr');
 const codingRoutes = require('./routes/coding');
+const onboardingRoutes = require('./routes/onboarding');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -67,6 +68,7 @@ app.use('/api/audit', auditRoutes);
 app.use('/api/eligibility', eligibilityRoutes);
 app.use('/api/org', orgRoutes);
 app.use('/api/billing', billingRoutes);
+app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/demo', demoRoutes);
 app.use('/api/super', superRoutes);
 app.use('/api/support', supportRoutes);

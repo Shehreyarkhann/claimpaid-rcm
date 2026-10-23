@@ -16,7 +16,7 @@ router.use(authRequired, superAdminRequired);
 // ---- Plans (must match billing.js) ----
 const PLAN_MRR = { starter: 19900, pro: 49900, ai: 9900, enterprise: 0, trial: 0 };
 const VALID_PLANS = ['starter', 'pro', 'ai', 'enterprise', 'trial'];
-const VALID_STATUSES = ['trialing', 'active', 'past_due', 'canceled', 'unpaid', 'incomplete', 'incomplete_expired'];
+const VALID_STATUSES = ['trialing', 'active', 'past_due', 'canceled', 'unpaid', 'incomplete', 'incomplete_expired', 'expired'];
 const VALID_ROLES = ['owner', 'biller', 'viewer'];
 
 function mrrFor(plan, status) {

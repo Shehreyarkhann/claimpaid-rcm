@@ -98,3 +98,14 @@ body {
   to { opacity: 1; transform: translateX(0); }
 }
 .animate-slide-in { animation: drawer-in 0.28s cubic-bezier(0.32, 0.72, 0, 1); }
+
+/* Onboarding wizard */
+@keyframes wiz-in-fwd { from { opacity: 0; transform: translateX(36px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes wiz-in-back { from { opacity: 0; transform: translateX(-36px); } to { opacity: 1; transform: translateX(0); } }
+.wiz-step-fwd { animation: wiz-in-fwd 0.32s cubic-bezier(0.32, 0.72, 0, 1); }
+.wiz-step-back { animation: wiz-in-back 0.32s cubic-bezier(0.32, 0.72, 0, 1); }
+@keyframes wiz-pop { 0% { opacity: 0; transform: scale(0.4); } 60% { opacity: 1; transform: scale(1.1); } 100% { opacity: 1; transform: scale(1); } }
+.wiz-check { animation: wiz-pop 0.5s cubic-bezier(0.32, 0.72, 0, 1) both; }
+@keyframes wiz-draw { to { stroke-dashoffset: 0; } }
+.wiz-check-path { stroke-dasharray: 60; stroke-dashoffset: 60; animation: wiz-draw 0.45s 0.3s ease-out forwards; }
+.wiz-progress-fill { transition: width 0.4s cubic-bezier(0.32, 0.72, 0, 1); }
