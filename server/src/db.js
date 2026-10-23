@@ -209,6 +209,8 @@ function initSchema() {
   if (!columnExists('orgs', 'stripe_customer_id')) db.exec('ALTER TABLE orgs ADD COLUMN stripe_customer_id TEXT');
   if (!columnExists('orgs', 'stripe_subscription_id')) db.exec('ALTER TABLE orgs ADD COLUMN stripe_subscription_id TEXT');
   if (!columnExists('orgs', 'current_period_end')) db.exec('ALTER TABLE orgs ADD COLUMN current_period_end TEXT');
+  // Super-admin: subscription set to cancel at Stripe period end
+  if (!columnExists('orgs', 'stripe_cancel_at_period_end')) db.exec('ALTER TABLE orgs ADD COLUMN stripe_cancel_at_period_end INTEGER NOT NULL DEFAULT 0');
 
   // Onboarding funnel + real 30-day trials
   if (!columnExists('orgs', 'onboarding_completed_at')) db.exec('ALTER TABLE orgs ADD COLUMN onboarding_completed_at TEXT');

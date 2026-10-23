@@ -137,6 +137,12 @@ export const api = {
       authFetch(`/api/super/orgs/${id}/plan`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan, plan_status }) }).then(handle),
     deleteOrg: (id) =>
       authFetch(`/api/super/orgs/${id}`, { method: 'DELETE' }).then(handle),
+    trialAction: (id, action, days) =>
+      authFetch(`/api/super/orgs/${id}/trial`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, days }) }).then(handle),
+    cancelSubscription: (id, immediate) =>
+      authFetch(`/api/super/orgs/${id}/subscription/cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ immediate }) }).then(handle),
+    resetOnboarding: (id) =>
+      authFetch(`/api/super/orgs/${id}/onboarding/reset`, { method: 'POST' }).then(handle),
     aiOrgs: () => get('/api/super/ai-orgs'),
     users: (search = '') => get(`/api/super/users?${new URLSearchParams({ search })}`),
     updateUser: (id, data) =>

@@ -115,6 +115,8 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
   const [status, setStatus] = useState('');
   const [confirmName, setConfirmName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [confirm, setConfirm] = useState(null); // { title, body, confirmLabel, danger, onConfirm }
 
   useEffect(() => {
     api.super.orgDetail(orgId).then((d) => {
@@ -124,15 +126,58 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
     }).catch((e) => toast.error(e.message));
   }, [orgId]);
 
+  const refresh = async () => {
+    const d = await api.super.orgDetail(orgId);
+    setDetail(d);
+    setPlan(d.org.plan || 'trial');
+    setStatus(d.org.plan_status || 'trialing');
+    onChanged();
+  };
+
   const savePlan = async () => {
     setSaving(true);
     try {
       await api.super.setPlan(orgId, plan, status);
       toast.success('Plan updated');
-      const d = await api.super.orgDetail(orgId);
-      setDetail(d); onChanged();
+      await refresh();
     } catch (e) { toast.error(e.message); }
     finally { setSaving(false); }
+  };
+
+  const runTrial = async (action, days) => {
+    setBusy(true);
+    try {
+      const r = await api.super.trialAction(orgId, action, days);
+      toast.success(action === 'revoke' ? 'Trial revoked' : `Trial extended to ${r.trial_ends_at?.slice(0, 10)}`);
+      if (r.stripeWarning) toast.error(r.stripeWarning);
+      setConfirm(null);
+      await refresh();
+    } catch (e) { toast.error(e.message); }
+    finally { setBusy(false); }
+  };
+
+  const runCancelSub = async (immediate) => {
+    setBusy(true);
+    try {
+      const r = await api.super.cancelSubscription(orgId, immediate);
+      toast.success(immediate ? 'Subscription cancelled immediately' : 'Subscription will cancel at period end');
+      if (r.stripeWarning) toast.error(r.stripeWarning);
+      if (r.message) toast.success(r.message);
+      setConfirm(null);
+      await refresh();
+    } catch (e) { toast.error(e.message); }
+    finally { setBusy(false); }
+  };
+
+  const runResetOnboarding = async () => {
+    setBusy(true);
+    try {
+      await api.super.resetOnboarding(orgId);
+      toast.success('Onboarding reset — the owner will see the funnel on next login');
+      setConfirm(null);
+      await refresh();
+    } catch (e) { toast.error(e.message); }
+    finally { setBusy(false); }
   };
 
   const del = async () => {
@@ -146,7 +191,20 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
   if (!detail) return <Modal onClose={onClose}><div className="p-8"><Skeleton className="h-40 !bg-slate-700" /></div></Modal>;
   const { org, users, claimsByStatus, openAppeals, baa, eligibility, transmission, ehr, coding } = detail;
 
+  // Trial status line
+  const trialInfo = (() => {
+    const ends = org.trial_ends_at ? new Date(org.trial_ends_at).getTime() : NaN;
+    if (org.plan_status === 'trialing' && Number.isFinite(ends)) {
+      const daysLeft = Math.max(0, Math.ceil((ends - Date.now()) / 86400000));
+      return { line: `Trial: ${PLAN_LABEL[org.plan] || org.plan} · ${daysLeft} day${daysLeft === 1 ? '' : 's'} left (ends ${org.trial_ends_at.slice(0, 10)})`, live: daysLeft > 0 };
+    }
+    if (org.plan_status === 'trialing') return { line: `Trial: ${PLAN_LABEL[org.plan] || org.plan} · no end date (legacy)`, live: true };
+    if (org.plan_status === 'expired') return { line: `Expired${org.trial_ends_at ? ` (ended ${org.trial_ends_at.slice(0, 10)})` : ''}`, live: false };
+    return { line: `No trial — status: ${org.plan_status}`, live: false };
+  })();
+
   return (
+    <>
     <Modal onClose={onClose} wide>
       <div className="p-7 bg-slate-900 text-slate-200 rounded-2xl">
         <h3 className="text-xl font-bold text-white mb-1">{org.name}</h3>
@@ -175,6 +233,31 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
               <div><span className="text-slate-500">sub </span><span className="text-slate-300">{trunc(org.stripe_subscription_id, 22)}</span></div>
               <div><span className="text-slate-500">period end </span><span className="text-slate-300">{org.current_period_end?.slice(0, 10) || '—'}</span></div>
             </div>
+            {org.stripe_cancel_at_period_end === 1 && (
+              <div className="mt-2"><span className="badge badge-amber">Cancelling at period end</span></div>
+            )}
+            <div className="flex gap-2 mt-3">
+              <button disabled={busy} onClick={() => setConfirm({
+                title: 'Cancel at period end?',
+                body: `${org.name} keeps paid access until ${org.current_period_end?.slice(0, 10) || 'the end of the current period'}, then the subscription ends. No refund is issued.`,
+                confirmLabel: 'Cancel at period end',
+                danger: true,
+                onConfirm: () => runCancelSub(false),
+              })}
+                className="btn !bg-slate-700 hover:!bg-slate-600 !text-white !py-1.5 !text-xs flex-1 disabled:!opacity-40">
+                Cancel at period end
+              </button>
+              <button disabled={busy} onClick={() => setConfirm({
+                title: 'Cancel immediately?',
+                body: `${org.name} loses paid access RIGHT NOW and the subscription ends immediately. This cannot be undone from here.`,
+                confirmLabel: 'Cancel immediately',
+                danger: true,
+                onConfirm: () => runCancelSub(true),
+              })}
+                className="btn !bg-rose-700 hover:!bg-rose-600 !text-white !py-1.5 !text-xs flex-1 disabled:!opacity-40">
+                Cancel now
+              </button>
+            </div>
           </div>
           <div className="bg-slate-800 rounded-xl p-4">
             <div className="text-xs text-slate-500 mb-2">Activity</div>
@@ -183,6 +266,56 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
               <div>Open appeals: <strong className="text-white">{openAppeals}</strong></div>
               {claimsByStatus.map((c) => <div key={c.status}>{c.status}: <strong className="text-white">{c.n}</strong></div>)}
             </div>
+          </div>
+        </div>
+
+        <SectionTitle>Trial controls</SectionTitle>
+        <div className="bg-slate-800 rounded-xl p-4 mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <span className={`badge ${trialInfo.live ? 'badge-blue' : 'badge-slate'}`}>{trialInfo.live ? 'TRIAL LIVE' : 'NO LIVE TRIAL'}</span>
+            <span className="text-sm text-slate-300">{trialInfo.line}</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <span className="text-xs text-slate-500 self-center mr-1">Extend:</span>
+            {[7, 14, 30].map((d) => (
+              <button key={d} disabled={busy} onClick={() => runTrial('extend', d)}
+                className="btn !bg-slate-700 hover:!bg-slate-600 !text-white !py-1.5 !text-xs disabled:!opacity-40">
+                +{d} days
+              </button>
+            ))}
+            <button disabled={busy || !trialInfo.live} onClick={() => setConfirm({
+              title: 'Revoke trial?',
+              body: `This ends ${org.name}'s trial immediately. They lose paid access right now. Their data stays intact.`,
+              confirmLabel: 'Revoke trial now',
+              danger: true,
+              onConfirm: () => runTrial('revoke'),
+            })}
+              className="btn !bg-transparent border !border-rose-800 hover:!bg-rose-900/40 !text-rose-300 !py-1.5 !text-xs disabled:!opacity-40 ml-auto">
+              Revoke trial
+            </button>
+          </div>
+        </div>
+
+        <SectionTitle>Onboarding</SectionTitle>
+        <div className="bg-slate-800 rounded-xl p-4 mb-6">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-sm text-slate-300">
+              {org.onboarding_completed_at
+                ? <span>Completed <span className="text-slate-500">{org.onboarding_completed_at.slice(0, 10)}</span></span>
+                : <span className="text-amber-300">Not completed — the owner will see the onboarding funnel on next login</span>}
+            </div>
+            {org.onboarding_completed_at && (
+              <button disabled={busy} onClick={() => setConfirm({
+                title: 'Reset onboarding?',
+                body: `The owner of ${org.name} will see the full onboarding funnel again on their next login (welcome → details → goals → plan). Their plan and data are untouched.`,
+                confirmLabel: 'Reset onboarding',
+                danger: false,
+                onConfirm: runResetOnboarding,
+              })}
+                className="btn !bg-slate-700 hover:!bg-slate-600 !text-white !py-1.5 !text-xs disabled:!opacity-40 shrink-0">
+                Reset onboarding
+              </button>
+            )}
           </div>
         </div>
 
@@ -304,6 +437,22 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
         </div>
       </div>
     </Modal>
+    {confirm && (
+      <Modal onClose={() => !busy && setConfirm(null)}>
+        <div className="p-7 bg-slate-900 text-slate-200 rounded-2xl max-w-md">
+          <h3 className="text-lg font-bold text-white mb-3">{confirm.title}</h3>
+          <p className="text-sm text-slate-400 mb-6">{confirm.body}</p>
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setConfirm(null)} disabled={busy} className="btn btn-ghost !text-slate-300 disabled:!opacity-40">Keep as is</button>
+            <button onClick={confirm.onConfirm} disabled={busy}
+              className={`btn !text-white disabled:!opacity-40 ${confirm.danger ? '!bg-rose-600 hover:!bg-rose-700' : 'btn-primary'}`}>
+              {busy ? 'Working…' : confirm.confirmLabel}
+            </button>
+          </div>
+        </div>
+      </Modal>
+    )}
+    </>
   );
 }
 
@@ -381,15 +530,19 @@ function AiClientsTab() {
 function UserDrawer({ userId, onClose, onChanged, meId }) {
   const toast = useToast();
   const [form, setForm] = useState({ name: '', role: 'biller', is_active: true });
+  const [userEmail, setUserEmail] = useState('');
   const [loaded, setLoaded] = useState(false);
   const [tempPw, setTempPw] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [confirmEmail, setConfirmEmail] = useState('');
+  const [showDelete, setShowDelete] = useState(false);
 
   useEffect(() => {
     api.super.users('').then((rows) => {
       const u = rows.find((r) => r.id === userId);
       if (u) {
         setForm({ name: u.name || '', role: (u.roles || 'biller').split(',')[0].trim() || 'biller', is_active: true });
+        setUserEmail(u.email || '');
         setLoaded(true);
       }
     }).catch((e) => toast.error(e.message));
@@ -411,11 +564,12 @@ function UserDrawer({ userId, onClose, onChanged, meId }) {
     } catch (e) { toast.error(e.message); }
   };
   const del = async () => {
-    if (!window.confirm('Delete this user permanently?')) return;
+    setBusy(true);
     try {
       await api.super.deleteUser(userId);
       toast.success('User deleted'); onChanged(); onClose();
     } catch (e) { toast.error(e.message); }
+    finally { setBusy(false); }
   };
 
   return (
@@ -452,8 +606,29 @@ function UserDrawer({ userId, onClose, onChanged, meId }) {
             )}
             {userId !== meId && (
               <div className="border-t border-slate-800 pt-4">
-                <button onClick={del} className="btn !bg-rose-600 hover:!bg-rose-700 !text-white !text-sm">Delete user</button>
+                <button onClick={() => { setConfirmEmail(''); setShowDelete(true); }} className="btn !bg-rose-600 hover:!bg-rose-700 !text-white !text-sm">Delete user</button>
               </div>
+            )}
+            {showDelete && (
+              <Modal onClose={() => !busy && setShowDelete(false)}>
+                <div className="p-7 bg-slate-900 text-slate-200 rounded-2xl max-w-md">
+                  <h3 className="text-lg font-bold text-white mb-3">Delete user?</h3>
+                  <p className="text-sm text-slate-400 mb-2">
+                    This permanently deletes <strong className="text-slate-200">{form.name || userEmail}</strong> and
+                    removes all of their workspace memberships. They will no longer be able to sign in.
+                  </p>
+                  <p className="text-xs text-slate-500 mb-3">Type <strong className="text-slate-300">{userEmail}</strong> to confirm.</p>
+                  <input value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} placeholder={userEmail}
+                    className="input !bg-slate-800 !border-slate-700 !text-white text-sm w-full mb-5" />
+                  <div className="flex justify-end gap-2">
+                    <button onClick={() => setShowDelete(false)} disabled={busy} className="btn btn-ghost !text-slate-300 disabled:!opacity-40">Keep user</button>
+                    <button onClick={del} disabled={busy || confirmEmail.trim().toLowerCase() !== userEmail.trim().toLowerCase()}
+                      className="btn !bg-rose-600 hover:!bg-rose-700 !text-white disabled:!opacity-40">
+                      {busy ? 'Deleting…' : 'Delete permanently'}
+                    </button>
+                  </div>
+                </div>
+              </Modal>
             )}
           </div>
         )}

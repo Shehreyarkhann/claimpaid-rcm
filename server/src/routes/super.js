@@ -8,10 +8,42 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { db } = require('../db');
 const { authRequired, superAdminRequired } = require('../auth');
+const { auditLog } = require('../audit');
 const { deleteOrg } = require('../orgDelete');
 
 const router = express.Router();
 router.use(authRequired, superAdminRequired);
+
+// Audit helper for super-admin power actions: the HIPAA audit_log wants an
+// org context. We pass a minimal req-like object (spreading an Express req
+// drops headers/ip), pinning the target org.
+function superAudit(req, orgId, action, resourceType, resourceId, resourceLabel) {
+  try {
+    auditLog(
+      { orgId, user: req.user, ip: req.ip, headers: req.headers || {} },
+      action, resourceType, resourceId, resourceLabel
+    );
+  } catch (e) {
+    console.error('superAudit failed:', e.message);
+  }
+}
+
+// Lazy Stripe client (null when STRIPE_SECRET_KEY is not configured).
+// All super-admin Stripe calls are defensive: a Stripe failure never crashes
+// the endpoint — the app-side action still applies and a warning is returned.
+let _stripe = null;
+function getStripe() {
+  if (_stripe) return _stripe;
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) return null;
+  try {
+    _stripe = require('stripe')(key);
+  } catch (e) {
+    console.error('super: Stripe init failed:', e.message);
+    return null;
+  }
+  return _stripe;
+}
 
 // ---- Plans (must match billing.js) ----
 const PLAN_MRR = { starter: 19900, pro: 49900, ai: 9900, enterprise: 0, trial: 0 };
@@ -157,6 +189,8 @@ router.patch('/orgs/:id/plan', (req, res) => {
   const org = orgRow(req.params.id);
   if (!org) return res.status(404).json({ error: 'Org not found' });
   db.prepare('UPDATE orgs SET plan = ?, plan_status = ? WHERE id = ?').run(plan, plan_status, org.id);
+  superAudit(req, org.id, 'super.plan_change', 'org', org.id,
+    `${org.name}: ${org.plan}/${org.plan_status} → ${plan}/${plan_status}`);
   res.json({ ok: true, plan, plan_status });
 });
 
@@ -168,7 +202,127 @@ router.delete('/orgs/:id', (req, res) => {
   } catch (e) {
     return res.status(500).json({ error: 'Delete failed: ' + e.message });
   }
+  superAudit(req, null, 'super.org_delete', 'org', org.id, org.name);
   res.json({ deleted: true });
+});
+
+// ---- Trial controls ----
+// POST /api/super/orgs/:id/trial  { action: 'revoke' | 'extend', days?: 7|14|30 }
+router.post('/orgs/:id/trial', async (req, res) => {
+  const org = orgRow(req.params.id);
+  if (!org) return res.status(404).json({ error: 'Org not found' });
+  const { action, days } = req.body || {};
+
+  if (action === 'revoke') {
+    db.prepare("UPDATE orgs SET plan_status = 'expired', trial_ends_at = datetime('now') WHERE id = ?")
+      .run(org.id);
+    superAudit(req, org.id, 'super.trial_revoke', 'org', org.id, org.name);
+    let stripeWarning = null;
+    // If there's a live Stripe trialing subscription, cancel it immediately too.
+    if (org.stripe_subscription_id) {
+      const stripe = getStripe();
+      if (stripe) {
+        try {
+          const sub = await stripe.subscriptions.retrieve(org.stripe_subscription_id);
+          if (sub && sub.status === 'trialing') {
+            await stripe.subscriptions.cancel(org.stripe_subscription_id);
+            db.prepare('UPDATE orgs SET stripe_subscription_id = NULL WHERE id = ?').run(org.id);
+          }
+        } catch (e) {
+          stripeWarning = 'App trial revoked, but the Stripe subscription could not be cancelled: ' + e.message;
+          console.error('super trial revoke stripe:', e.message);
+        }
+      } else {
+        stripeWarning = 'App trial revoked. No Stripe key configured — check for a live Stripe trial manually.';
+      }
+    }
+    return res.json({ ok: true, plan_status: 'expired', stripeWarning });
+  }
+
+  if (action === 'extend') {
+    const d = Number(days);
+    if (![7, 14, 30].includes(d)) return res.status(400).json({ error: 'days must be 7, 14, or 30' });
+    const nowMs = Date.now();
+    const endsMs = org.trial_ends_at ? new Date(org.trial_ends_at).getTime() : NaN;
+    // Extend from the current end date when the trial is still live; otherwise start fresh now.
+    const baseMs = (org.plan_status === 'trialing' && Number.isFinite(endsMs) && endsMs > nowMs) ? endsMs : nowMs;
+    const newEnd = new Date(baseMs + d * 86400000).toISOString().slice(0, 19).replace('T', ' ');
+    db.prepare(`UPDATE orgs SET plan_status = 'trialing', trial_ends_at = ?,
+                trial_started_at = COALESCE(trial_started_at, datetime('now')) WHERE id = ?`)
+      .run(newEnd, org.id);
+    superAudit(req, org.id, 'super.trial_extend', 'org', org.id, `${org.name} +${d}d → ${newEnd.slice(0, 10)}`);
+    return res.json({ ok: true, plan_status: 'trialing', trial_ends_at: newEnd });
+  }
+
+  return res.status(400).json({ error: "action must be 'revoke' or 'extend'" });
+});
+
+// ---- Subscription controls ----
+// POST /api/super/orgs/:id/subscription/cancel  { immediate: boolean }
+router.post('/orgs/:id/subscription/cancel', async (req, res) => {
+  const org = orgRow(req.params.id);
+  if (!org) return res.status(404).json({ error: 'Org not found' });
+  const immediate = !!(req.body || {}).immediate;
+
+  // No Stripe subscription on record: app-side cancel only (plan row stays for the record).
+  if (!org.stripe_subscription_id) {
+    db.prepare("UPDATE orgs SET plan_status = 'expired' WHERE id = ?").run(org.id);
+    superAudit(req, org.id, 'super.subscription_cancel', 'org', org.id,
+      `${org.name} — no Stripe sub on file; app-side plan set to expired`);
+    return res.json({ ok: true, plan_status: 'expired', stripe: 'none', message: 'No Stripe subscription on file — plan set to expired.' });
+  }
+
+  const stripe = getStripe();
+  if (!stripe) {
+    // Stripe not configured here: still apply the app-side effect, warn loudly.
+    db.prepare("UPDATE orgs SET plan_status = ? WHERE id = ?")
+      .run(immediate ? 'expired' : org.plan_status, org.id);
+    superAudit(req, org.id, 'super.subscription_cancel', 'org', org.id,
+      `${org.name} — Stripe key missing; app-side ${immediate ? 'expired immediately' : 'left as-is'}`);
+    return res.json({
+      ok: true,
+      plan_status: immediate ? 'expired' : org.plan_status,
+      stripeWarning: 'Stripe is not configured on this server — the Stripe subscription was NOT touched. Cancel it in the Stripe dashboard.',
+    });
+  }
+
+  try {
+    if (immediate) {
+      await stripe.subscriptions.cancel(org.stripe_subscription_id);
+      db.prepare(`UPDATE orgs SET plan_status = 'expired', stripe_subscription_id = NULL,
+                  stripe_cancel_at_period_end = 0 WHERE id = ?`).run(org.id);
+      superAudit(req, org.id, 'super.subscription_cancel', 'org', org.id, `${org.name} — cancelled immediately`);
+      return res.json({ ok: true, plan_status: 'expired' });
+    }
+    await stripe.subscriptions.update(org.stripe_subscription_id, { cancel_at_period_end: true });
+    let periodEnd = org.current_period_end || null;
+    try {
+      const sub = await stripe.subscriptions.retrieve(org.stripe_subscription_id);
+      if (sub.current_period_end) {
+        periodEnd = new Date(sub.current_period_end * 1000).toISOString().slice(0, 19).replace('T', ' ');
+        db.prepare('UPDATE orgs SET current_period_end = ? WHERE id = ?').run(periodEnd, org.id);
+      }
+    } catch {}
+    db.prepare('UPDATE orgs SET stripe_cancel_at_period_end = 1 WHERE id = ?').run(org.id);
+    superAudit(req, org.id, 'super.subscription_cancel', 'org', org.id,
+      `${org.name} — set to cancel at period end${periodEnd ? ` (${periodEnd.slice(0, 10)})` : ''}`);
+    return res.json({ ok: true, plan_status: org.plan_status, cancel_at_period_end: true, current_period_end: periodEnd });
+  } catch (e) {
+    console.error('super subscription cancel stripe:', e.message);
+    return res.status(502).json({
+      error: 'Stripe cancel failed: ' + e.message,
+      hint: 'The app-side plan was NOT changed. Fix Stripe and retry, or change plan_status manually.',
+    });
+  }
+});
+
+// ---- Onboarding reset: owner sees the funnel again on next login ----
+router.post('/orgs/:id/onboarding/reset', (req, res) => {
+  const org = orgRow(req.params.id);
+  if (!org) return res.status(404).json({ error: 'Org not found' });
+  db.prepare('UPDATE orgs SET onboarding_completed_at = NULL WHERE id = ?').run(org.id);
+  superAudit(req, org.id, 'super.onboarding_reset', 'org', org.id, org.name);
+  res.json({ ok: true });
 });
 
 // ================= AI CLIENTS (read-only) =================
@@ -269,12 +423,32 @@ router.patch('/users/:id', (req, res) => {
 
 router.delete('/users/:id', (req, res) => {
   const id = Number(req.params.id);
-  const u = db.prepare('SELECT id FROM users WHERE id = ?').get(id);
+  const u = db.prepare('SELECT id, email, name FROM users WHERE id = ?').get(id);
   if (!u) return res.status(404).json({ error: 'User not found' });
+  if (id === req.user.id) return res.status(400).json({ error: 'You cannot delete your own account.' });
   const guard = lastSuperadminGuard(id);
   if (guard) return res.status(400).json({ error: guard });
+  // Cannot orphan an org: block if this user is the last owner of any workspace.
+  const ownedOrgs = db.prepare(
+    `SELECT m.org_id, o.name FROM user_orgs m JOIN orgs o ON o.id = m.org_id
+     WHERE m.user_id = ? AND m.role = 'owner'`
+  ).all(id);
+  for (const o of ownedOrgs) {
+    const owners = db.prepare(
+      `SELECT COUNT(*) AS n FROM user_orgs WHERE org_id = ? AND role = 'owner' AND user_id != ?`
+    ).get(o.org_id, id).n;
+    if (owners === 0) {
+      return res.status(400).json({
+        error: `Cannot delete — this user is the last owner of workspace "${o.name}". Transfer ownership or delete the workspace first.`,
+      });
+    }
+  }
+  const memberships = db.prepare('SELECT org_id FROM user_orgs WHERE user_id = ?').all(id);
+  const firstOrgId = memberships.length ? memberships[0].org_id : null;
   db.prepare('DELETE FROM user_orgs WHERE user_id = ?').run(id);
   db.prepare('DELETE FROM users WHERE id = ?').run(id);
+  superAudit(req, firstOrgId, 'super.user_delete', 'user', id,
+    `${u.name || ''} <${u.email}> (${memberships.length} membership${memberships.length === 1 ? '' : 's'} removed)`);
   res.json({ deleted: true });
 });
 
@@ -397,8 +571,11 @@ router.patch('/tickets/:id', (req, res) => {
 const TABLE_WHITELIST = [
   'orgs', 'users', 'user_orgs', 'payers', 'claims', 'appeals', 'appeal_notes',
   'payer_filing_rules', 'payer_playbook', 'claim_activity', 'auth_requests', 'auth_notes',
-  'eligibility_checks', 'appeal_letter_templates', 'demo_requests', 'support_tickets',
-  'custom_scrub_rules', 'rule_suggestions',
+  'eligibility_checks', 'eligibility_lookups', 'appeal_letter_templates', 'demo_requests',
+  'support_tickets', 'support_replies', 'custom_scrub_rules', 'rule_suggestions',
+  'baa_signatures', 'claim_batches', 'coding_jobs', 'coding_decisions',
+  'ehr_connections', 'ehr_encounters', 'edi_control_numbers',
+  'audit_log', 'auth_events', 'auth_rate_limits', 'mfa_codes', 'password_resets',
 ];
 
 function tableInfo(name) {
