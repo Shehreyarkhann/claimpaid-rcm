@@ -198,6 +198,21 @@ export const api = {
     saveConfig: (data) =>
       authFetch('/api/eligibility/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(handle),
   },
+  ehr: {
+    connections: () => get('/api/ehr/connections'),
+    connectDemo: () =>
+      authFetch('/api/ehr/connect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ provider: 'demo' }) }).then(handle),
+    disconnect: (provider) =>
+      authFetch('/api/ehr/disconnect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ provider }) }).then(handle),
+    athenaAuthorize: () => get('/api/ehr/athena/authorize'),
+    sync: () => authFetch('/api/ehr/sync', { method: 'POST' }).then(handle),
+    encounters: (status = 'new') => get(`/api/ehr/encounters?status=${status}`),
+    convert: (id) => authFetch(`/api/ehr/encounters/${id}/convert`, { method: 'POST' }).then(handle),
+    ignore: (id) => authFetch(`/api/ehr/encounters/${id}/ignore`, { method: 'POST' }).then(handle),
+    getAthenaConfig: () => get('/api/ehr/athena/config'),
+    saveAthenaConfig: (data) =>
+      authFetch('/api/ehr/athena/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(handle),
+  },
 };
 
 export const csvUrl = (path) => path; // auth via cookie-less; use fetch for authed CSV

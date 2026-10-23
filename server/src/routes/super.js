@@ -123,7 +123,16 @@ router.get('/orgs/:id', (req, res) => {
       return r.t ? Math.round((r.a / r.t) * 100) : null;
     })(),
   } : null;
-  res.json({ org, users, claimsByStatus, openAppeals, baa, eligibility, transmission });
+  const ehrTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='ehr_connections'`).get();
+  const ehr = ehrTable ? {
+    connections: db.prepare(
+      `SELECT provider, status, practice_id, last_sync_at FROM ehr_connections WHERE org_id = ?`
+    ).all(org.id),
+    encounters_30d: db.prepare(
+      `SELECT COUNT(*) AS n FROM ehr_encounters WHERE org_id = ? AND synced_at >= datetime('now', '-30 days')`
+    ).get(org.id).n,
+  } : null;
+  res.json({ org, users, claimsByStatus, openAppeals, baa, eligibility, transmission, ehr });
 });
 
 router.patch('/orgs/:id/plan', (req, res) => {

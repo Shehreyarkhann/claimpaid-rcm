@@ -144,7 +144,7 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
   };
 
   if (!detail) return <Modal onClose={onClose}><div className="p-8"><Skeleton className="h-40 !bg-slate-700" /></div></Modal>;
-  const { org, users, claimsByStatus, openAppeals, baa, eligibility, transmission } = detail;
+  const { org, users, claimsByStatus, openAppeals, baa, eligibility, transmission, ehr } = detail;
 
   return (
     <Modal onClose={onClose} wide>
@@ -238,6 +238,26 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
             </div>
           ) : (
             <p className="text-sm text-slate-500">No transmission data.</p>
+          )}
+        </div>
+
+        <SectionTitle>EHR</SectionTitle>
+        <div className="bg-slate-800 rounded-xl p-4 mb-6">
+          {ehr ? (
+            <div className="grid sm:grid-cols-3 gap-x-6 gap-y-2 text-xs">
+              <div><span className="text-slate-500">Connections </span>
+                {(ehr.connections || []).length ? ehr.connections.map((c) => (
+                  <span key={c.provider} className={`badge ml-1 ${c.status === 'connected' ? 'badge-green' : c.status === 'error' ? 'badge-red' : 'badge-slate'}`}>
+                    {c.provider}: {c.status}
+                  </span>
+                )) : <span className="text-slate-400">none</span>}</div>
+              <div><span className="text-slate-500">Encounters synced (30d) </span>
+                <span className="text-white font-bold">{ehr.encounters_30d}</span></div>
+              <div><span className="text-slate-500">Last sync </span>
+                <span className="text-slate-200">{ehr.connections?.[0]?.last_sync_at?.slice(0, 16).replace('T', ' ') || '—'}</span></div>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">No EHR data.</p>
           )}
         </div>
 

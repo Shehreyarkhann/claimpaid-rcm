@@ -25,6 +25,7 @@ const superRoutes = require('./routes/super');
 const supportRoutes = require('./routes/support');
 const { legalRoutes } = require('./routes/legal');
 const transmissionRoutes = require('./routes/transmission');
+const ehrRoutes = require('./routes/ehr');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -64,6 +65,7 @@ app.use('/api/super', superRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/legal', legalRoutes);
 app.use('/api/transmission', transmissionRoutes);
+app.use('/api/ehr', ehrRoutes);
 
 // Email-code MFA routes
 const { registerRoutes: registerMfaRoutes } = require('./mfa');

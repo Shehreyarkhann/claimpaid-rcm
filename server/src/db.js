@@ -502,6 +502,62 @@ function initSchema() {
       last_seq INTEGER NOT NULL DEFAULT 0
     );
   `);
+
+  // EHR connections: one row per org per provider.
+  // NOTE (honest posture): OAuth tokens live in the droplet SQLite file, which
+  // is NOT encrypted at rest — same posture as the eligibility/transmission
+  // credentials. Protected by DB file permissions + app-level access control;
+  // tokens are never exposed through the API (the list endpoint omits them).
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS ehr_connections (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      provider TEXT NOT NULL CHECK (provider IN ('athenahealth','demo')),
+      status TEXT NOT NULL DEFAULT 'disconnected' CHECK (status IN ('disconnected','connected','error')),
+      access_token TEXT,
+      refresh_token TEXT,
+      token_expires_at TEXT,
+      practice_id TEXT,
+      auth_mode TEXT,
+      oauth_state TEXT,
+      last_sync_at TEXT,
+      last_error TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(org_id, provider)
+    );
+  `);
+
+  // EHR encounters pulled by sync; convert/ignore workflow into claim drafts.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS ehr_encounters (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      connection_id INTEGER NOT NULL REFERENCES ehr_connections(id) ON DELETE CASCADE,
+      ehr_encounter_id TEXT NOT NULL,
+      ehr_patient_id TEXT,
+      patient_first TEXT,
+      patient_last TEXT,
+      patient_dob TEXT,
+      payer_name TEXT,
+      date_of_service TEXT,
+      cpt_codes TEXT NOT NULL DEFAULT '[]',
+      icd_codes TEXT NOT NULL DEFAULT '[]',
+      rendering_provider TEXT,
+      status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new','converted','ignored')),
+      converted_claim_id INTEGER REFERENCES claims(id),
+      raw_payload TEXT,
+      synced_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(org_id, ehr_encounter_id)
+    );
+  `);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_ehrenc_org_status ON ehr_encounters(org_id, status);`);
+
+  // Per-org athenahealth app credentials (env ATHENA_CLIENT_ID/SECRET preferred).
+  if (!columnExists('orgs', 'ehr_athena_client_id')) db.exec('ALTER TABLE orgs ADD COLUMN ehr_athena_client_id TEXT');
+  if (!columnExists('orgs', 'ehr_athena_client_secret')) db.exec('ALTER TABLE orgs ADD COLUMN ehr_athena_client_secret TEXT');
+  if (!columnExists('orgs', 'ehr_athena_env')) db.exec("ALTER TABLE orgs ADD COLUMN ehr_athena_env TEXT NOT NULL DEFAULT 'preview'");
+  if (!columnExists('orgs', 'ehr_athena_practice_id')) db.exec('ALTER TABLE orgs ADD COLUMN ehr_athena_practice_id TEXT');
 }
 
 // Thin wrapper so route code keeps working with .prepare().get()/.all()/.run()

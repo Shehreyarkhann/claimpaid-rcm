@@ -142,27 +142,48 @@ function validateClaimInput(orgId, body, isUpdate = false) {
 
 const daysBetween = (d) => Math.max(0, Math.floor((new Date() - new Date(d)) / 86400000));
 
-router.post('/', canWrite, (req, res) => {
-  const errors = validateClaimInput(req.orgId, req.body);
-  if (errors.length) return res.status(400).json({ errors });
-
+// Shared claim creation used by the POST route AND by the EHR
+// encounter-convert flow — one code path, no duplication.
+function createClaimDraft(orgId, userId, body) {
+  const errors = validateClaimInput(orgId, body);
+  if (errors.length) {
+    const e = new Error(errors.join('; '));
+    e.status = 400;
+    e.validationErrors = errors;
+    throw e;
+  }
   try {
     const result = db.prepare(`
       INSERT INTO claims (org_id, claim_number, patient_name, payer_id, service_date, billed_amount, paid_amount, status, denial_reason, days_in_ar, cpt_codes, icd_codes, rendering_npi, rendering_provider, patient_dob, member_id)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(req.orgId, req.body.claim_number.trim(), req.body.patient_name.trim(),
-      resolvePayerId(req.orgId, req.body.payer), req.body.service_date,
-      Number(req.body.billed_amount), Number(req.body.paid_amount || 0),
-      req.body.status || 'pending', req.body.denial_reason || null,
-      daysBetween(req.body.service_date),
-      req.body.cpt_codes?.trim() || null, req.body.icd_codes?.trim() || null,
-      req.body.rendering_npi?.trim() || null, req.body.rendering_provider?.trim() || null,
-      req.body.patient_dob?.trim() || null, req.body.member_id?.trim() || null);
+    `).run(orgId, body.claim_number.trim(), body.patient_name.trim(),
+      resolvePayerId(orgId, body.payer), body.service_date,
+      Number(body.billed_amount), Number(body.paid_amount || 0),
+      body.status || 'pending', body.denial_reason || null,
+      daysBetween(body.service_date),
+      body.cpt_codes?.trim() || null, body.icd_codes?.trim() || null,
+      body.rendering_npi?.trim() || null, body.rendering_provider?.trim() || null,
+      body.patient_dob?.trim() || null, body.member_id?.trim() || null);
     const newId = Number(result.lastInsertRowid);
-    logActivity(req.orgId, newId, req.user.id, 'created', `Claim ${req.body.claim_number.trim()} created`);
-    res.status(201).json(db.prepare('SELECT c.*, p.name AS payer FROM claims c JOIN payers p ON p.id = c.payer_id WHERE c.id = ?').get(newId));
+    logActivity(orgId, newId, userId, 'created', `Claim ${body.claim_number.trim()} created`);
+    return db.prepare('SELECT c.*, p.name AS payer FROM claims c JOIN payers p ON p.id = c.payer_id WHERE c.id = ?').get(newId);
   } catch (e) {
-    if (e.message.includes('UNIQUE')) return res.status(409).json({ error: 'Claim number already exists in your organization' });
+    if (e.message.includes('UNIQUE')) {
+      const dup = new Error('Claim number already exists in your organization');
+      dup.status = 409;
+      throw dup;
+    }
+    throw e;
+  }
+}
+
+router.post('/', canWrite, (req, res) => {
+  try {
+    const claim = createClaimDraft(req.orgId, req.user.id, req.body);
+    res.status(201).json(claim);
+  } catch (e) {
+    if (e.status === 400) return res.status(400).json({ errors: e.validationErrors });
+    if (e.status === 409) return res.status(409).json({ error: e.message });
     throw e;
   }
 });
@@ -273,3 +294,5 @@ router.post('/upload/csv', canWrite, upload.single('file'), (req, res) => {
 });
 
 module.exports = router;
+module.exports.createClaimDraft = createClaimDraft;
+module.exports.resolvePayerId = resolvePayerId;
