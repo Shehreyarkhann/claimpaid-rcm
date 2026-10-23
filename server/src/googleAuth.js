@@ -53,7 +53,7 @@ async function verifyGoogleIdToken(idToken) {
   } catch {
     decoded = null;
   }
-  if (!decoded || !decoded.header || !decoded.header.kid) fail(401, 'Invalid Google token.');
+  if (!decoded || !decoded.header || !decoded.header.kid) fail(401, 'Google token could not be read. Please try signing in again.');
 
   let keys;
   try {
@@ -62,16 +62,16 @@ async function verifyGoogleIdToken(idToken) {
     fail(502, 'Could not verify Google token right now. Please try again.');
   }
   const jwk = keys.find((k) => k.kid === decoded.header.kid && k.x5c && k.x5c[0]);
-  if (!jwk) fail(401, 'Invalid Google token.');
+  if (!jwk) fail(401, 'Google signing key not found for this token. Please try signing in again.');
 
   let payload;
   try {
     payload = jwt.verify(idToken, jwkToPem(jwk), { algorithms: ['RS256'] });
   } catch {
-    fail(401, 'Invalid Google token.');
+    fail(401, 'Google token signature check failed. Please try signing in again.');
   }
 
-  if (payload.aud !== clientId) fail(401, 'Invalid Google token.');
+  if (payload.aud !== clientId) fail(401, 'This Google sign-in was set up for a different app.');
   if (!GOOGLE_ISSUERS.includes(payload.iss)) fail(401, 'Invalid Google token.');
   if (payload.email_verified !== true && payload.email_verified !== 'true') {
     fail(401, 'Your Google account email is not verified.');

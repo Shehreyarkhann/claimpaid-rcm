@@ -136,7 +136,8 @@ router.post('/login', loginIpLimit, loginEmailLimit, async (req, res) => {
 
 // --- Google sign-in (Google Identity Services ID-token flow) ---
 router.post('/google', googleIpLimit, async (req, res) => {
-  const { idToken } = req.body || {};
+  const { idToken: rawToken } = req.body || {};
+  const idToken = typeof rawToken === 'string' ? rawToken.trim() : rawToken;
   if (!idToken) return res.status(400).json({ error: 'Google token is required' });
   const ip = clientIp(req);
 
