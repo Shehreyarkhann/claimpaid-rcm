@@ -209,8 +209,6 @@ export default function SupportPage() {
             <NewTicketForm onSubmitted={() => setRefreshKey((k) => k + 1)} />
             <div className="text-center mt-4">
               <a href="/app/" className="text-xs text-slate-500 hover:text-slate-300">← Back to the app</a>
-              <span className="text-slate-700 text-xs">·</span>
-              <a href="/status/" className="text-xs text-slate-500 hover:text-slate-300">System status</a>
             </div>
           </div>
         ) : (
@@ -218,8 +216,6 @@ export default function SupportPage() {
             <NewTicketForm />
             <div className="text-center mt-4">
               <a href="/app/" className="text-xs text-slate-500 hover:text-slate-300">← Back to the app</a>
-              <span className="text-slate-700 text-xs">·</span>
-              <a href="/status/" className="text-xs text-slate-500 hover:text-slate-300">System status</a>
             </div>
           </div>
         )}
