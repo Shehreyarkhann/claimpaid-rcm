@@ -60,6 +60,10 @@ STRIPE_WEBHOOK_SECRET="${STRIPE_WEBHOOK_SECRET:-}"
 APP_URL="${APP_URL:-https://${DOMAIN}}"
 # Google Sign-In (GIS ID-token flow). Leave empty to hide the Google button.
 GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID:-}"
+# AI usage reads (Billing tab). Must have a top-level default: the keep_or
+# block below only runs when server/.env already exists, and the .env heredoc
+# expands this unguarded — deploy #42 died on exactly that.
+AI_DB_PATH="${AI_DB_PATH:-/opt/claimpaid-ai/server/askbase.db}"
 
 echo "==> ClaimPaid setup for ${DOMAIN}"
 
