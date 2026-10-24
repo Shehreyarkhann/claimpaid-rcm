@@ -576,7 +576,7 @@ const TABLE_WHITELIST = [
   'baa_signatures', 'claim_batches', 'coding_jobs', 'coding_decisions',
   'ehr_connections', 'ehr_encounters', 'edi_control_numbers',
   'audit_log', 'auth_events', 'auth_rate_limits', 'mfa_codes', 'password_resets',
-  'era_remittances', 'era_claim_lines',
+  'era_remittances', 'era_claim_lines', 'transmission_outbox',
 ];
 
 function tableInfo(name) {

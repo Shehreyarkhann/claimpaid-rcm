@@ -7,6 +7,8 @@ import { useToast } from './ui';
 export default function EligibilityVendorSettings() {
   const toast = useToast();
   const [form, setForm] = useState({ vendor: 'demo', endpoint: '', api_key: '', auth_scheme: 'Bearer' });
+  const [av, setAv] = useState({ client_id: '', client_secret: '', payer_map_lines: '' });
+  const [avSecretSet, setAvSecretSet] = useState(false);
   const [keySet, setKeySet] = useState(false);
   const [customHeader, setCustomHeader] = useState('');
   const [error, setError] = useState(null);
@@ -19,6 +21,13 @@ export default function EligibilityVendorSettings() {
       setForm({ vendor: c.vendor || 'demo', endpoint: c.endpoint || '', api_key: '', auth_scheme: preset });
       if (preset === 'custom') setCustomHeader(c.auth_scheme);
       setKeySet(!!c.api_key);
+      let lines = '';
+      try {
+        const pm = JSON.parse(c.availity_payer_map || '{}');
+        lines = Object.entries(pm).map(([k, v]) => `${k} = ${v}`).join('\n');
+      } catch { lines = ''; }
+      setAv({ client_id: c.availity_client_id || '', client_secret: '', payer_map_lines: lines });
+      setAvSecretSet(!!c.availity_client_secret_set);
     }).catch(() => {});
   }, []);
 
@@ -31,7 +40,18 @@ export default function EligibilityVendorSettings() {
         auth_scheme: form.auth_scheme === 'custom' ? customHeader.trim() : form.auth_scheme,
       };
       if (form.api_key) payload.api_key = form.api_key;
+      if (form.vendor === 'availity') {
+        const map = {};
+        for (const line of av.payer_map_lines.split('\n')) {
+          const m = line.split('=');
+          if (m.length >= 2 && m[0].trim()) map[m[0].trim()] = m.slice(1).join('=').trim();
+        }
+        payload.availity_client_id = av.client_id.trim();
+        payload.availity_payer_map = JSON.stringify(map);
+        if (av.client_secret) payload.availity_client_secret = av.client_secret;
+      }
       await api.eligibility.saveConfig(payload);
+      if (form.vendor === 'availity' && av.client_secret) { setAvSecretSet(true); setAv((a) => ({ ...a, client_secret: '' })); }
       setSaved(true);
       setKeySet(!!form.api_key || keySet);
       setForm((f) => ({ ...f, api_key: '' }));
@@ -62,9 +82,35 @@ export default function EligibilityVendorSettings() {
           <label className="label">Vendor</label>
           <select className="input" value={form.vendor} onChange={set('vendor')}>
             <option value="demo">Demo (synthetic responses)</option>
-            <option value="rest">Custom REST API (pVerify / Eligible / Availity…)</option>
+            <option value="availity">Availity (Coverages API — free Essentials account)</option>
+            <option value="rest">Custom REST API (pVerify / Eligible / …)</option>
           </select>
         </div>
+        {form.vendor === 'availity' && (
+          <>
+            <div>
+              <label className="label">Availity Client ID *</label>
+              <input className="input" value={av.client_id} onChange={(e) => setAv({ ...av, client_id: e.target.value })}
+                placeholder="From developer.availity.com → My Apps" />
+            </div>
+            <div>
+              <label className="label">Availity Client Secret * {avSecretSet && !av.client_secret && <span className="text-emerald-600 font-normal">(saved — leave blank to keep)</span>}</label>
+              <input className="input" type="password" value={av.client_secret} onChange={(e) => setAv({ ...av, client_secret: e.target.value })}
+                placeholder={avSecretSet ? '••••••••' : 'Paste client secret'} autoComplete="new-password" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="label">Payer map — one per line: Your payer name = Availity payer ID</label>
+              <textarea className="input font-mono text-xs" rows={4} value={av.payer_map_lines}
+                onChange={(e) => setAv({ ...av, payer_map_lines: e.target.value })}
+                placeholder={'Aetna = AETNA\nCigna = CIGNA'} />
+              <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                Availity identifies payers by its own IDs (see Availity's payer list). Checks also use your
+                billing NPI from Organization / EDI settings, and your app must be subscribed to Availity's
+                Coverages API product. Free signup: developer.availity.com.
+              </p>
+            </div>
+          </>
+        )}
         {form.vendor === 'rest' && (
           <>
             <div>

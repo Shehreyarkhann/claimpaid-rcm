@@ -8,12 +8,14 @@ router.use(authRequired, requireProduct('rcm'));
 const canWrite = roleRequired('owner', 'biller');
 const ownerOnly = roleRequired('owner');
 
-const ELIG_VENDORS = ['demo', 'rest'];
+const ELIG_VENDORS = ['demo', 'rest', 'availity'];
 
 // Org's eligibility vendor config (columns on orgs; see db.js for the at-rest note)
 function orgEligConfig(orgId) {
   const o = db.prepare(
-    `SELECT eligibility_vendor, eligibility_endpoint, eligibility_api_key, eligibility_auth_scheme
+    `SELECT eligibility_vendor, eligibility_endpoint, eligibility_api_key, eligibility_auth_scheme,
+            eligibility_availity_client_id, eligibility_availity_client_secret,
+            eligibility_availity_payer_map, billing_npi
      FROM orgs WHERE id = ?`
   ).get(orgId) || {};
   return {
@@ -21,6 +23,10 @@ function orgEligConfig(orgId) {
     endpoint: o.eligibility_endpoint || '',
     api_key: o.eligibility_api_key || '',
     auth_scheme: o.eligibility_auth_scheme || 'Bearer',
+    availity_client_id: o.eligibility_availity_client_id || '',
+    availity_client_secret_set: !!o.eligibility_availity_client_secret,
+    availity_payer_map: o.eligibility_availity_payer_map || '',
+    billing_npi: o.billing_npi || '',
   };
 }
 
@@ -92,10 +98,17 @@ router.post('/check', canWrite, async (req, res) => {
   const cfg = orgEligConfig(req.orgId);
   let result;
   try {
+    const rawOrg = db.prepare(
+      'SELECT eligibility_availity_client_secret FROM orgs WHERE id = ?'
+    ).get(req.orgId) || {};
     result = await runCheck(cfg.vendor, {
       eligibility_endpoint: cfg.endpoint,
       eligibility_api_key: cfg.api_key,
       eligibility_auth_scheme: cfg.auth_scheme,
+      eligibility_availity_client_id: cfg.availity_client_id,
+      eligibility_availity_client_secret: rawOrg.eligibility_availity_client_secret || '',
+      eligibility_availity_payer_map: cfg.availity_payer_map,
+      billing_npi: cfg.billing_npi,
     }, { ...b, payer: payerName });
   } catch (e) {
     // Validation errors -> 400; vendor failures -> 502 (never silently demo)
@@ -170,8 +183,29 @@ router.put('/config', ownerOnly, (req, res) => {
   if (endpoint && !/^https?:\/\//i.test(endpoint)) {
     return res.status(400).json({ error: 'Endpoint must be an http(s) URL' });
   }
+  // Availity fields (deploy #46 step 4): client id + payer map always
+  // updatable; the secret only changes when a non-empty value is sent.
+  if (b.availity_payer_map !== undefined && b.availity_payer_map !== '') {
+    try {
+      const pm = JSON.parse(b.availity_payer_map);
+      if (!pm || typeof pm !== 'object' || Array.isArray(pm)) throw new Error('not an object');
+    } catch {
+      return res.status(400).json({ error: 'Availity payer map must be a JSON object of payer name -> Availity payer ID' });
+    }
+  }
+  if (vendor === 'availity') {
+    const existing = orgEligConfig(req.orgId);
+    const cid = (b.availity_client_id !== undefined ? b.availity_client_id : existing.availity_client_id || '').trim();
+    const hasSecret = !!(b.availity_client_secret || existing.availity_client_secret_set);
+    if (!cid || !hasSecret) {
+      return res.status(400).json({ error: 'Availity needs your developer app Client ID and Client Secret' });
+    }
+  }
   const updates = ['eligibility_vendor = ?', 'eligibility_endpoint = ?', 'eligibility_auth_scheme = ?'];
   const params = [vendor, endpoint || null, auth_scheme];
+  if (b.availity_client_id !== undefined) { updates.push('eligibility_availity_client_id = ?'); params.push((b.availity_client_id || '').trim() || null); }
+  if (b.availity_client_secret) { updates.push('eligibility_availity_client_secret = ?'); params.push(b.availity_client_secret); }
+  if (b.availity_payer_map !== undefined) { updates.push('eligibility_availity_payer_map = ?'); params.push((b.availity_payer_map || '').trim() || null); }
   if (b.api_key !== undefined && b.api_key !== '') {
     updates.push('eligibility_api_key = ?');
     params.push(b.api_key);

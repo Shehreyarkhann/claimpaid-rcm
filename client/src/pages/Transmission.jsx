@@ -336,6 +336,51 @@ function BatchDetail({ id, onBack }) {
   );
 }
 
+const OUTBOX_BADGE = { queued: 'badge-slate', sent: 'badge-blue', acknowledged: 'badge-green', failed: 'badge-rose', requeued: 'badge-amber' };
+
+function OutboxPanel() {
+  const toast = useToast();
+  const [rows, setRows] = useState(null);
+  const load = () => { api.transmission.outbox().then((d) => setRows(d.outbox)).catch(() => setRows([])); };
+  useEffect(load, []);
+  const requeue = async (id) => {
+    try { await api.transmission.requeueOutbox(id); toast.success('Claim released — it can be added to a new batch'); load(); }
+    catch (e) { toast.error(e.message); }
+  };
+  if (!rows || !rows.length) return null;
+  return (
+    <div className="card p-6 mt-5">
+      <div className="font-semibold text-slate-900 mb-1">Transmission outbox</div>
+      <p className="text-sm text-slate-500 mb-4">Every claim's path through the clearinghouse: queued → sent → acknowledged. A failed (rejected) claim can be released back for correction and re-batching.</p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-slate-500">
+              <th className="p-2">Claim</th><th className="p-2">Batch</th><th className="p-2">Vendor</th>
+              <th className="p-2">Status</th><th className="p-2">Sent</th><th className="p-2">Ack</th><th className="p-2" />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((o) => (
+              <tr key={o.id} className="border-t border-slate-100">
+                <td className="p-2 font-mono text-xs">{o.claim_number}</td>
+                <td className="p-2 font-mono text-xs text-slate-500">{o.batch_number || '—'}</td>
+                <td className="p-2">{o.vendor || '—'}</td>
+                <td className="p-2"><span className={`badge ${OUTBOX_BADGE[o.status] || 'badge-slate'}`}>{o.status}</span></td>
+                <td className="p-2 text-slate-500">{o.sent_at ? fmtDate(o.sent_at.slice(0, 10)) : '—'}</td>
+                <td className="p-2 text-slate-500">{o.ack_at ? fmtDate(o.ack_at.slice(0, 10)) : '—'}</td>
+                <td className="p-2 text-right">
+                  {o.status === 'failed' && <button className="btn btn-sm btn-outline" onClick={() => requeue(o.id)}>Release for re-batch</button>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function Transmission() {
   const toast = useToast();
   const [batches, setBatches] = useState(null);
@@ -405,6 +450,7 @@ export default function Transmission() {
           </table>
         </div>
       )}
+      <OutboxPanel />
       {showNew && <NewBatchModal onClose={() => setShowNew(false)} onCreated={(id) => { setShowNew(false); setSelected(id); load(); }} />}
     </div>
   );

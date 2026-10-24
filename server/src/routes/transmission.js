@@ -29,6 +29,33 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 *
 const BATCH_STATUSES = ['draft', 'generated', 'transmitted', 'acknowledged', 'accepted', 'rejected', 'partial'];
 const SCRUB_OK = ['clean', 'warnings'];
 
+// ---- transmission outbox (deploy #46 step 4) -------------------------------
+// Durable per-claim queue rows mirroring the batch lifecycle:
+//   queued (837 generated) -> sent (transmitted) -> acknowledged (999/277CA
+//   accepted) | failed (rejected) -> requeued (claim released for re-batch).
+function outboxQueueClaims(orgId, batchId, claimIds) {
+  const ins = db.prepare(`INSERT INTO transmission_outbox (org_id, claim_id, batch_id, status) VALUES (?, ?, ?, 'queued')`);
+  for (const cid of claimIds) ins.run(orgId, cid, batchId);
+}
+function outboxSetBatch(orgId, batchId, status, { vendor = null, ack = false } = {}) {
+  db.prepare(`
+    UPDATE transmission_outbox
+    SET status = ?, vendor = COALESCE(?, vendor),
+        attempts = attempts + CASE WHEN ? = 'sent' THEN 1 ELSE 0 END,
+        sent_at = CASE WHEN ? = 'sent' THEN datetime('now') ELSE sent_at END,
+        ack_at = CASE WHEN ? THEN datetime('now') ELSE ack_at END,
+        updated_at = datetime('now')
+    WHERE org_id = ? AND batch_id = ? AND status IN ('queued', 'sent')
+  `).run(status, vendor, status, status, ack ? 1 : 0, orgId, batchId);
+}
+function outboxSetClaim(orgId, batchId, claimId, status) {
+  db.prepare(`
+    UPDATE transmission_outbox
+    SET status = ?, ack_at = datetime('now'), updated_at = datetime('now')
+    WHERE org_id = ? AND batch_id = ? AND claim_id = ? AND status IN ('queued', 'sent')
+  `).run(status, orgId, batchId, claimId);
+}
+
 function getBatch(id, orgId) {
   return db.prepare('SELECT * FROM claim_batches WHERE id = ? AND org_id = ?').get(id, orgId);
 }
@@ -234,6 +261,7 @@ router.post('/batches/:id/generate', canWrite, (req, res) => {
     SET edi_text = ?, control_number = ?, status = 'generated', updated_at = datetime('now')
     WHERE id = ?
   `).run(ediText, controlNumber, batch.id);
+  outboxQueueClaims(req.orgId, batch.id, claims.map((c) => c.id));
   auditLog(req, 'generate', 'claim_batch', batch.id, `${batch.batch_number} — 837P generated (${claimCount} claims, ISA ${controlNumber})`);
 
   res.json({
@@ -302,6 +330,7 @@ router.post('/batches/:id/transmit', canWrite, async (req, res) => {
       const ph = ids.map(() => '?').join(',');
       db.prepare(`UPDATE claims SET x12_status = 'transmitted' WHERE id IN (${ph})`).run(...ids);
     }
+    outboxSetBatch(req.orgId, batch.id, 'sent', { vendor });
     db.exec('COMMIT');
   } catch (e) {
     db.exec('ROLLBACK');
@@ -347,6 +376,9 @@ router.post('/batches/:id/ack', canWrite, upload.single('file'), (req, res) => {
           const ph = ids.map(() => '?').join(',');
           db.prepare(`UPDATE claims SET x12_status = 'rejected' WHERE id IN (${ph})`).run(...ids);
         }
+        outboxSetBatch(req.orgId, batch.id, 'failed', { ack: true });
+      } else if (parsed.batchStatus === 'accepted') {
+        outboxSetBatch(req.orgId, batch.id, 'acknowledged', { ack: true });
       }
     } else {
       db.prepare(`UPDATE claim_batches SET ack_raw_277ca = ?, status = ?, updated_at = datetime('now') WHERE id = ?`)
@@ -355,6 +387,7 @@ router.post('/batches/:id/ack', canWrite, upload.single('file'), (req, res) => {
         if (!batchIds.has(String(c.claimId))) continue; // ignore claims not in this batch
         const newStatus = c.status === 'accepted' ? 'accepted' : 'rejected';
         db.prepare('UPDATE claims SET x12_status = ? WHERE id = ?').run(newStatus, Number(c.claimId));
+        outboxSetClaim(req.orgId, batch.id, Number(c.claimId), c.status === 'accepted' ? 'acknowledged' : 'failed');
       }
     }
     db.exec('COMMIT');
@@ -380,6 +413,7 @@ router.delete('/batches/:id', canWrite, (req, res) => {
       const ph = ids.map(() => '?').join(',');
       db.prepare(`UPDATE claims SET x12_status = 'not_sent', last_batch_id = NULL WHERE id IN (${ph})`).run(...ids);
     }
+    db.prepare(`DELETE FROM transmission_outbox WHERE org_id = ? AND batch_id = ? AND status = 'queued'`).run(req.orgId, batch.id);
     db.prepare('DELETE FROM claim_batches WHERE id = ?').run(batch.id);
     db.exec('COMMIT');
   } catch (e) {
@@ -387,6 +421,40 @@ router.delete('/batches/:id', canWrite, (req, res) => {
     throw e;
   }
   res.json({ deleted: true });
+});
+
+// --- Outbox -------------------------------------------------------------------
+
+router.get('/outbox', (req, res) => {
+  const rows = db.prepare(`
+    SELECT o.*, c.claim_number, b.batch_number
+    FROM transmission_outbox o
+    JOIN claims c ON c.id = o.claim_id
+    LEFT JOIN claim_batches b ON b.id = o.batch_id
+    WHERE o.org_id = ?
+    ORDER BY o.id DESC LIMIT 200
+  `).all(req.orgId);
+  res.json({ outbox: rows });
+});
+
+// POST /outbox/:id/requeue — a failed entry releases its claim back to
+// 'not_sent' so it can be corrected and included in a new batch; the
+// outbox row is kept (status 'requeued') as the audit trail.
+router.post('/outbox/:id/requeue', canWrite, (req, res) => {
+  const row = db.prepare('SELECT * FROM transmission_outbox WHERE id = ? AND org_id = ?').get(req.params.id, req.orgId);
+  if (!row) return res.status(404).json({ error: 'Outbox entry not found' });
+  if (row.status !== 'failed') return res.status(400).json({ error: `Only failed entries can be requeued (this one is ${row.status})` });
+  db.exec('BEGIN');
+  try {
+    db.prepare(`UPDATE claims SET x12_status = 'not_sent', last_batch_id = NULL WHERE id = ? AND org_id = ?`).run(row.claim_id, req.orgId);
+    db.prepare(`UPDATE transmission_outbox SET status = 'requeued', updated_at = datetime('now') WHERE id = ?`).run(row.id);
+    db.exec('COMMIT');
+  } catch (e) {
+    db.exec('ROLLBACK');
+    throw e;
+  }
+  auditLog(req, 'requeue', 'claim', row.claim_id, `Outbox entry ${row.id} requeued — claim released for re-batch`);
+  res.json({ ok: true });
 });
 
 module.exports = router;

@@ -310,6 +310,9 @@ export const api = {
     getConfig: () => get('/api/transmission/config'),
     saveConfig: (data) =>
       authFetch('/api/transmission/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(handle),
+    outbox: () => get('/api/transmission/outbox'),
+    requeueOutbox: (id) =>
+      authFetch(`/api/transmission/outbox/${id}/requeue`, { method: 'POST' }).then(handle),
   },
   eligibility: {
     check: (data) =>

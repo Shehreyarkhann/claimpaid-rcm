@@ -515,6 +515,34 @@ function initSchema() {
   if (!columnExists('orgs', 'eligibility_endpoint')) db.exec('ALTER TABLE orgs ADD COLUMN eligibility_endpoint TEXT');
   if (!columnExists('orgs', 'eligibility_api_key')) db.exec('ALTER TABLE orgs ADD COLUMN eligibility_api_key TEXT');
   if (!columnExists('orgs', 'eligibility_auth_scheme')) db.exec("ALTER TABLE orgs ADD COLUMN eligibility_auth_scheme TEXT NOT NULL DEFAULT 'Bearer'");
+  // Availity eligibility vendor (deploy #46 step 4): developer-app credentials
+  // + a JSON map of payer name -> Availity payer ID. Same at-rest note as above.
+  if (!columnExists('orgs', 'eligibility_availity_client_id')) db.exec('ALTER TABLE orgs ADD COLUMN eligibility_availity_client_id TEXT');
+  if (!columnExists('orgs', 'eligibility_availity_client_secret')) db.exec('ALTER TABLE orgs ADD COLUMN eligibility_availity_client_secret TEXT');
+  if (!columnExists('orgs', 'eligibility_availity_payer_map')) db.exec('ALTER TABLE orgs ADD COLUMN eligibility_availity_payer_map TEXT');
+
+  // ---- Transmission outbox (deploy #46 step 4) ----
+  // One durable row per claim per transmission attempt, so the queue state
+  // (queued -> sent -> acknowledged / failed -> requeued) survives restarts
+  // and is auditable independently of the batch record.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS transmission_outbox (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL,
+      claim_id INTEGER NOT NULL,
+      batch_id INTEGER,
+      vendor TEXT,
+      status TEXT NOT NULL DEFAULT 'queued',
+      detail TEXT,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      sent_at TEXT,
+      ack_at TEXT,
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_outbox_org ON transmission_outbox(org_id, status);
+    CREATE INDEX IF NOT EXISTS idx_outbox_claim ON transmission_outbox(claim_id);
+  `);
 
   // ---- Electronic claim transmission (837P batches) ----
   // Subscriber identity needed for valid 837P 2010BA loops.

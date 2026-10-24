@@ -207,6 +207,154 @@ async function restCheck(orgConfig, input) {
   };
 }
 
+// ---- availity vendor ----------------------------------------------------------
+// Real eligibility via Availity's Coverages API (developer.availity.com).
+// Verified against Availity's published docs during the build:
+//   Token:     POST https://api.availity.com/availity/v1/token
+//              form: grant_type=client_credentials, client_id, client_secret,
+//              scope=hipaa  ->  { access_token, expires_in: 300 }
+//   Coverages: GET  https://api.availity.com/availity/v1/coverages
+//              query: payerID, memberId, providerNpi, patientBirthDate,
+//              patientFirstName, patientLastName, serviceType=30
+//              (30 = Health Benefit Plan Coverage, the standard 270 service type)
+// The org supplies: developer-app client id/secret (subscribed to the
+// Coverages product), its billing NPI (EDI settings), and a payer map
+// (our payer name -> Availity payer ID, from Availity's payer list).
+// Any missing piece throws a precise error — it NEVER falls back to demo.
+
+const AVAILITY_BASE = 'https://api.availity.com/availity/v1';
+const AVAILITY_TIMEOUT_MS = 30000;
+const tokenCache = new Map(); // client_id -> { token, expiresAt }
+
+async function availityToken(clientId, clientSecret) {
+  const cached = tokenCache.get(clientId);
+  if (cached && cached.expiresAt - Date.now() > 30000) return cached.token;
+  let res;
+  try {
+    res = await fetch(`${AVAILITY_BASE}/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'client_credentials',
+        client_id: clientId,
+        client_secret: clientSecret,
+        scope: 'hipaa',
+      }).toString(),
+      signal: AbortSignal.timeout(AVAILITY_TIMEOUT_MS),
+    });
+  } catch (e) {
+    throw new Error(`Availity token request unreachable: ${e.message}`);
+  }
+  const text = await res.text();
+  let parsed = null;
+  try { parsed = text ? JSON.parse(text) : null; } catch { /* non-JSON */ }
+  if (!res.ok || !parsed?.access_token) {
+    const detail = parsed?.error_description || parsed?.error || text.slice(0, 200);
+    throw new Error(`Availity token request failed (HTTP ${res.status})${detail ? `: ${detail}` : ''} — check the client ID/secret in Eligibility settings.`);
+  }
+  tokenCache.set(clientId, { token: parsed.access_token, expiresAt: Date.now() + (parsed.expires_in || 300) * 1000 });
+  return parsed.access_token;
+}
+
+function numOrNull(v) {
+  const n = Number(v);
+  return v === null || v === undefined || v === '' || Number.isNaN(n) ? null : n;
+}
+
+// The Coverages response nests benefit data; shapes vary a little by payer.
+// Extract defensively and ALWAYS keep the full body in raw_response.
+function mapAvailityCoverage(parsed) {
+  const out = {
+    coverage_active: 0, plan_name: null, plan_type: null, group_number: null,
+    copay_primary: null, copay_specialist: null,
+    deductible_individual: null, deductible_remaining: null,
+    oop_max: null, effective_date: null, term_date: null,
+  };
+  const list = Array.isArray(parsed?.coverages) ? parsed.coverages
+    : (parsed?.coverage && typeof parsed.coverage === 'object' ? [parsed.coverage] : [parsed]);
+  const cov = list.find((c) => /active/i.test(String(c?.status || c?.coverageStatus || ''))) || list[0] || {};
+  const statusStr = String(cov.status || cov.coverageStatus || parsed?.status || '');
+  out.coverage_active = /active/i.test(statusStr) && !/in ?active/i.test(statusStr) ? 1 : 0;
+  out.plan_name = pickField(cov, ['planName', 'plan_name', 'plan', 'coverageName']);
+  out.plan_type = pickField(cov, ['planType', 'plan_type', 'coverageType']);
+  out.group_number = pickField(cov, ['groupNumber', 'group_number', 'groupId']);
+  out.effective_date = pickField(cov, ['effectiveDate', 'effective_date', 'coverageStartDate', 'startDate']);
+  out.term_date = pickField(cov, ['expirationDate', 'termDate', 'term_date', 'coverageEndDate', 'endDate']);
+  const deds = Array.isArray(cov.deductibles) ? cov.deductibles : [];
+  const ded = deds.find((d) => /individual/i.test(String(d.level || d.type || ''))) || deds[0];
+  if (ded) {
+    out.deductible_individual = numOrNull(ded.total ?? ded.amount ?? ded.totalAmount);
+    out.deductible_remaining = numOrNull(ded.remaining ?? ded.remainingAmount);
+  }
+  if (out.deductible_individual === null) out.deductible_individual = numOrNull(pickField(cov, ['deductible', 'deductibleAmount', 'deductibleIndividual']));
+  if (out.deductible_remaining === null) out.deductible_remaining = numOrNull(pickField(cov, ['deductibleRemaining', 'deductible_remaining']));
+  const oops = Array.isArray(cov.outOfPocket) ? cov.outOfPocket : (Array.isArray(cov.outOfPockets) ? cov.outOfPockets : []);
+  const oop = oops.find((d) => /individual/i.test(String(d.level || d.type || ''))) || oops[0];
+  if (oop) out.oop_max = numOrNull(oop.total ?? oop.amount ?? oop.totalAmount);
+  if (out.oop_max === null) out.oop_max = numOrNull(pickField(cov, ['oopMax', 'outOfPocketMax', 'oop_max']));
+  const copays = Array.isArray(cov.copays) ? cov.copays : (Array.isArray(cov.coPayments) ? cov.coPayments : []);
+  for (const cp of copays) {
+    const label = String(cp.serviceType || cp.type || cp.name || '');
+    const amt = numOrNull(cp.amount ?? cp.copayAmount ?? cp.value);
+    if (amt === null) continue;
+    if (/primary|pcp|office/i.test(label) && out.copay_primary === null) out.copay_primary = amt;
+    if (/special/i.test(label) && out.copay_specialist === null) out.copay_specialist = amt;
+  }
+  if (out.copay_primary === null) out.copay_primary = numOrNull(pickField(cov, ['copayPrimary', 'primaryCopay', 'copay']));
+  return out;
+}
+
+async function availityCheck(orgConfig, input) {
+  const clientId = (orgConfig.eligibility_availity_client_id || '').trim();
+  const clientSecret = (orgConfig.eligibility_availity_client_secret || '').trim();
+  if (!clientId || !clientSecret) {
+    throw new Error('Availity is not configured — add your Availity developer app Client ID and Secret in Eligibility settings first.');
+  }
+  const npi = (orgConfig.billing_npi || '').trim();
+  if (!/^\d{10}$/.test(npi)) {
+    throw new Error('Availity checks need your 10-digit billing NPI — set it in Organization / EDI settings first.');
+  }
+  let payerMap = {};
+  try { payerMap = JSON.parse(orgConfig.eligibility_availity_payer_map || '{}') || {}; } catch { payerMap = {}; }
+  const payerID = payerMap[input.payer];
+  if (!payerID) {
+    throw new Error(`No Availity payer ID is mapped for "${input.payer}" — add it in Eligibility settings (Availity payer list) before running a real check.`);
+  }
+  const token = await availityToken(clientId, clientSecret);
+  const qs = new URLSearchParams({
+    payerID: String(payerID),
+    memberId: input.member_id,
+    providerNpi: npi,
+    patientBirthDate: input.dob,
+    patientFirstName: input.patient_first,
+    patientLastName: input.patient_last,
+    serviceType: '30',
+  });
+  let res;
+  try {
+    res = await fetch(`${AVAILITY_BASE}/coverages?${qs.toString()}`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+      signal: AbortSignal.timeout(AVAILITY_TIMEOUT_MS),
+    });
+  } catch (e) {
+    throw new Error(`Availity coverages request unreachable: ${e.message}`);
+  }
+  const text = await res.text();
+  let parsed = null;
+  try { parsed = text ? JSON.parse(text) : null; } catch { /* non-JSON */ }
+  if (!res.ok) {
+    const detail = parsed?.message || parsed?.error || text.slice(0, 200);
+    throw new Error(`Availity coverages request failed (HTTP ${res.status})${detail ? `: ${detail}` : ''}`);
+  }
+  if (!parsed || typeof parsed !== 'object') throw new Error('Availity returned a non-JSON response.');
+  const mapped = mapAvailityCoverage(parsed);
+  return {
+    ...mapped,
+    raw_request: { vendor: 'availity', payerID: String(payerID), memberId: input.member_id, serviceType: '30' },
+    raw_response: { demo: false, http_status: res.status, vendor_body: parsed },
+  };
+}
+
 // ---- entry point ------------------------------------------------------------
 
 async function runCheck(vendorName, orgConfig, input) {
@@ -218,9 +366,10 @@ async function runCheck(vendorName, orgConfig, input) {
     throw e;
   }
   if (vendorName === 'rest') return restCheck(orgConfig, clean);
+  if (vendorName === 'availity') return availityCheck(orgConfig, clean);
   // Unknown/missing vendor names fall back to demo ONLY when the org never
-  // configured a real vendor — a configured 'rest' vendor that fails throws.
+  // configured a real vendor — a configured real vendor that fails throws.
   return demoCheck(clean);
 }
 
-module.exports = { runCheck, validateInput, demoCheck, restCheck, DEFAULT_FIELD_MAP };
+module.exports = { runCheck, validateInput, demoCheck, restCheck, availityCheck, mapAvailityCoverage, DEFAULT_FIELD_MAP };
