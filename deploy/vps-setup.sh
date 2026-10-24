@@ -323,6 +323,18 @@ if [[ "${LLM_PROVIDER}" == "ollama" ]]; then
   fi
   # Ensure the ollama service is running
   (systemctl enable --now ollama > /dev/null 2>&1 || service ollama start > /dev/null 2>&1 || true)
+  # Keep the model loaded in memory: Ollama's default unloads after 5 idle
+  # minutes, and a cold load on 2 vCPU takes 60s+ (users see "Thinking…" forever).
+  # 24h keep-alive trades ~2GB resident RAM for instant answers.
+  mkdir -p /etc/systemd/system/ollama.service.d
+  if ! grep -q "OLLAMA_KEEP_ALIVE=24h" /etc/systemd/system/ollama.service.d/keepalive.conf 2>/dev/null; then
+    cat > /etc/systemd/system/ollama.service.d/keepalive.conf <<'EOF'
+[Service]
+Environment=OLLAMA_KEEP_ALIVE=24h
+EOF
+    systemctl daemon-reload
+    systemctl restart ollama
+  fi
   # Wait for the API, then pull the model if missing (one-time ~2GB download)
   for i in $(seq 1 30); do
     curl -sf http://localhost:11434/api/tags > /dev/null 2>&1 && break
