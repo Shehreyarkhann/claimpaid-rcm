@@ -661,6 +661,69 @@ function initSchema() {
   `);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_codingjobs_org ON coding_jobs(org_id, created_at);`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_codingdec_job ON coding_decisions(job_id);`);
+
+  // ---- ERA auto-posting engine (deploy #41) ----
+  // era_remittances: one row per uploaded 835 file. era_claim_lines: one row
+  // per CLP claim loop, with the full CAS adjustment breakdown, the match
+  // result, variance flags and posting state. Clean lines auto-post at
+  // upload; exceptions wait in the ERA inbox for one-click resolution.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS era_remittances (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      payer_name TEXT,
+      check_number TEXT,
+      pay_date TEXT,
+      payment_amount REAL NOT NULL DEFAULT 0,
+      plb_total REAL NOT NULL DEFAULT 0,
+      total_billed REAL NOT NULL DEFAULT 0,
+      total_paid REAL NOT NULL DEFAULT 0,
+      total_adjustments REAL NOT NULL DEFAULT 0,
+      total_patient_resp REAL NOT NULL DEFAULT 0,
+      line_count INTEGER NOT NULL DEFAULT 0,
+      posted_count INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'received' CHECK (status IN ('received','partially_posted','posted')),
+      source_filename TEXT,
+      file_hash TEXT,
+      uploaded_by INTEGER REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS era_claim_lines (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      era_id INTEGER NOT NULL REFERENCES era_remittances(id) ON DELETE CASCADE,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      clp_ref TEXT NOT NULL,
+      payer_icn TEXT,
+      patient_name TEXT,
+      service_start TEXT,
+      service_end TEXT,
+      status_code TEXT,
+      billed REAL NOT NULL DEFAULT 0,
+      paid REAL NOT NULL DEFAULT 0,
+      patient_resp REAL NOT NULL DEFAULT 0,
+      allowed REAL NOT NULL DEFAULT 0,
+      adjustments TEXT NOT NULL DEFAULT '[]',
+      total_adjustments REAL NOT NULL DEFAULT 0,
+      variance REAL NOT NULL DEFAULT 0,
+      denial_reason TEXT,
+      flags TEXT NOT NULL DEFAULT '[]',
+      match_claim_id INTEGER REFERENCES claims(id),
+      suggested_claim_id INTEGER REFERENCES claims(id),
+      match_method TEXT,
+      post_status TEXT NOT NULL DEFAULT 'pending' CHECK (post_status IN ('pending','posted','ignored')),
+      posted_at TEXT,
+      posted_by INTEGER REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_era_lines_org ON era_claim_lines(org_id, post_status);`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_era_lines_era ON era_claim_lines(era_id);`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_era_rem_org ON era_remittances(org_id, created_at);`);
+  // Claim-level posting rollups the engine maintains.
+  if (!columnExists('claims', 'allowed_amount')) db.exec('ALTER TABLE claims ADD COLUMN allowed_amount REAL');
+  if (!columnExists('claims', 'adjustment_amount')) db.exec('ALTER TABLE claims ADD COLUMN adjustment_amount REAL NOT NULL DEFAULT 0');
+  if (!columnExists('claims', 'patient_resp_amount')) db.exec('ALTER TABLE claims ADD COLUMN patient_resp_amount REAL NOT NULL DEFAULT 0');
+  if (!columnExists('claims', 'payer_icn')) db.exec('ALTER TABLE claims ADD COLUMN payer_icn TEXT');
 }
 
 // Thin wrapper so route code keeps working with .prepare().get()/.all()/.run()

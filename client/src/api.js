@@ -111,6 +111,19 @@ export const api = {
   payerStats: () => get('/api/playbook/payer-stats'),
   // ERA / Digest
   digest: () => get('/api/era/digest'),
+  era: {
+    remittances: () => get('/api/era/remittances'),
+    remittance: (id) => get(`/api/era/remittances/${id}`),
+    reconciliation: () => get('/api/era/reconciliation'),
+    matchCandidates: (q) => get(`/api/era/match-candidates?q=${encodeURIComponent(q)}`),
+    postLine: (id) => authFetch(`/api/era/lines/${id}/post`, { method: 'POST' }).then(handle),
+    ignoreLine: (id) => authFetch(`/api/era/lines/${id}/ignore`, { method: 'POST' }).then(handle),
+    matchLine: (id, claimId, post) =>
+      authFetch(`/api/era/lines/${id}/match`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ claim_id: claimId, post: !!post }),
+      }).then(handle),
+  },
   claimDetail: (id) => get(`/api/claims/${id}`),
   // Prior authorizations
   authzList: (params = {}) => get(`/api/authz?${new URLSearchParams(params)}`),
