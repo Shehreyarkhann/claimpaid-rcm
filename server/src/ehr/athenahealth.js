@@ -151,6 +151,19 @@ async function apiGet(base, practiceId, path, accessToken, query = {}) {
   return parsed;
 }
 
+// athenaOne list endpoints wrap results: { totalcount, departments: [...] },
+// { appointments: [...] }, etc. — NOT bare arrays (learned live from the
+// Preview sandbox: "(departments || []).map is not a function"). Normalize
+// any of: bare array | { <key>: [...] } | first array-valued property.
+function listOf(resp, key) {
+  if (Array.isArray(resp)) return resp;
+  if (resp && typeof resp === 'object') {
+    if (Array.isArray(resp[key])) return resp[key];
+    for (const v of Object.values(resp)) if (Array.isArray(v)) return v;
+  }
+  return [];
+}
+
 function fmtAtnDate(d) {
   // athenaOne appointments endpoints take MM/DD/YYYY.
   const dt = new Date(d + 'T12:00:00');
@@ -197,7 +210,7 @@ async function syncEncounters(conn, orgRow, since) {
   const practiceId = conn.practice_id || orgRow?.ehr_athena_practice_id || '195900';
 
   const departments = await apiGet(base, practiceId, '/departments', accessToken);
-  const deptIds = (departments || []).map((d) => d.departmentid).filter(Boolean);
+  const deptIds = listOf(departments, 'departments').map((d) => d.departmentid).filter(Boolean);
   if (!deptIds.length) throw new Error('athenahealth returned no departments for this practice.');
 
   const endDate = new Date().toISOString().slice(0, 10);
@@ -217,7 +230,7 @@ async function syncEncounters(conn, orgRow, since) {
       errors.push(`department ${deptId}: ${e.message}`);
       continue;
     }
-    for (const appt of appts || []) {
+    for (const appt of listOf(appts, 'appointments')) {
       // Only pull visits that actually happened (checked-out / complete).
       const st = String(appt.appointmentstatus || appt.status || '').toLowerCase();
       if (!/check.?out|complete|done/.test(st)) continue;
@@ -231,7 +244,7 @@ async function syncEncounters(conn, orgRow, since) {
         if (encounterId) {
           diagnoses = await apiGet(base, practiceId, `/chart/encounter/${encounterId}/diagnoses`, accessToken).catch(() => []);
         }
-        const enc = normalizeEncounter(appt, patient?.[0] || patient || {}, insurances?.insurances || insurances || [], diagnoses?.diagnoses || diagnoses || []);
+        const enc = normalizeEncounter(appt, listOf(patient, 'patients')[0] || {}, listOf(insurances, 'insurances'), listOf(diagnoses, 'diagnoses'));
         enc.raw_payload = { appointment: appt, patient, insurances, diagnoses };
         encounters.push(enc);
       } catch (e) {
@@ -254,4 +267,5 @@ module.exports = {
   syncEncounters,
   newOauthState,
   baseUrl,
+  listOf,
 };

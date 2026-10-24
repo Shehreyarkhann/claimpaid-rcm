@@ -203,7 +203,10 @@ router.post('/disconnect', roleRequired('owner'), (req, res) => {
 // retried on the next sync. Shared by the manual route and the scheduler.
 async function runSyncForOrg(orgId, userId) {
   const orgRow = orgEhrRow(orgId);
-  const conns = db.prepare(`SELECT * FROM ehr_connections WHERE org_id = ? AND status = 'connected'`).all(orgId);
+  // 'error' connections are retried too — a transient athena failure (or a
+  // since-fixed adapter bug) shouldn't strand the connection until a manual
+  // reconnect; a successful sync flips it back to 'connected'.
+  const conns = db.prepare(`SELECT * FROM ehr_connections WHERE org_id = ? AND status IN ('connected', 'error')`).all(orgId);
   const summary = { synced: [], errors: [] };
   for (const conn of conns) {
     try {
@@ -260,7 +263,7 @@ async function runSyncForOrg(orgId, userId) {
 
 // POST /api/ehr/sync — owner/biller; pulls new encounters (+ auto-pull).
 router.post('/sync', canWrite, async (req, res) => {
-  const any = db.prepare(`SELECT COUNT(*) AS n FROM ehr_connections WHERE org_id = ? AND status = 'connected'`).get(req.orgId);
+  const any = db.prepare(`SELECT COUNT(*) AS n FROM ehr_connections WHERE org_id = ? AND status IN ('connected', 'error')`).get(req.orgId);
   if (!any.n) return res.status(400).json({ error: 'No connected EHR — connect the demo EHR or athenahealth first.' });
   res.json(await runSyncForOrg(req.orgId, req.user.id));
 });
