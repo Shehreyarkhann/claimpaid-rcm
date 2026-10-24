@@ -26,7 +26,7 @@ export default function EligibilityVendorSettings() {
         const pm = JSON.parse(c.availity_payer_map || '{}');
         lines = Object.entries(pm).map(([k, v]) => `${k} = ${v}`).join('\n');
       } catch { lines = ''; }
-      setAv({ client_id: c.availity_client_id || '', client_secret: '', payer_map_lines: lines, env: c.availity_env === 'demo' ? 'demo' : 'production' });
+      setAv({ client_id: c.availity_client_id || '', client_secret: '', payer_map_lines: lines, env: ['demo-tst', 'demo-qua'].includes(c.availity_env) ? c.availity_env : 'production' });
       setAvSecretSet(!!c.availity_client_secret_set);
     }).catch(() => {});
   }, []);
@@ -103,11 +103,13 @@ export default function EligibilityVendorSettings() {
               <label className="label">Environment</label>
               <select className="input" value={av.env} onChange={(e) => setAv({ ...av, env: e.target.value })}>
                 <option value="production">Production (Standard plan)</option>
-                <option value="demo">Demo (developer-portal demo plan)</option>
+                <option value="demo-tst">Demo — test host (tst.api.availity.com)</option>
+                <option value="demo-qua">Demo — QA host (qua.api.availity.com)</option>
               </select>
               <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-                Demo-plan credentials are rejected by the production endpoints — pick Demo until your
-                Standard plan is approved, then switch to Production (same credentials screen in Availity).
+                Demo-plan credentials are rejected by the production endpoints. Availity routes demo
+                plans by host — if one demo host answers "Not Found", switch to the other and re-run
+                the check. When your Standard plan is approved, switch back to Production.
               </p>
             </div>
             <div className="sm:col-span-2">

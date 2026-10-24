@@ -26,7 +26,8 @@ function orgEligConfig(orgId) {
     availity_client_id: o.eligibility_availity_client_id || '',
     availity_client_secret_set: !!o.eligibility_availity_client_secret,
     availity_payer_map: o.eligibility_availity_payer_map || '',
-    availity_env: o.eligibility_availity_env === 'demo' ? 'demo' : 'production',
+    availity_env: o.eligibility_availity_env === 'demo' ? 'demo-tst'
+      : (['production', 'demo-tst', 'demo-qua'].includes(o.eligibility_availity_env) ? o.eligibility_availity_env : 'production'),
     billing_npi: o.billing_npi || '',
   };
 }
@@ -209,8 +210,9 @@ router.put('/config', ownerOnly, (req, res) => {
   if (b.availity_client_secret) { updates.push('eligibility_availity_client_secret = ?'); params.push(b.availity_client_secret); }
   if (b.availity_payer_map !== undefined) { updates.push('eligibility_availity_payer_map = ?'); params.push((b.availity_payer_map || '').trim() || null); }
   if (b.availity_env !== undefined) {
-    if (!['production', 'demo'].includes(b.availity_env)) return res.status(400).json({ error: 'Availity environment must be production or demo' });
-    updates.push('eligibility_availity_env = ?'); params.push(b.availity_env);
+    const envNorm = b.availity_env === 'demo' ? 'demo-tst' : b.availity_env;
+    if (!['production', 'demo-tst', 'demo-qua'].includes(envNorm)) return res.status(400).json({ error: 'Availity environment must be production, demo-tst, or demo-qua' });
+    updates.push('eligibility_availity_env = ?'); params.push(envNorm);
   }
   if (b.api_key !== undefined && b.api_key !== '') {
     updates.push('eligibility_api_key = ?');

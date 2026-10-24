@@ -43,7 +43,7 @@ async function partA() {
     if (u.includes('/token')) {
       tokenCalls++;
       if ((opts.body || '').includes('bad-secret')) return json({ error: 'invalid_client' }, 401);
-      if (u.includes('/demo/v1/token') && (opts.body || '').includes('cid-fb')) return json({ error: 'not_found' }, 404);
+      if (u.includes('tst.api.availity.com') && u.includes('/token') && (opts.body || '').includes('cid-fb')) return json({ error: 'not_found' }, 404);
       return json({ access_token: 'tok-123', expires_in: 300 });
     }
     if (u.includes('/coverages')) {
@@ -92,14 +92,20 @@ async function partA() {
     check('real shape: Active Coverage in plans[] maps to active', rs.coverage_active === 1, JSON.stringify(rs).slice(0, 160));
     check('real shape: plan name/group/dates from plans[]', rs.plan_name === 'Humana Gold Plus HMO' && rs.group_number === 'GRP-9' && rs.effective_date === '2026-01-01' && rs.term_date === '2026-12-31', JSON.stringify(rs).slice(0, 200));
 
-    // Demo environment: requests route to /demo/v1, not /availity/v1.
+    // Demo environments route to Availity's documented demo hosts.
     calls.length = 0;
-    const rd = await runCheck('availity', { ...cfg, eligibility_availity_client_id: 'cid-demo', eligibility_availity_env: 'demo' }, input);
-    check('demo env: check succeeds', rd.coverage_active === 1, JSON.stringify(rd).slice(0, 120));
-    check('demo env: coverages called on /demo/v1', calls.some((u) => u.startsWith('https://api.availity.com/demo/v1/coverages')), calls.join(' | ').slice(0, 200));
+    const rd = await runCheck('availity', { ...cfg, eligibility_availity_client_id: 'cid-demo', eligibility_availity_env: 'demo-tst' }, input);
+    check('demo-tst env: check succeeds', rd.coverage_active === 1, JSON.stringify(rd).slice(0, 120));
+    check('demo-tst env: coverages called on tst host', calls.some((u) => u.startsWith('https://tst.api.availity.com/v1/coverages')), calls.join(' | ').slice(0, 200));
+    calls.length = 0;
+    const rl = await runCheck('availity', { ...cfg, eligibility_availity_client_id: 'cid-legacy', eligibility_availity_env: 'demo' }, input);
+    check('legacy "demo" value aliases to the tst host', rl.coverage_active === 1 && calls.some((u) => u.startsWith('https://tst.api.availity.com/v1/coverages')), calls.join(' | ').slice(0, 160));
+    calls.length = 0;
+    const rq = await runCheck('availity', { ...cfg, eligibility_availity_client_id: 'cid-qua', eligibility_availity_env: 'demo-qua' }, input);
+    check('demo-qua env: coverages called on qua host', rq.coverage_active === 1 && calls.some((u) => u.startsWith('https://qua.api.availity.com/availity/v1/coverages')), calls.join(' | ').slice(0, 200));
 
     // Demo token endpoint missing -> production token endpoint fallback.
-    const rf = await runCheck('availity', { ...cfg, eligibility_availity_client_id: 'cid-fb', eligibility_availity_env: 'demo' }, input);
+    const rf = await runCheck('availity', { ...cfg, eligibility_availity_client_id: 'cid-fb', eligibility_availity_env: 'demo-tst' }, input);
     check('demo env: token fallback to production auth host works', rf.coverage_active === 1, JSON.stringify(rf).slice(0, 120));
   } finally {
     global.fetch = realFetch;

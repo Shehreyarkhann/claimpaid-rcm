@@ -224,17 +224,23 @@ async function restCheck(orgConfig, input) {
 
 // Production apps use /availity/v1. Developer-portal DEMO plans are
 // forbidden on those paths (gateway 403 "Requested endpoint is forbidden",
-// confirmed live 2026-10-24) — Availity serves demo resources under
-// /demo/v1 on the same host.
+// confirmed live 2026-10-24), and /demo/v1 on the same host 404s (also
+// confirmed live). Availity's own docs point demo/test traffic at two
+// other hosts, so both are first-class options:
+//   test: https://tst.api.availity.com/v1        (Getting Started: test token URL)
+//   qa:   https://qua.api.availity.com/availity/v1 (QUA developer docs)
 const AVAILITY_BASES = {
   production: 'https://api.availity.com/availity/v1',
-  demo: 'https://api.availity.com/demo/v1',
+  'demo-tst': 'https://tst.api.availity.com/v1',
+  'demo-qua': 'https://qua.api.availity.com/availity/v1',
 };
 const AVAILITY_TIMEOUT_MS = 30000;
 const tokenCache = new Map(); // `${base}|${client_id}` -> { token, expiresAt }
 
 function availityBase(orgConfig) {
-  return orgConfig.eligibility_availity_env === 'demo' ? AVAILITY_BASES.demo : AVAILITY_BASES.production;
+  const env = orgConfig.eligibility_availity_env;
+  if (env === 'demo') return AVAILITY_BASES['demo-tst']; // legacy stored value
+  return AVAILITY_BASES[env] || AVAILITY_BASES.production;
 }
 
 async function availityTokenRequest(base, clientId, secretValue) {
@@ -275,7 +281,7 @@ async function availityToken(clientId, secretValue, base) {
     // The OAuth server is shared across environments — demo-plan tokens
     // also issue from the production token endpoint (observed live: the
     // token call succeeded there while /availity/v1/coverages 403'd).
-    if (base !== AVAILITY_BASES.demo) throw e;
+    if (base === AVAILITY_BASES.production) throw e;
     parsed = await availityTokenRequest(AVAILITY_BASES.production, clientId, secretValue);
   }
   tokenCache.set(cacheKey, { token: parsed.access_token, expiresAt: Date.now() + (parsed.expires_in || 300) * 1000 });
@@ -407,7 +413,7 @@ async function availityCheck(orgConfig, input) {
   const mapped = mapAvailityCoverage(parsed);
   return {
     ...mapped,
-    raw_request: { vendor: 'availity', env: orgConfig.eligibility_availity_env === 'demo' ? 'demo' : 'production', payerID: String(payerID), memberId: input.member_id, serviceType: '30' },
+    raw_request: { vendor: 'availity', env: orgConfig.eligibility_availity_env || 'production', payerID: String(payerID), memberId: input.member_id, serviceType: '30' },
     raw_response: { demo: false, http_status: res.status, vendor_body: parsed },
   };
 }
