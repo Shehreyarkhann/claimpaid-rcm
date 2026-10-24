@@ -211,7 +211,7 @@ async function runSyncForOrg(orgId, userId) {
   for (const conn of conns) {
     try {
       const since = conn.last_sync_at ? conn.last_sync_at.slice(0, 10) : null;
-      const { encounters, errors, tokenUpdate } = await syncEncounters(conn, orgRow, since);
+      const { encounters, errors, tokenUpdate, stats } = await syncEncounters(conn, orgRow, since);
       let added = 0;
       const ins = db.prepare(`
         INSERT OR IGNORE INTO ehr_encounters
@@ -250,7 +250,7 @@ async function runSyncForOrg(orgId, userId) {
           }
         }
       }
-      summary.synced.push({ provider: conn.provider, new_encounters: added, seen: encounters.length, auto_created: autoCreated, auto_failed: autoFailed });
+      summary.synced.push({ provider: conn.provider, new_encounters: added, seen: encounters.length, auto_created: autoCreated, auto_failed: autoFailed, stats: stats || undefined });
       if (errors.length) summary.errors.push({ provider: conn.provider, errors: errors.slice(0, 5) });
     } catch (e) {
       db.prepare(`UPDATE ehr_connections SET status='error', last_error=?, updated_at=datetime('now') WHERE id = ?`)

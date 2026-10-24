@@ -172,6 +172,23 @@ function fmtAtnDate(d) {
 
 // Normalize one appointment (+ patient + insurance + encounter diagnoses)
 // into the provider-interface encounter shape.
+// athenaOne appointmentstatus vocabulary is terse ('x' = checked out is the
+// classic code); map generously. Used for the staged encounter status —
+// the auto-pull converter only drafts 'checked_out'.
+function statusOf(appt) {
+  const st = String(appt.appointmentstatus || appt.status || '').trim().toLowerCase();
+  if (st === 'x' || /check(ed)?[-\s]?out|complete|closed|done/.test(st)) return 'checked_out';
+  if (/cancel/.test(st)) return 'cancelled';
+  if (/no.?show/.test(st)) return 'no_show';
+  if (/check.?in/.test(st)) return 'checked_in';
+  return 'scheduled';
+}
+
+function mdYToIso(s) {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(s || '').trim());
+  return m ? `${m[3]}-${m[1]}-${m[2]}` : (s || null);
+}
+
 function normalizeEncounter(appt, patient, insurances, diagnoses) {
   const cpts = [];
   if (appt.appointmenttype) cpts.push(String(appt.appointmenttype));
@@ -193,7 +210,8 @@ function normalizeEncounter(appt, patient, insurances, diagnoses) {
     patient_last: patient.lastname || '',
     patient_dob: dob,
     payer_name: primary ? (primary.insuranceplanname || primary.insurancecompanyname || '') : '',
-    date_of_service: (appt.date || '').slice(0, 10) || null,
+    status: statusOf(appt),
+    date_of_service: mdYToIso(appt.date),
     cpt_codes: [...new Set(cpts)],
     icd_codes: [...new Set(icds)],
     rendering_provider: appt.providername || appt.renderingprovidername || '',
@@ -213,46 +231,83 @@ async function syncEncounters(conn, orgRow, since) {
   const deptIds = listOf(departments, 'departments').map((d) => d.departmentid).filter(Boolean);
   if (!deptIds.length) throw new Error('athenahealth returned no departments for this practice.');
 
-  const endDate = new Date().toISOString().slice(0, 10);
-  const startDate = since || new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10);
+  const dayMs = 86400000;
+  const shift = (iso, days) => new Date(Date.parse(iso + 'T12:00:00') + days * dayMs).toISOString().slice(0, 10);
 
-  const encounters = [];
-  const errors = [];
-  for (const deptId of deptIds) {
-    let appts;
-    try {
-      appts = await apiGet(base, practiceId, '/appointments/booked', accessToken, {
+  async function fetchBooked(deptId, startDate, endDate) {
+    const all = [];
+    const limit = 100;
+    for (let page = 0; page < 20; page++) {
+      const resp = await apiGet(base, practiceId, '/appointments/booked', accessToken, {
         departmentid: deptId,
         startdate: fmtAtnDate(startDate),
         enddate: fmtAtnDate(endDate),
+        limit,
+        offset: page * limit,
       });
-    } catch (e) {
-      errors.push(`department ${deptId}: ${e.message}`);
-      continue;
+      const rows = listOf(resp, 'appointments');
+      all.push(...rows);
+      if (rows.length < limit) break;
     }
-    for (const appt of listOf(appts, 'appointments')) {
-      // Only pull visits that actually happened (checked-out / complete).
-      const st = String(appt.appointmentstatus || appt.status || '').toLowerCase();
-      if (!/check.?out|complete|done/.test(st)) continue;
+    return all;
+  }
+
+  // One scan over all departments for a window. Stages everything except
+  // cancelled / no-show visits (the converter drafts checked-out ones and
+  // the rest stay visible in the inbox with their real status).
+  async function scan(startDate, endDate) {
+    const staged = [];
+    const errs = [];
+    let seen = 0;
+    for (const deptId of deptIds) {
+      let appts;
       try {
-        const [patient, insurances] = await Promise.all([
-          apiGet(base, practiceId, `/patients/${appt.patientid}`, accessToken),
-          apiGet(base, practiceId, `/patients/${appt.patientid}/insurances`, accessToken).catch(() => []),
-        ]);
-        let diagnoses = [];
-        const encounterId = appt.encounterid;
-        if (encounterId) {
-          diagnoses = await apiGet(base, practiceId, `/chart/encounter/${encounterId}/diagnoses`, accessToken).catch(() => []);
-        }
-        const enc = normalizeEncounter(appt, listOf(patient, 'patients')[0] || {}, listOf(insurances, 'insurances'), listOf(diagnoses, 'diagnoses'));
-        enc.raw_payload = { appointment: appt, patient, insurances, diagnoses };
-        encounters.push(enc);
+        appts = await fetchBooked(deptId, startDate, endDate);
       } catch (e) {
-        errors.push(`appointment ${appt.appointmentid}: ${e.message}`);
+        errs.push(`department ${deptId}: ${e.message}`);
+        continue;
+      }
+      seen += appts.length;
+      for (const appt of appts) {
+        const st = statusOf(appt);
+        if (st === 'cancelled' || st === 'no_show') continue;
+        try {
+          const [patient, insurances] = await Promise.all([
+            apiGet(base, practiceId, `/patients/${appt.patientid}`, accessToken),
+            apiGet(base, practiceId, `/patients/${appt.patientid}/insurances`, accessToken).catch(() => []),
+          ]);
+          let diagnoses = [];
+          const encounterId = appt.encounterid;
+          if (encounterId) {
+            diagnoses = await apiGet(base, practiceId, `/chart/encounter/${encounterId}/diagnoses`, accessToken).catch(() => []);
+          }
+          const enc = normalizeEncounter(appt, listOf(patient, 'patients')[0] || {}, listOf(insurances, 'insurances'), listOf(diagnoses, 'diagnoses'));
+          enc.raw_payload = { status: enc.status, appointment: appt, patient, insurances, diagnoses };
+          staged.push(enc);
+        } catch (e) {
+          errs.push(`appointment ${appt.appointmentid}: ${e.message}`);
+        }
       }
     }
+    return { staged, errs, seen };
   }
-  return { encounters, errors, tokenUpdate: updated, practiceId, env };
+
+  // Recent window first (default 30 days). Sandbox practices like Preview
+  // 195900 carry historical sample visits, so an empty recent scan falls
+  // back to a deep scan (3 years back, 90 days forward) automatically.
+  const recentStart = since || shift(today, -30);
+  let { staged, errs, seen } = await scan(recentStart, today);
+  let windowUsed = `recent (${recentStart} → ${today})`;
+  if (seen === 0) {
+    const deep = await scan(shift(today, -1095), shift(today, 90));
+    staged = deep.staged;
+    errs = errs.concat(deep.errs);
+    seen = deep.seen;
+    windowUsed = 'deep (3 years back, 90 days forward)';
+  }
+  const stats = { departments: deptIds.length, appointments: seen, window: windowUsed };
+  return { encounters: staged, errors: errs, tokenUpdate: updated, practiceId, env, stats };
 }
 
 function newOauthState() {
@@ -268,4 +323,5 @@ module.exports = {
   newOauthState,
   baseUrl,
   listOf,
+  statusOf,
 };

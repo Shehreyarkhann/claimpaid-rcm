@@ -104,7 +104,7 @@ export default function Ehr({ onViewClaim }) {
     setSyncing(true);
     try {
       const s = await api.ehr.sync();
-      const parts = (s.synced || []).map((x) => `${x.provider}: ${x.new_encounters} new${x.auto_created ? `, ${x.auto_created} draft claims auto-created` : ''}`);
+      const parts = (s.synced || []).map((x) => `${x.provider}: ${x.new_encounters} new${x.auto_created ? `, ${x.auto_created} draft claims auto-created` : ''}${x.stats ? ` (scanned ${x.stats.appointments} appointments · ${x.stats.departments} departments · ${x.stats.window})` : ''}`);
       toast.success(parts.length ? `Sync complete — ${parts.join(', ')}` : 'Sync complete');
       if ((s.errors || []).length) toast.error(s.errors.map((x) => x.errors.join('; ')).join(' | '));
       load();
