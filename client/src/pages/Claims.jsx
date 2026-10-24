@@ -3,6 +3,7 @@ import { useAuth, authFetch } from '../auth';
 import { api, fmtMoney2 } from '../api';
 import { Modal, EmptyState, PageHeader, Skeleton } from '../components/ui';
 import { useToast } from '../components/ui';
+import { useOrgSettings } from '../orgSettings';
 import CodingAssistant from '../components/CodingAssistant';
 
 const STATUS_META = {
@@ -253,12 +254,13 @@ export default function Claims({ onCheckEligibility }) {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [scrubResult, setScrubResult] = useState(null);
   const fileRef = useRef(null);
-  const limit = 20;
+  const { settings } = useOrgSettings() || {};
+  const limit = settings?.rows_per_page || 20;
   const canWrite = ['owner', 'biller'].includes(user?.role);
 
   const fetchClaims = () => api.claims({ search, status, payer, page, limit }).then((d) => { setData(d); setSelected(new Set()); }).catch((e) => toast.error(e.message));
   useEffect(() => { api.payers().then(setPayers).catch(() => {}); }, []);
-  useEffect(() => { fetchClaims(); }, [page]);
+  useEffect(() => { fetchClaims(); }, [page, limit]);
 
   const applyFilters = () => { setPage(1); fetchClaims(); };
   const totalPages = data ? Math.ceil(data.total / limit) : 0;

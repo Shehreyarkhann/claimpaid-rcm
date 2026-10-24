@@ -36,13 +36,32 @@ router.post('/requests', async (req, res) => {
      VALUES (?, ?, ?, ?, ?, ?)`
   ).run(clean.name, clean.email, clean.company, clean.phone, clean.team_size, clean.message).lastInsertRowid);
 
-  // Notify (logs to console when email isn't configured)
-  const notifyTo = process.env.DEMO_NOTIFY_EMAIL || process.env.SMTP_FROM || 'hello@claimpaid.io';
-  sendEmail({
-    to: notifyTo,
-    subject: `New ClaimPaid demo request — ${clean.company}`,
-    text: `Name: ${clean.name}\nEmail: ${clean.email}\nCompany: ${clean.company}\nPhone: ${clean.phone || '—'}\nTeam size: ${clean.team_size || '—'}\n\nMessage:\n${clean.message || '—'}\n\nReceived: ${new Date().toISOString()}`,
-  }).catch((e) => console.error('Demo notify email failed:', e.message));
+  // Optional org attribution (e.g. demo form embedded in an org-branded page).
+  // Lets the org's "demo request alerts" preference gate the staff notify.
+  let orgId = null;
+  const oid = Number((req.body || {}).org_id);
+  if (Number.isInteger(oid) && oid > 0) {
+    const hit = db.prepare('SELECT id FROM orgs WHERE id = ?').get(oid);
+    if (hit) orgId = hit.id;
+  }
+
+  // Notify (logs to console when email isn't configured).
+  // Gated by the org's demo-request preference when an org is attached.
+  let sendNotify = true;
+  if (orgId) {
+    try {
+      const pref = db.prepare('SELECT notify_demo_requests FROM orgs WHERE id = ?').get(orgId);
+      if (pref && pref.notify_demo_requests === 0) sendNotify = false;
+    } catch { /* column missing — send as before */ }
+  }
+  if (sendNotify) {
+    const notifyTo = process.env.DEMO_NOTIFY_EMAIL || process.env.SMTP_FROM || 'hello@claimpaid.io';
+    sendEmail({
+      to: notifyTo,
+      subject: `New ClaimPaid demo request — ${clean.company}`,
+      text: `Name: ${clean.name}\nEmail: ${clean.email}\nCompany: ${clean.company}\nPhone: ${clean.phone || '—'}\nTeam size: ${clean.team_size || '—'}\n\nMessage:\n${clean.message || '—'}\n\nReceived: ${new Date().toISOString()}`,
+    }).catch((e) => console.error('Demo notify email failed:', e.message));
+  }
 
   res.status(201).json({ ok: true, id });
 });

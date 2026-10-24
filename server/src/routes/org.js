@@ -7,14 +7,24 @@ router.use(authRequired, requireProduct('rcm'));
 
 // --- Organization profile ---
 router.get('/', (req, res) => {
-  const org = db.prepare('SELECT id, name, created_at FROM orgs WHERE id = ?').get(req.orgId);
+  const org = db.prepare(
+    `SELECT id, name, created_at, timezone, date_format, rows_per_page, brand_color, logo_path, logo_updated_at
+     FROM orgs WHERE id = ?`
+  ).get(req.orgId);
   if (!org) return res.status(404).json({ error: 'Workspace not found' });
   const counts = {
     users: db.prepare('SELECT COUNT(*) c FROM user_orgs WHERE org_id = ?').get(req.orgId).c,
     claims: db.prepare('SELECT COUNT(*) c FROM claims WHERE org_id = ?').get(req.orgId).c,
     appeals: db.prepare('SELECT COUNT(*) c FROM appeals WHERE org_id = ?').get(req.orgId).c,
   };
-  res.json({ ...org, ...counts });
+  res.json({
+    ...org,
+    timezone: org.timezone || 'America/New_York',
+    date_format: org.date_format || 'MM/DD/YYYY',
+    rows_per_page: org.rows_per_page || 25,
+    logo_url: org.logo_path ? `/uploads/org-logos/${org.id}.png?v=${encodeURIComponent(org.logo_updated_at || org.created_at || '')}` : null,
+    ...counts,
+  });
 });
 
 router.put('/', roleRequired('owner'), (req, res) => {

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../auth';
+import { useOrgSettings } from '../orgSettings';
 import { api } from '../api';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 
@@ -168,7 +169,11 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
       <aside className={`${collapsed ? 'w-[76px]' : 'w-[248px]'} shrink-0 bg-[#0b1220] text-white flex flex-col fixed inset-y-0 z-40 transition-all duration-200`}>
         <div className={`${collapsed ? 'px-4' : 'px-5'} pt-6 pb-2`}>
           <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'}`}>
-            <img src="/app/claimpaid-icon.webp" alt="ClaimPaid" className="w-10 h-10 rounded-xl shadow-[0_4px_16px_rgba(16,185,129,0.4)] shrink-0" />
+            {settings?.logo_url ? (
+              <img src={settings.logo_url} alt="Workspace logo" className="w-10 h-10 rounded-xl object-contain bg-white shrink-0" />
+            ) : (
+              <img src="/app/claimpaid-icon.webp" alt="ClaimPaid" className="w-10 h-10 rounded-xl shadow-[0_4px_16px_rgba(16,185,129,0.4)] shrink-0" />
+            )}
             {!collapsed && <WorkspaceSwitcher collapsed={collapsed} />}
           </div>
         </div>

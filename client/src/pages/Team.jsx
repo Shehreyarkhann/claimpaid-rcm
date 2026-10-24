@@ -63,9 +63,13 @@ export default function Team() {
   const { user } = useAuth();
   const toast = useToast();
   const [team, setTeam] = useState(null);
+  const [seats, setSeats] = useState(null);
   const [showInvite, setShowInvite] = useState(false);
 
-  const load = () => api.team().then(setTeam).catch((e) => toast.error(e.message));
+  const load = () => {
+    api.team().then(setTeam).catch((e) => toast.error(e.message));
+    api.settings.seats().then(setSeats).catch(() => {});
+  };
   useEffect(() => { load(); }, []);
 
   const changeRole = async (id, role) => {
@@ -100,6 +104,35 @@ export default function Team() {
 
       <SecuritySettings />
       {user?.role === 'owner' && <EdiSettings />}
+
+      {seats && (
+        <div className="card p-5 mb-5">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-sm font-semibold text-slate-800">Seat usage</div>
+            <div className="text-sm tabular-nums text-slate-600">
+              <span className="font-bold text-slate-900">{seats.used}</span>
+              {' of '}
+              <span className="font-bold text-slate-900">{seats.limit === null ? '∞' : seats.limit}</span>
+              {' seats used'}
+              <span className="text-slate-400 capitalize"> · {seats.plan} plan</span>
+            </div>
+          </div>
+          {seats.limit !== null && (
+            <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${seats.atCap ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                style={{ width: `${Math.min(100, (seats.used / seats.limit) * 100)}%` }}
+              />
+            </div>
+          )}
+          {seats.atCap && (
+            <p className="text-xs text-rose-700 mt-2">Seat limit reached — remove a member or upgrade your plan to invite more people.</p>
+          )}
+          {seats.limit === null && (
+            <p className="text-xs text-slate-400 mt-2">Unlimited seats on the Enterprise plan.</p>
+          )}
+        </div>
+      )}
 
       <div className="card p-5 mb-5 bg-gradient-to-r from-violet-50 to-sky-50 !border-violet-100">
         <div className="text-sm font-semibold text-slate-800 mb-3">Roles & permissions</div>

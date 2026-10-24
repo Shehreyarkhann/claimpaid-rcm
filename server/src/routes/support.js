@@ -12,7 +12,15 @@ const router = express.Router();
 const TICKET_PUBLIC_COLS = `id, org_id, user_id, name, email, subject, message, status, priority,
   first_response_at, last_activity_at, sla_due_at, created_at, updated_at`;
 
-function notifyOwner(subject, text) {
+function notifyOwner(orgId, subject, text) {
+  // Per-org preference: support reply/new-ticket staff alerts. Tickets with no
+  // org (or orgs on the default) still send.
+  if (orgId) {
+    try {
+      const row = db.prepare('SELECT notify_support_replies FROM orgs WHERE id = ?').get(orgId);
+      if (row && row.notify_support_replies === 0) return;
+    } catch { /* column missing — send as before */ }
+  }
   const notifyTo = process.env.SUPPORT_NOTIFY_EMAIL || process.env.DEMO_NOTIFY_EMAIL || process.env.SMTP_FROM || 'hello@claimpaid.io';
   sendEmail({ to: notifyTo, subject, text }).catch((e) => console.error('Support notify email failed:', e.message));
 }
@@ -55,6 +63,7 @@ router.post('/', async (req, res) => {
   ).run(orgId, userId, clean.name, clean.email, clean.subject, clean.message).lastInsertRowid);
 
   notifyOwner(
+    orgId,
     `ClaimPaid support ticket #${id} — ${clean.subject}`,
     `Name: ${clean.name}\nEmail: ${clean.email}\nSubject: ${clean.subject}\n\nMessage:\n${clean.message}\n\nReceived: ${new Date().toISOString()}`
   );
@@ -120,6 +129,7 @@ router.post('/:id/reply', authRequired, (req, res) => {
   ).run(t.id);
 
   notifyOwner(
+    t.org_id,
     `ClaimPaid support ticket #${t.id} — customer replied`,
     `${req.user.name || req.user.email} replied to ticket #${t.id} (${t.subject}):\n\n${body}`
   );
