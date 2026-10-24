@@ -1,7 +1,7 @@
 // Canned support replies — inserted into the super-admin ticket composer.
 // Written in the founder's support voice: lead with the answer, no fluff,
 // 3–5 sentences max, short phone-readable paragraphs, ends with exactly one
-// next step or one question, signed "— Shehreyar". Sendable as-is.
+// next step or one question, signed "— The ClaimPaid Support Team". Sendable as-is.
 export const CANNED_REPLIES = [
   {
     id: 'trial',
@@ -10,7 +10,7 @@ export const CANNED_REPLIES = [
 
 How many claims does your team handle per month? I can tell you which plan fits.
 
-— Shehreyar`,
+— The ClaimPaid Support Team`,
   },
   {
     id: 'billing',
@@ -19,7 +19,7 @@ How many claims does your team handle per month? I can tell you which plan fits.
 
 Upgrade, downgrade, or cancel from the Billing tab any time — nothing locks you in. Want a recommendation based on your claim volume?
 
-— Shehreyar`,
+— The ClaimPaid Support Team`,
   },
   {
     id: 'ehr',
@@ -28,7 +28,7 @@ Upgrade, downgrade, or cancel from the Billing tab any time — nothing locks yo
 
 Heads up: we don't do Epic. I'd rather tell you that now than waste your time. Are you on athenahealth today?
 
-— Shehreyar`,
+— The ClaimPaid Support Team`,
   },
   {
     id: 'eligibility',
@@ -37,7 +37,7 @@ Heads up: we don't do Epic. I'd rather tell you that now than waste your time. A
 
 Checks only go live once your vendor account is connected on your end. Which vendor are you using?
 
-— Shehreyar`,
+— The ClaimPaid Support Team`,
   },
   {
     id: 'transmission',
@@ -46,7 +46,7 @@ Checks only go live once your vendor account is connected on your end. Which ven
 
 Which clearinghouse do you submit through?
 
-— Shehreyar`,
+— The ClaimPaid Support Team`,
   },
   {
     id: 'baa',
@@ -55,7 +55,7 @@ Which clearinghouse do you submit through?
 
 Is there anything specific your compliance team needs in it?
 
-— Shehreyar`,
+— The ClaimPaid Support Team`,
   },
   {
     id: 'login',
@@ -64,7 +64,7 @@ Is there anything specific your compliance team needs in it?
 
 Still stuck after that? Tell me exactly what you see on screen.
 
-— Shehreyar`,
+— The ClaimPaid Support Team`,
   },
   {
     id: 'import',
@@ -73,7 +73,7 @@ Still stuck after that? Tell me exactly what you see on screen.
 
 Roughly how many claims are you importing?
 
-— Shehreyar`,
+— The ClaimPaid Support Team`,
   },
   {
     id: 'cancel',
@@ -82,15 +82,15 @@ Roughly how many claims are you importing?
 
 What wasn't working for you? It helps us get better.
 
-— Shehreyar`,
+— The ClaimPaid Support Team`,
   },
   {
     id: 'security',
     title: 'Security / compliance question',
-    body: `Plain version: all traffic is TLS-encrypted, backups are encrypted the moment they're written, access is role-based with optional MFA, and sensitive actions are audit-logged. Our AI runs on our own server — your data never goes to a third-party AI API. We also offer BAA e-signing in the app.
+    body: `All traffic is TLS-encrypted, backups are encrypted the moment they're written, access is role-based with optional MFA, and sensitive actions are audit-logged. Our AI runs on our own server — your data never goes to a third-party AI API. We also offer BAA e-signing in the app.
 
 Is there a specific requirement your team needs covered?
 
-— Shehreyar`,
+— The ClaimPaid Support Team`,
   },
 ];
