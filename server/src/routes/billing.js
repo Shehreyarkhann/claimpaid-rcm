@@ -140,6 +140,12 @@ router.get('/status', authRequired, (req, res) => {
   res.json(billingStatusFor(org));
 });
 
+// ---- GET /api/billing/usage — plan usage vs limits (powers usage bars + 80% banner) ----
+router.get('/usage', authRequired, (req, res) => {
+  const { usageForOrg } = require('../usage');
+  res.json(usageForOrg(req.orgId));
+});
+
 // ---- POST /api/billing/checkout — create a Checkout session (owner only) ----
 router.post('/checkout', authRequired, roleRequired('owner'), async (req, res) => {
   if (!billingConfigured(res)) return;

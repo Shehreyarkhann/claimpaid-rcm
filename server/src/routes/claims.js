@@ -3,6 +3,7 @@ const multer = require('multer');
 const { parse } = require('csv-parse/sync');
 const { db } = require('../db');
 const { authRequired, roleRequired, requireProduct } = require('../auth');
+const { checkClaimQuota } = require('../usage');
 const { FILING_SELECT, FILING_JOIN } = require('./filing');
 const { logActivity } = require('../activity');
 const { auditLog } = require('../audit');
@@ -177,7 +178,7 @@ function createClaimDraft(orgId, userId, body) {
   }
 }
 
-router.post('/', canWrite, (req, res) => {
+router.post('/', canWrite, checkClaimQuota, (req, res) => {
   try {
     const claim = createClaimDraft(req.orgId, req.user.id, req.body);
     res.status(201).json(claim);
@@ -255,7 +256,7 @@ router.post('/export-837', canWrite, (req, res) => {
   res.send(edi);
 });
 
-router.post('/upload/csv', canWrite, upload.single('file'), (req, res) => {
+router.post('/upload/csv', canWrite, checkClaimQuota, upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded (field name: file)' });
 
   let records;

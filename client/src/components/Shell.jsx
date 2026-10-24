@@ -99,10 +99,28 @@ const ICONS = {
 
 export default function Shell({ page, setPage, children, dueCount, authzAlertCount }) {
   const { user, logout } = useAuth();
+  const { settings } = useOrgSettings() || {};
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem('cp_sidebar') === 'collapsed'; } catch { return false; }
   });
   const [baaSigned, setBaaSigned] = useState(null);
+  // Plan usage warning (owners): banner when any metered resource is ≥80% of quota
+  const [usageWarn, setUsageWarn] = useState(null);
+  useEffect(() => {
+    if (user?.role === 'owner') {
+      api.billingUsage().then((u) => {
+        if (!u?.warn?.length) return;
+        const pick = ['claims', 'seats', 'aiQueries'].find((k) => u.warn.includes(k));
+        const res = u[pick];
+        if (res && res.limit !== null && res.limit !== undefined) {
+          const noun = pick === 'claims' ? 'claims' : pick === 'seats' ? 'team seats' : 'AI queries';
+          setUsageWarn(`You've used ${Number(res.used).toLocaleString('en-US')} of ${Number(res.limit).toLocaleString('en-US')} ${noun} this month — upgrade to avoid interruption.`);
+        }
+      }).catch(() => {});
+    } else {
+      setUsageWarn(null);
+    }
+  }, [user?.role]);
   // Owners get a persistent nudge until the BAA is signed
   useEffect(() => {
     if (user?.role === 'owner') {
@@ -214,6 +232,16 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
 
       {/* Main */}
       <div className={`flex-1 ${collapsed ? 'ml-[76px]' : 'ml-[248px]'} min-h-screen flex flex-col transition-all duration-200`}>
+        {usageWarn && (
+          <button onClick={() => setPage('billing')}
+            className="mx-8 mt-5 rounded-xl bg-violet-50 border border-violet-300 px-5 py-3 flex items-center gap-3 text-left hover:bg-violet-100 transition max-w-[1400px] w-[calc(100%-4rem)] self-center">
+            <span className="text-violet-600 text-lg">📊</span>
+            <span className="text-sm text-violet-900">
+              <strong>Plan usage:</strong> {usageWarn}
+              <span className="underline font-medium ml-1">Go to Billing →</span>
+            </span>
+          </button>
+        )}
         {baaSigned === false && (
           <button onClick={() => setPage('compliance')}
             className="mx-8 mt-5 rounded-xl bg-amber-50 border border-amber-300 px-5 py-3 flex items-center gap-3 text-left hover:bg-amber-100 transition max-w-[1400px] w-[calc(100%-4rem)] self-center">

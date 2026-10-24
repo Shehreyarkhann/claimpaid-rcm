@@ -19,6 +19,49 @@ const STATUS_PILL = {
   canceled: 'badge-slate',
 };
 
+// One usage meter: label + "X of Y" + progress bar + Upgrade CTA.
+// limit null => unlimited; included false => plan doesn't cover this resource.
+function UsageBar({ label, used, limit, unknown, included, onUpgrade }) {
+  const pct = limit ? Math.min(100, (used / limit) * 100) : 0;
+  const hot = limit && used / limit >= 0.8;
+  return (
+    <div className="py-3">
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="text-sm font-semibold text-slate-800">{label}</div>
+        <div className="flex items-center gap-2">
+          <div className="text-xs text-slate-500">
+            {unknown ? '—' : included === false ? 'Not included' : limit === null || limit === undefined
+              ? `${Number(used).toLocaleString('en-US')} used · Unlimited`
+              : `${Number(used).toLocaleString('en-US')} of ${Number(limit).toLocaleString('en-US')} used`}
+          </div>
+          {included !== false && (
+            <button onClick={onUpgrade} className="text-xs font-semibold text-emerald-700 hover:text-emerald-900 hover:underline">
+              Upgrade
+            </button>
+          )}
+        </div>
+      </div>
+      {limit !== null && limit !== undefined && included !== false && (
+        <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-500 ${hot ? 'bg-gradient-to-r from-amber-400 to-rose-500' : 'bg-gradient-to-r from-emerald-400 to-emerald-500'}`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      )}
+      {included === false && (
+        <div className="text-xs text-slate-500">
+          Not included in your plan.{' '}
+          <button onClick={onUpgrade} className="font-semibold text-emerald-700 hover:underline">Upgrade to unlock →</button>
+        </div>
+      )}
+      {unknown && (
+        <div className="text-xs text-slate-400">Usage unavailable — the AI service isn't reporting yet.</div>
+      )}
+    </div>
+  );
+}
+
 function statusLabel(s) {
   if (s.plan_status === 'trialing') {
     return s.trial_days_left > 0 ? `Free trial · ${s.trial_days_left} day${s.trial_days_left === 1 ? '' : 's'} left` : 'Free trial';
@@ -35,6 +78,7 @@ function fmtDate(iso) {
 export default function Billing({ onBaaRequired }) {
   const [status, setStatus] = useState(null);
   const [invoices, setInvoices] = useState([]);
+  const [usage, setUsage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(null);
   const plansRef = useRef(null);
@@ -45,9 +89,11 @@ export default function Billing({ onBaaRequired }) {
     Promise.all([
       api.billingStatus().catch((e) => { toast.error(e.message); return null; }),
       api.billingInvoices().then((r) => r.invoices || []).catch(() => []),
-    ]).then(([s, inv]) => {
+      api.billingUsage().catch(() => null),
+    ]).then(([s, inv, u]) => {
       if (s) setStatus(s);
       setInvoices(inv);
+      if (u) setUsage(u);
     }).finally(() => setLoading(false));
   };
 
@@ -241,6 +287,41 @@ export default function Billing({ onBaaRequired }) {
         )}
       </div>
 
+      {/* ── Usage this month ── */}
+      {usage && (
+        <div className="card p-6">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <div className="text-[11px] uppercase tracking-widest text-slate-500 mb-1">Usage this month</div>
+              <div className="text-sm text-slate-500">Quotas reset on the 1st (UTC). Upgrade anytime to raise your limits.</div>
+            </div>
+          </div>
+          <div className="divide-y divide-slate-100">
+            <UsageBar
+              label="Claims created"
+              used={usage.claims.used}
+              limit={usage.claims.limit}
+              included={usage.claims.limit !== 0}
+              onUpgrade={() => plansRef.current?.scrollIntoView({ behavior: 'smooth' })}
+            />
+            <UsageBar
+              label="Team seats"
+              used={usage.seats.used}
+              limit={usage.seats.limit}
+              onUpgrade={() => plansRef.current?.scrollIntoView({ behavior: 'smooth' })}
+            />
+            <UsageBar
+              label="AI queries"
+              used={usage.aiQueries.used}
+              limit={usage.aiQueries.limit}
+              unknown={usage.aiQueries.unknown}
+              included={usage.aiQueries.limit !== 0}
+              onUpgrade={() => plansRef.current?.scrollIntoView({ behavior: 'smooth' })}
+            />
+          </div>
+        </div>
+      )}
+
       {/* ── Plan picker ── */}
       {!isActive && (
         <>
@@ -254,11 +335,11 @@ export default function Billing({ onBaaRequired }) {
           </div>
           <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
             {planCard('starter', 'RCM Starter', 'For small billing teams', <><>$199</><span className="text-sm font-normal text-slate-500">/mo</span></>,
-              ['Full RCM platform', 'Timely filing radar + 13-rule scrubber', 'Auto appeal letters (8 categories)', '835 import / 837P export', 'Up to 3 team seats'])}
+              ['Full RCM platform', '1,000 claims/month', 'Timely filing radar + 13-rule scrubber', 'Auto appeal letters (8 categories)', '835 import / 837P export', 'Up to 3 team seats'])}
             {planCard('pro', 'RCM Pro + AI', 'For teams serious about denial recovery', <><>$499</><span className="text-sm font-normal text-slate-500">/mo</span></>,
-              ['Everything in Starter', 'ClaimPaid AI — embedded tab + quick-chat', 'Payer Policy Handbook, pre-loaded', 'Autopilot crawling + Teach-it loop', 'Denial pattern analytics', 'Unlimited team seats'])}
+              ['Everything in Starter', '10,000 claims/month', 'ClaimPaid AI — embedded tab + quick-chat', '2,000 AI queries/month', 'Payer Policy Handbook, pre-loaded', 'Autopilot crawling + Teach-it loop', 'Denial pattern analytics', 'Up to 15 team seats'])}
             {planCard('ai', 'ClaimPaid AI', 'Just the AI assistant', <><>$99</><span className="text-sm font-normal text-slate-500">/mo</span></>,
-              ['Private AI chat over your documents', 'Cited answers, grounded in your KB', 'Unlimited knowledge bases', 'Public share links + embed widget', 'Your data never leaves our servers'])}
+              ['Private AI chat over your documents', '1,000 AI queries/month', 'Cited answers, grounded in your KB', 'Unlimited knowledge bases', 'Public share links + embed widget', 'Up to 5 team seats', 'Your data never leaves our servers'])}
             <div className="card p-6 flex flex-col">
               <div className="font-bold">Enterprise</div>
               <div className="text-xs text-slate-500 mt-0.5">For large billing companies & MSOs</div>
