@@ -91,6 +91,15 @@ export default function Ehr({ onViewClaim }) {
     } catch (e) { toast.error(e.message); setBusy(null); }
   };
 
+  const connectService = async () => {
+    setBusy('athena-svc');
+    try {
+      const r = await api.ehr.connectAthenaService();
+      toast.success(`athenahealth connected via app credentials (${r.env}${r.practice_id ? `, practice ${r.practice_id}` : ''}) — Sync now works`);
+      load();
+    } catch (e) { toast.error(e.message); } finally { setBusy(null); }
+  };
+
   const sync = async () => {
     setSyncing(true);
     try {
@@ -194,6 +203,7 @@ export default function Ehr({ onViewClaim }) {
           {athenaConn?.status === 'connected' && (
             <div className="text-xs text-slate-500 mb-3 space-y-1">
               <div>Practice ID: <span className="font-mono text-slate-700">{athenaConn.practice_id || '—'}</span></div>
+              <div>Mode: <span className="text-slate-700">{athenaConn.auth_mode === '2legged' ? 'Service (app credentials)' : athenaConn.auth_mode === '3legged' ? 'Provider (OAuth consent)' : (athenaConn.auth_mode || '—')}</span></div>
               <div>Environment: <span className="text-slate-700">{athenaEnv}</span></div>
               <div>Last sync: <span className="text-slate-700">{athenaConn.last_sync_at ? new Date(athenaConn.last_sync_at).toLocaleString() : 'never'}</span></div>
             </div>
@@ -207,11 +217,23 @@ export default function Ehr({ onViewClaim }) {
                 {isOwner && (
                   <button className="btn btn-sm" onClick={openAthenaSetup}>App settings</button>
                 )}
+                {isOwner && (
+                  <button className="btn btn-sm btn-outline" onClick={connectService} disabled={busy === 'athena-svc'}>
+                    {busy === 'athena-svc' ? 'Connecting…' : 'Connect with app credentials'}
+                  </button>
+                )}
               </>
             ) : (
               isOwner && <button className="btn btn-sm" onClick={() => disconnect('athenahealth')} disabled={busy === 'athenahealth'}>Disconnect</button>
             )}
           </div>
+          {(!athenaConn || athenaConn.status !== 'connected') && (
+            <p className="text-xs text-slate-400 mt-3">
+              “Connect athenahealth” uses the clinician-consent flow (a practice's athenaOne login).
+              “Connect with app credentials” is the service path — no clinician login; use it for the
+              Preview sandbox (practice 195900) with the credentials from App settings.
+            </p>
+          )}
           {autoPullRow(athenaConn)}
           {!athenaConfigured && (
             <p className="text-xs text-amber-700 mt-3">⚠ No athenahealth app credentials yet — {isOwner ? 'open App settings to add them.' : 'an owner must add them in App settings.'}</p>

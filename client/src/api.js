@@ -328,6 +328,7 @@ export const api = {
     disconnect: (provider) =>
       authFetch('/api/ehr/disconnect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ provider }) }).then(handle),
     athenaAuthorize: () => get('/api/ehr/athena/authorize'),
+    connectAthenaService: () => authFetch('/api/ehr/athena/connect-service', { method: 'POST' }).then(handle),
     sync: () => authFetch('/api/ehr/sync', { method: 'POST' }).then(handle),
     setAutoConvert: (provider, enabled) =>
       authFetch('/api/ehr/auto-convert', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ provider, enabled }) }).then(handle),

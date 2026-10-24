@@ -143,6 +143,42 @@ router.put('/athena/config', roleRequired('owner'), (req, res) => {
   res.json({ ok: true });
 });
 
+// POST /api/ehr/athena/connect-service — owner-only; 2-legged service connect.
+// The 3-legged Connect flow needs a clinician (athenaOne) login at athena's
+// widget — a Developer Portal account is rejected there ("This app is for
+// clinicians"). For sandbox testing (and service-account setups) the app
+// credentials alone are enough: validate them with a real client_credentials
+// token request, then mark the connection connected in '2legged' mode.
+// Syncs then run through ensureAccessToken's client_credentials path.
+router.post('/athena/connect-service', roleRequired('owner'), async (req, res) => {
+  const orgRow = orgEhrRow(req.orgId);
+  const { clientId, clientSecret, env } = athena.appCredentials(orgRow);
+  if (!clientId || !clientSecret) {
+    return res.status(400).json({ error: 'athenahealth app not configured — add your Client ID and Secret in App settings first.' });
+  }
+  try {
+    const { accessToken, updated } = await athena.ensureAccessToken(
+      { access_token: null, refresh_token: null, token_expires_at: null }, orgRow);
+    const practiceId = orgRow.ehr_athena_practice_id || (env === 'preview' ? '195900' : null);
+    db.prepare(`
+      INSERT INTO ehr_connections (org_id, provider, status, access_token, refresh_token, token_expires_at, practice_id, auth_mode, oauth_state, last_error, updated_at)
+      VALUES (?, 'athenahealth', 'connected', ?, NULL, ?, ?, '2legged', NULL, NULL, datetime('now'))
+      ON CONFLICT(org_id, provider) DO UPDATE SET
+        status='connected', access_token=excluded.access_token, refresh_token=NULL,
+        token_expires_at=excluded.token_expires_at, practice_id=COALESCE(excluded.practice_id, practice_id),
+        auth_mode='2legged', oauth_state=NULL, last_error=NULL, updated_at=datetime('now')
+    `).run(req.orgId, accessToken, updated?.token_expires_at || null, practiceId);
+    res.json({ ok: true, env, practice_id: practiceId, auth_mode: '2legged' });
+  } catch (e) {
+    db.prepare(`
+      INSERT INTO ehr_connections (org_id, provider, status, last_error, updated_at)
+      VALUES (?, 'athenahealth', 'error', ?, datetime('now'))
+      ON CONFLICT(org_id, provider) DO UPDATE SET status='error', last_error=excluded.last_error, updated_at=datetime('now')
+    `).run(req.orgId, String(e.message || e).slice(0, 500));
+    res.status(e.status || 502).json({ error: e.message });
+  }
+});
+
 // POST /api/ehr/disconnect { provider } — owner-only.
 router.post('/disconnect', roleRequired('owner'), (req, res) => {
   const provider = (req.body?.provider || '').trim();
