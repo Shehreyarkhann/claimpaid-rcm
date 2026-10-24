@@ -31,6 +31,9 @@ export default function WorkspaceSwitcher({ collapsed }) {
       localStorage.setItem('pulse_token', r.token);
       window.location.reload();
     } catch (e) {
+      // mfaRequired: api.switchOrg already dispatched the global org-MFA event
+      // (with the issued mfaToken) — AuthGate shows the verification screen.
+      if (e.mfaRequired) { setBusy(false); return; }
       alert(e.message);
       setBusy(false);
     }
@@ -45,6 +48,7 @@ export default function WorkspaceSwitcher({ collapsed }) {
       localStorage.setItem('pulse_token', r.token);
       window.location.reload();
     } catch (e) {
+      if (e.mfaRequired) { setBusy(false); return; }
       alert(e.message);
       setBusy(false);
     }

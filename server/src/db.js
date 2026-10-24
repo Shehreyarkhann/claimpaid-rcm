@@ -216,10 +216,42 @@ function initSchema() {
   if (!columnExists('orgs', 'onboarding_completed_at')) db.exec('ALTER TABLE orgs ADD COLUMN onboarding_completed_at TEXT');
   if (!columnExists('orgs', 'onboarding_data')) db.exec('ALTER TABLE orgs ADD COLUMN onboarding_data TEXT');
   if (!columnExists('orgs', 'trial_started_at')) db.exec('ALTER TABLE orgs ADD COLUMN trial_started_at TEXT');
+  // Org-wide MFA enforcement (workstream C): owners can require every member to
+  // complete the email-code MFA flow before getting a session for this org.
+  if (!columnExists('orgs', 'mfa_required')) db.exec('ALTER TABLE orgs ADD COLUMN mfa_required INTEGER NOT NULL DEFAULT 0');
   if (!columnExists('orgs', 'trial_ends_at')) db.exec('ALTER TABLE orgs ADD COLUMN trial_ends_at TEXT');
   // Backfill: existing paying customers and the demo org skip the onboarding funnel
   db.exec(`UPDATE orgs SET onboarding_completed_at = datetime('now') WHERE onboarding_completed_at IS NULL
            AND (stripe_subscription_id IS NOT NULL OR name = 'Demo Billing Co.')`);
+
+  // Settings expansion (General / Notifications / Customization tabs)
+  if (!columnExists('orgs', 'timezone')) db.exec(`ALTER TABLE orgs ADD COLUMN timezone TEXT NOT NULL DEFAULT 'America/New_York'`);
+  if (!columnExists('orgs', 'date_format')) db.exec(`ALTER TABLE orgs ADD COLUMN date_format TEXT NOT NULL DEFAULT 'MM/DD/YYYY'`);
+  if (!columnExists('orgs', 'rows_per_page')) db.exec(`ALTER TABLE orgs ADD COLUMN rows_per_page INTEGER NOT NULL DEFAULT 25`);
+  if (!columnExists('orgs', 'brand_color')) db.exec('ALTER TABLE orgs ADD COLUMN brand_color TEXT');
+  if (!columnExists('orgs', 'logo_path')) db.exec('ALTER TABLE orgs ADD COLUMN logo_path TEXT');
+  if (!columnExists('orgs', 'logo_updated_at')) db.exec('ALTER TABLE orgs ADD COLUMN logo_updated_at TEXT');
+  if (!columnExists('orgs', 'notify_demo_requests')) db.exec('ALTER TABLE orgs ADD COLUMN notify_demo_requests INTEGER NOT NULL DEFAULT 1');
+  if (!columnExists('orgs', 'notify_support_replies')) db.exec('ALTER TABLE orgs ADD COLUMN notify_support_replies INTEGER NOT NULL DEFAULT 1');
+  if (!columnExists('orgs', 'notify_trial_reminders')) db.exec('ALTER TABLE orgs ADD COLUMN notify_trial_reminders INTEGER NOT NULL DEFAULT 1');
+  if (!columnExists('orgs', 'notify_weekly_digest')) db.exec('ALTER TABLE orgs ADD COLUMN notify_weekly_digest INTEGER NOT NULL DEFAULT 1');
+  // NOTE: orgs.mfa_required is owned by the MFA-enforcement workstream (PUT /api/settings/security).
+
+  // Developer API keys — only the SHA-256 hash is stored, never the plaintext key.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      name TEXT NOT NULL,
+      key_hash TEXT NOT NULL UNIQUE,
+      key_prefix TEXT NOT NULL,
+      created_by INTEGER REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      last_used_at TEXT,
+      revoked_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_apikeys_org ON api_keys(org_id);
+  `);
 
   // HIPAA audit log — who accessed what PHI and when
   db.exec(`

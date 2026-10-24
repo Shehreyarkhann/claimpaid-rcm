@@ -7,6 +7,17 @@
 //   3. POST /api/auth/mfa/resend { mfaToken } -> new code (rate-limited)
 // Enrollment: POST /api/auth/mfa/enable (authed) sends a code; verify it to activate.
 // Disable:    POST /api/auth/mfa/disable (authed, password confirmed).
+//
+// Org-wide enforcement (workstream C): when orgs.mfa_required = 1, login /
+// Google sign-in / org-switch return an org-enforce MFA step for members who
+// are not MFA-enrolled (users.mfa_enabled = 0). The mfaToken carries an
+// orgEnforce claim with the target org id; verifying with purpose
+// 'org-enforce' ENROLLS the user (mfa_enabled = 1) and issues a session scoped
+// to that org. No new enrollment column was needed — users.mfa_enabled doubles
+// as the enrollment flag (design choice: smallest correct schema change).
+// A mid-session safety net: POST /api/auth/mfa/org-challenge (authed) lets a
+// member whose API calls are blocked by the authRequired MFA gate start the
+// flow with their existing (restricted) session.
 
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
@@ -48,17 +59,39 @@ try { ensureSchema(); } catch (e) {
   db.exec(`CREATE INDEX IF NOT EXISTS idx_mfa_user ON mfa_codes(user_id);`);
 }
 
-function issueMfaToken(userId) {
-  return jwt.sign({ sub: userId, mfa: true }, JWT_SECRET, { expiresIn: MFA_TOKEN_TTL });
+function issueMfaToken(userId, orgEnforceId = null) {
+  return jwt.sign(
+    { sub: userId, mfa: true, orgEnforce: orgEnforceId || null },
+    JWT_SECRET,
+    { expiresIn: MFA_TOKEN_TTL }
+  );
 }
 
-function verifyMfaToken(token) {
+function verifyMfaTokenPayload(token) {
   try {
     const p = jwt.verify(token, JWT_SECRET);
-    return p.mfa === true ? p.sub : null;
+    if (p.mfa !== true) return null;
+    return { userId: p.sub, orgEnforce: p.orgEnforce || null };
   } catch {
     return null;
   }
+}
+
+function verifyMfaToken(token) {
+  const payload = token ? verifyMfaTokenPayload(token) : null;
+  return payload ? payload.userId : null;
+}
+
+// 'org-enforce' = org-wide MFA enforcement challenge. Falls back to the token's
+// orgEnforce claim so callers can omit purpose when the token already carries it.
+function normalizePurpose(purpose, tokenOrgEnforce) {
+  if (purpose === 'enroll') return 'enroll';
+  if (purpose === 'org-enforce' || tokenOrgEnforce) return 'org-enforce';
+  return 'login';
+}
+
+function validEmail(email) {
+  return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 async function issueCode(userId, purpose = 'login') {
@@ -114,20 +147,41 @@ function registerRoutes(app, issueSession) {
   // --- Verify MFA code -> full session ---
   app.post('/api/auth/mfa/verify', async (req, res) => {
     const { mfaToken, code, purpose } = req.body || {};
-    const userId = mfaToken ? verifyMfaToken(mfaToken) : null;
-    if (!userId) return res.status(401).json({ error: 'Session expired. Please sign in again.' });
+    const payload = mfaToken ? verifyMfaTokenPayload(mfaToken) : null;
+    if (!payload) return res.status(401).json({ error: 'Session expired. Please sign in again.' });
     if (!code) return res.status(400).json({ error: 'Verification code is required' });
 
-    const result = checkCode(userId, code, purpose === 'enroll' ? 'enroll' : 'login');
+    const effPurpose = normalizePurpose(purpose, payload.orgEnforce);
+    const result = checkCode(payload.userId, code, effPurpose);
     if (!result.ok) return res.status(401).json({ error: result.error });
 
-    if (purpose === 'enroll') {
-      db.prepare('UPDATE users SET mfa_enabled = 1 WHERE id = ?').run(userId);
+    if (effPurpose === 'enroll') {
+      db.prepare('UPDATE users SET mfa_enabled = 1 WHERE id = ?').run(payload.userId);
       return res.json({ enrolled: true, message: 'Two-factor authentication is now on.' });
     }
 
+    // Org-enforced challenge: successful verification ENROLLS the user
+    // (mfa_enabled = 1) and issues a session scoped to the enforced org —
+    // which may differ from the user's home org (org-switch flow).
+    if (effPurpose === 'org-enforce') {
+      db.prepare('UPDATE users SET mfa_enabled = 1 WHERE id = ?').run(payload.userId);
+      const orgId = payload.orgEnforce;
+      const member = db.prepare(
+        `SELECT u.id, u.email, u.name, m.role
+         FROM user_orgs m JOIN users u ON u.id = m.user_id
+         WHERE m.user_id = ? AND m.org_id = ?`
+      ).get(payload.userId, orgId);
+      if (!member) {
+        return res.status(403).json({ error: 'You no longer belong to that workspace.' });
+      }
+      return res.json(issueSession(
+        { id: member.id, email: member.email, name: member.name, role: member.role, org_id: orgId },
+        orgId
+      ));
+    }
+
     // Full login session
-    const user = db.prepare('SELECT id, org_id, name, email, role, mfa_enabled FROM users WHERE id = ?').get(userId);
+    const user = db.prepare('SELECT id, org_id, name, email, role, mfa_enabled FROM users WHERE id = ?').get(payload.userId);
     if (!user) return res.status(401).json({ error: 'Account not found' });
     res.json(issueSession(user));
   });
@@ -135,17 +189,47 @@ function registerRoutes(app, issueSession) {
   // --- Resend code (rate-limited) ---
   app.post('/api/auth/mfa/resend', async (req, res) => {
     const { mfaToken, purpose } = req.body || {};
-    const userId = mfaToken ? verifyMfaToken(mfaToken) : null;
-    if (!userId) return res.status(401).json({ error: 'Session expired. Please sign in again.' });
+    const payload = mfaToken ? verifyMfaTokenPayload(mfaToken) : null;
+    if (!payload) return res.status(401).json({ error: 'Session expired. Please sign in again.' });
 
-    const last = lastCodeAt(userId, purpose === 'enroll' ? 'enroll' : 'login');
+    const effPurpose = normalizePurpose(purpose, payload.orgEnforce);
+    const last = lastCodeAt(payload.userId, effPurpose);
     if (last && (Date.now() - last.getTime()) / 1000 < RESEND_COOLDOWN_SEC) {
       const wait = Math.ceil(RESEND_COOLDOWN_SEC - (Date.now() - last.getTime()) / 1000);
       return res.status(429).json({ error: `Please wait ${wait}s before requesting another code.` });
     }
     try {
-      await issueCode(userId, purpose === 'enroll' ? 'enroll' : 'login');
+      await issueCode(payload.userId, effPurpose);
       res.json({ sent: true, message: 'A new code is on its way.' });
+    } catch (e) {
+      res.status(500).json({ error: 'Could not send code. Please try again.' });
+    }
+  });
+
+  // --- Org-enforcement challenge for a signed-in (but API-blocked) member ---
+  // authRequired's MFA gate exempts this path so a member whose session is
+  // blocked by org enforcement can start the email-code flow. Verifying the
+  // returned mfaToken (purpose 'org-enforce') enrolls them and issues a full
+  // session for this org.
+  app.post('/api/auth/mfa/org-challenge', authRequired, async (req, res) => {
+    const org = db.prepare('SELECT id, name, mfa_required FROM orgs WHERE id = ?').get(req.orgId);
+    const urow = db.prepare('SELECT mfa_enabled, is_superadmin, email FROM users WHERE id = ?').get(req.user.id);
+    if (!org || !org.mfa_required || urow.mfa_enabled || urow.is_superadmin) {
+      return res.status(400).json({ error: 'Two-factor enforcement is not required for your workspace right now.' });
+    }
+    if (!validEmail(urow.email)) {
+      return res.status(422).json({
+        error: 'No valid email is on file for your account. Ask your workspace owner to update your email address, then try again.',
+      });
+    }
+    try {
+      await issueCode(req.user.id, 'org-enforce');
+      res.json({
+        mfaToken: issueMfaToken(req.user.id, org.id),
+        sent: true,
+        orgName: org.name,
+        message: 'Your organization requires two-factor authentication. A verification code was sent to your email.',
+      });
     } catch (e) {
       res.status(500).json({ error: 'Could not send code. Please try again.' });
     }
@@ -182,4 +266,14 @@ function registerRoutes(app, issueSession) {
   });
 }
 
-module.exports = { issueMfaToken, issueCode, registerRoutes };
+// Returns true when the org enforces MFA and the user is not enrolled.
+// Super-admins are exempt (their access must never be gated by org settings).
+function orgMfaBlocksUser(orgId, userId) {
+  const org = db.prepare('SELECT mfa_required FROM orgs WHERE id = ?').get(orgId);
+  if (!org || org.mfa_required !== 1) return false;
+  const u = db.prepare('SELECT mfa_enabled, is_superadmin FROM users WHERE id = ?').get(userId);
+  if (!u) return false;
+  return !u.mfa_enabled && !u.is_superadmin;
+}
+
+module.exports = { issueMfaToken, issueCode, registerRoutes, orgMfaBlocksUser, verifyMfaTokenPayload };

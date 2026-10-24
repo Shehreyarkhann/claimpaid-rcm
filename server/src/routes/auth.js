@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const { db } = require('../db');
 const { signToken, authRequired, roleRequired } = require('../auth');
+const { checkSeatQuota } = require('../usage');
 const {
   passwordError,
   clientIp,
@@ -89,6 +90,34 @@ router.post('/signup', signupIpLimit, (req, res) => {
   res.status(201).json({ token: signToken(user), user });
 });
 
+// Shared MFA step for password login + Google sign-in.
+// Returns null when no second factor is needed; otherwise the mfa-step body.
+// When the ORG enforces MFA (orgs.mfa_required = 1) and the user is not enrolled
+// (users.mfa_enabled = 0), the step is an 'org-enforce' challenge: verifying it
+// enrolls the user and issues the session for this org.
+async function maybeMfaStep(user) {
+  const { issueMfaToken, issueCode, orgMfaBlocksUser } = require('../mfa');
+  const enforced = orgMfaBlocksUser(user.org_id, user.id);
+  if (!user.mfa_enabled && !enforced) return null;
+
+  if (enforced && (!user.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email))) {
+    return {
+      noEmail: true,
+      error: 'Your organization requires two-factor authentication, but no valid email is on file for your account. Ask your workspace owner to update your email address, then sign in again.',
+    };
+  }
+  const purpose = enforced ? 'org-enforce' : 'login';
+  await issueCode(user.id, purpose);
+  return {
+    mfaRequired: true,
+    mfaToken: issueMfaToken(user.id, enforced ? user.org_id : null),
+    orgEnforced: enforced,
+    message: enforced
+      ? 'Your organization requires two-factor authentication. A verification code was sent to your email.'
+      : 'A verification code was sent to your email.',
+  };
+}
+
 // --- Login ---
 router.post('/login', loginIpLimit, loginEmailLimit, async (req, res) => {
   const { email, password } = req.body || {};
@@ -116,19 +145,16 @@ router.post('/login', loginIpLimit, loginEmailLimit, async (req, res) => {
 
   resetLoginCounters(user.id);
 
-  // MFA: password was correct, but a second factor is required
-  if (user.mfa_enabled) {
-    try {
-      const { issueMfaToken, issueCode } = require('../mfa');
-      await issueCode(user.id, 'login');
-      return res.json({
-        mfaRequired: true,
-        mfaToken: issueMfaToken(user.id),
-        message: 'A verification code was sent to your email.',
-      });
-    } catch (e) {
-      return res.status(500).json({ error: 'Could not send verification code. Please try again.' });
+  // MFA: password was correct, but a second factor is required —
+  // either the user opted in (mfa_enabled) or their org enforces it.
+  try {
+    const step = await maybeMfaStep(user);
+    if (step) {
+      if (step.noEmail) return res.status(403).json({ error: step.error });
+      return res.json(step);
     }
+  } catch (e) {
+    return res.status(500).json({ error: 'Could not send verification code. Please try again.' });
   }
 
   res.json(buildLoginResponse(user));
@@ -183,19 +209,15 @@ router.post('/google', googleIpLimit, async (req, res) => {
     return res.status(423).json({ error: 'Too many failed attempts. Try again in 15 minutes.' });
   }
 
-  // MFA: honor it for Google sign-ins too when enabled
-  if (user.mfa_enabled) {
-    try {
-      const { issueMfaToken, issueCode } = require('../mfa');
-      await issueCode(user.id, 'login');
-      return res.json({
-        mfaRequired: true,
-        mfaToken: issueMfaToken(user.id),
-        message: 'A verification code was sent to your email.',
-      });
-    } catch (e) {
-      return res.status(500).json({ error: 'Could not send verification code. Please try again.' });
+  // MFA: honor it for Google sign-ins too — user opt-in or org enforcement
+  try {
+    const step = await maybeMfaStep(user);
+    if (step) {
+      if (step.noEmail) return res.status(403).json({ error: step.error });
+      return res.json(step);
     }
+  } catch (e) {
+    return res.status(500).json({ error: 'Could not send verification code. Please try again.' });
   }
 
   res.json(buildLoginResponse(user));
@@ -277,15 +299,27 @@ router.get('/team', authRequired, (req, res) => {
   res.json(users);
 });
 
-router.post('/team', authRequired, roleRequired('owner'), (req, res) => {
+router.post('/team', authRequired, roleRequired('owner'), checkSeatQuota, (req, res) => {
   const { name, email, password, role } = req.body || {};
   if (!email) return res.status(400).json({ error: 'Email is required' });
   if (!['owner', 'biller', 'viewer'].includes(role)) return res.status(400).json({ error: 'Invalid role' });
 
+  // Seat cap: enforced before any insert. seatUsage is the source of truth
+  // (server/src/config/planLimits.js). Existing members re-added to the same
+  // workspace don't consume a new seat.
+  const { seatUsage } = require('../config/planLimits');
+  const seats = seatUsage(db, req.orgId);
   const existing = db.prepare('SELECT id, name FROM users WHERE LOWER(email) = LOWER(?)').get(email.trim());
+  const already = existing && db.prepare('SELECT 1 FROM user_orgs WHERE user_id = ? AND org_id = ?').get(existing.id, req.orgId);
+  if (!already && seats.atCap) {
+    const planLabel = { starter: 'Starter', pro: 'Pro', ai: 'AI', enterprise: 'Enterprise' }[seats.plan] || seats.plan;
+    return res.status(403).json({
+      error: `Seat limit reached — ${seats.used} of ${seats.limit} seats used on the ${planLabel} plan. Remove a team member or upgrade your plan to invite more people.`,
+      seats,
+    });
+  }
   if (existing) {
     // Existing ClaimPaid user: just add them to this workspace (no new password needed)
-    const already = db.prepare('SELECT 1 FROM user_orgs WHERE user_id = ? AND org_id = ?').get(existing.id, req.orgId);
     if (already) return res.status(409).json({ error: 'This person is already in this workspace' });
     db.prepare('INSERT INTO user_orgs (user_id, org_id, role) VALUES (?, ?, ?)')
       .run(existing.id, req.orgId, role);
@@ -403,7 +437,7 @@ router.delete('/orgs/:id', authRequired, (req, res) => {
   const token = signToken({ id: u.id, org_id: next.id, role: next.role, email: u.email, name: u.name });
   res.json({ deleted: true, token, orgName: next.name });
 });
-router.post('/switch', authRequired, (req, res) => {
+router.post('/switch', authRequired, async (req, res) => {
   const orgId = Number(req.body && req.body.org_id);
   if (!orgId) return res.status(400).json({ error: 'org_id is required' });
   const member = db.prepare(
@@ -412,6 +446,30 @@ router.post('/switch', authRequired, (req, res) => {
      WHERE m.user_id = ? AND m.org_id = ?`
   ).get(req.user.id, orgId);
   if (!member) return res.status(403).json({ error: 'You do not belong to that workspace' });
+
+  // Org-switch into an enforcing org: no session until the email-code flow
+  // completes. Verifying enrolls the user and issues the session for this org.
+  const { orgMfaBlocksUser, issueMfaToken, issueCode } = require('../mfa');
+  if (orgMfaBlocksUser(orgId, req.user.id)) {
+    if (!member.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(member.email)) {
+      return res.status(403).json({
+        error: 'That workspace requires two-factor authentication, but no valid email is on file for your account. Ask its owner to update your email address.',
+      });
+    }
+    try {
+      await issueCode(req.user.id, 'org-enforce');
+    } catch (e) {
+      return res.status(500).json({ error: 'Could not send verification code. Please try again.' });
+    }
+    const org = db.prepare('SELECT name FROM orgs WHERE id = ?').get(orgId);
+    return res.json({
+      mfaRequired: true,
+      mfaToken: issueMfaToken(req.user.id, orgId),
+      orgEnforced: true,
+      orgName: org.name,
+      message: 'That workspace requires two-factor authentication. A verification code was sent to your email.',
+    });
+  }
 
   const token = signToken({ id: member.id, org_id: orgId, role: member.role, email: member.email, name: member.name });
   const org = db.prepare('SELECT name FROM orgs WHERE id = ?').get(orgId);

@@ -21,14 +21,16 @@ import LetterTemplates from './pages/LetterTemplates';
 import AIAssistant from './pages/AIAssistant';
 import Billing from './pages/Billing';
 import Organization from './pages/Organization';
-import { Login, Signup, ForgotPassword, ResetPassword } from './pages/AuthPages';
+import { Login, Signup, ForgotPassword, ResetPassword, OrgMfaRequiredScreen } from './pages/AuthPages';
 import SuperAdmin from './pages/SuperAdmin';
 import SupportPage from './pages/SupportPage';
 import Legal from './pages/Legal';
 import Compliance from './pages/Compliance';
 import { api } from './api';
 import ErrorBoundary from './components/ErrorBoundary';
+import LimitModal from './components/LimitModal';
 import OnboardingWizard from './components/OnboardingWizard';
+import { OrgSettingsProvider } from './orgSettings';
 
 // Trial-expired owners land here: Billing handles reactivation,
 // Compliance covers the BAA step if checkout demands it.
@@ -65,6 +67,16 @@ function AuthGate({ children }) {
   });
   const [billing, setBilling] = useState(null);
   const [onboarding, setOnboarding] = useState(null);
+  // Org-wide MFA enforcement: set when the server blocks a request (or an
+  // org-switch) because the workspace requires two-factor the member hasn't
+  // completed. { mfaToken?, orgName? }
+  const [orgMfa, setOrgMfa] = useState(null);
+
+  useEffect(() => {
+    const onOrgMfa = (e) => setOrgMfa(e.detail || {});
+    window.addEventListener('claimpaid:org-mfa', onOrgMfa);
+    return () => window.removeEventListener('claimpaid:org-mfa', onOrgMfa);
+  }, []);
   // Landing pricing CTA (?plan=pro) preselects the plan in the onboarding wizard
   const [planIntent] = useState(() => {
     const p = new URLSearchParams(window.location.search).get('plan');
@@ -102,6 +114,13 @@ function AuthGate({ children }) {
     return mode === 'login'
       ? <Login goSignup={() => setMode('signup')} goForgot={() => setMode('forgot')} />
       : <Signup goLogin={() => setMode('login')} />;
+  }
+
+  // Workspace requires two-factor the member hasn't completed yet (flag flipped
+  // mid-session, or an org-switch that returned an MFA step). This screen
+  // guides through the email-code flow — never a dead end.
+  if (orgMfa) {
+    return <OrgMfaRequiredScreen initialToken={orgMfa.mfaToken} orgName={orgMfa.orgName} />;
   }
 
   // New owners go through the onboarding funnel before anything else
@@ -162,6 +181,13 @@ function Workspace() {
   const [authzAlertCount, setAuthzAlertCount] = useState(0);
   // Cross-page deep links: { page, appealId, claimId, startAppealClaimId }
   const [deepLink, setDeepLink] = useState(null);
+  // Plan-limit modal: api.js dispatches 'plan-limit' on 402 quota responses
+  const [limitInfo, setLimitInfo] = useState(null);
+  useEffect(() => {
+    const onLimit = (e) => setLimitInfo(e.detail);
+    window.addEventListener('plan-limit', onLimit);
+    return () => window.removeEventListener('plan-limit', onLimit);
+  }, []);
 
   useEffect(() => {
     const refresh = () => {
@@ -216,6 +242,13 @@ function Workspace() {
       </ErrorBoundary>
     </Shell>
     <FloatingChat />
+    {limitInfo && (
+      <LimitModal
+        info={limitInfo}
+        onClose={() => setLimitInfo(null)}
+        onUpgrade={() => { setLimitInfo(null); go('billing'); }}
+      />
+    )}
     </>
   );
 }
@@ -271,7 +304,9 @@ export default function App() {
     <AuthProvider>
       <ToastProvider>
         <AuthGate>
-          <Workspace />
+          <OrgSettingsProvider>
+            <Workspace />
+          </OrgSettingsProvider>
         </AuthGate>
       </ToastProvider>
     </AuthProvider>

@@ -28,6 +28,8 @@ const transmissionRoutes = require('./routes/transmission');
 const ehrRoutes = require('./routes/ehr');
 const codingRoutes = require('./routes/coding');
 const onboardingRoutes = require('./routes/onboarding');
+const settingsRoutes = require('./routes/settings');
+const apiV1Routes = require('./routes/apiV1');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -76,13 +78,23 @@ app.use('/api/legal', legalRoutes);
 app.use('/api/transmission', transmissionRoutes);
 app.use('/api/ehr', ehrRoutes);
 app.use('/api/coding', codingRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api', apiV1Routes); // /api/v1/* — developer API keys only
+
+// Org logo uploads (public read — logos are shown in the app header)
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+fs.mkdirSync(uploadsDir, { recursive: true });
+app.use('/uploads', express.static(uploadsDir));
 
 // Email-code MFA routes
 const { registerRoutes: registerMfaRoutes } = require('./mfa');
 const { signToken } = require('./auth');
-registerMfaRoutes(app, (user) => {
-  const org = db.prepare('SELECT name FROM orgs WHERE id = ?').get(user.org_id);
-  const safe = { id: user.id, org_id: user.org_id, email: user.email, name: user.name, role: user.role };
+registerMfaRoutes(app, (user, orgIdOverride) => {
+  // orgIdOverride: org-enforced MFA verification issues the session for the
+  // enforced org, which may differ from the user's home org (org-switch flow).
+  const effOrgId = orgIdOverride || user.org_id;
+  const org = db.prepare('SELECT name FROM orgs WHERE id = ?').get(effOrgId);
+  const safe = { id: user.id, org_id: effOrgId, email: user.email, name: user.name, role: user.role };
   return { token: signToken(safe), user: { ...safe, orgName: org ? org.name : '' } };
 });
 

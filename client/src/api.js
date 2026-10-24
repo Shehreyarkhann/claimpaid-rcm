@@ -1,5 +1,28 @@
 import { authFetch } from './auth';
 
+// 402 limit responses from the plan-quota workstream — surface a friendly
+// upgrade modal instead of a raw error. App.jsx listens for this event.
+const LIMIT_ERRORS = ['claim_limit_reached', 'seat_limit_reached', 'ai_query_limit_reached'];
+export function isLimitError(body) {
+  return body && LIMIT_ERRORS.includes(body.error);
+}
+
+// Fired when the server blocks a request because the workspace requires
+// two-factor authentication the member hasn't completed yet. App.jsx listens
+// for this and shows the org-MFA screen instead of a dead end.
+function dispatchOrgMfa(detail) {
+  window.dispatchEvent(new CustomEvent('claimpaid:org-mfa', { detail }));
+}
+
+function mfaRequiredError(body) {
+  const err = new Error(body.error || 'Two-factor authentication required');
+  err.status = 403;
+  err.mfaRequired = true;
+  err.mfaToken = body.mfaToken || null;
+  err.orgName = body.orgName || null;
+  return err;
+}
+
 async function handle(res) {
   if (res.status === 401) {
     localStorage.removeItem('pulse_token');
@@ -8,7 +31,19 @@ async function handle(res) {
   }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error((body.errors || [body.error || `API error: ${res.status}`]).join('; '));
+    if (res.status === 402 && isLimitError(body)) {
+      window.dispatchEvent(new CustomEvent('plan-limit', { detail: body }));
+    }
+    if (res.status === 403 && body.mfaRequired) {
+      // Org-wide MFA block — NOT a logout: the session stays valid, but this
+      // workspace needs the email-code flow completed first.
+      dispatchOrgMfa({ mfaToken: null, orgName: null });
+      throw mfaRequiredError(body);
+    }
+    const err = new Error((body.errors || [body.error || `API error: ${res.status}`]).join('; '));
+    err.status = res.status;
+    err.limitInfo = body;
+    throw err;
   }
   return res.json();
 }
@@ -83,6 +118,7 @@ export const api = {
   authzDetail: (id) => get(`/api/authz/${id}`),
   authzFindForClaim: (claimId) => get(`/api/authz/find-for-claim/${claimId}`),
   billingStatus: () => get('/api/billing/status'),
+  billingUsage: () => get('/api/billing/usage'),
   billingCheckout: (plan) =>
     authFetch('/api/billing/checkout', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -105,7 +141,25 @@ export const api = {
     authFetch('/api/auth/switch', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ org_id }),
+    }).then(handle).then((r) => {
+      // Switching into an MFA-enforcing workspace: no session token is issued
+      // until the email-code flow completes — surface the org-MFA screen.
+      if (r && r.mfaRequired) {
+        dispatchOrgMfa({ mfaToken: r.mfaToken, orgName: r.orgName });
+        throw mfaRequiredError(r);
+      }
+      return r;
+    }),
+  // Org-wide MFA enforcement (workstream C) — used by Settings → Security tab
+  // and by the org-MFA challenge screen.
+  securitySettings: () => get('/api/settings/security'),
+  updateSecuritySettings: (mfa_required) =>
+    authFetch('/api/settings/security', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mfa_required }),
     }).then(handle),
+  orgMfaChallenge: () =>
+    authFetch('/api/auth/mfa/org-challenge', { method: 'POST' }).then(handle),
   deleteOrg: (org_id) =>
     authFetch(`/api/auth/orgs/${org_id}`, { method: 'DELETE' }).then(handle),
   renameOrg: (name) =>
@@ -114,6 +168,49 @@ export const api = {
       body: JSON.stringify({ name }),
     }).then(handle),
   orgProfile: () => get('/api/org'),
+  // ---- Org settings (tabs) ----
+  settings: {
+    get: () => get('/api/settings'),
+    saveGeneral: (data) =>
+      authFetch('/api/settings/general', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      }).then(handle),
+    seats: () => get('/api/settings/seats'),
+    apiKeys: () => get('/api/settings/api-keys'),
+    createApiKey: (name) =>
+      authFetch('/api/settings/api-keys', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      }).then(handle),
+    revokeApiKey: (id) =>
+      authFetch(`/api/settings/api-keys/${id}`, { method: 'DELETE' }).then(handle),
+    notifications: () => get('/api/settings/notifications'),
+    saveNotifications: (prefs) =>
+      authFetch('/api/settings/notifications', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(prefs),
+      }).then(handle),
+    // MFA enforcement toggle — backend owned by the MFA workstream
+    // (PUT /api/settings/security { mfa_required }); this call targets it exactly.
+    saveSecurity: (mfa_required) =>
+      authFetch('/api/settings/security', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mfa_required }),
+      }).then(handle),
+    uploadLogo: (file) => {
+      const fd = new FormData();
+      fd.append('logo', file);
+      return authFetch('/api/settings/logo', { method: 'POST', body: fd }).then(handle);
+    },
+    deleteLogo: () =>
+      authFetch('/api/settings/logo', { method: 'DELETE' }).then(handle),
+    saveBrand: (brand_color) =>
+      authFetch('/api/settings/brand', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brand_color }),
+      }).then(handle),
+  },
   billingPortal: () =>
     authFetch('/api/billing/portal', { method: 'POST' }).then(handle),
   // ---- Legal / BAA ----
@@ -254,8 +351,21 @@ export const fmtMoneyCompact = (n) => {
 export const fmtMoney2 = (n) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(n || 0);
 
+// Org date-format preference (set at boot from the org profile; defaults to MM/DD/YYYY).
+let orgDateFormat = 'MM/DD/YYYY';
+export const setOrgDateFormat = (f) => {
+  if (['MM/DD/YYYY', 'DD/MM/YYYY', 'YYYY-MM-DD'].includes(f)) orgDateFormat = f;
+};
+
 export const fmtDate = (d) => {
   if (!d) return '—';
-  return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
+  const dt = new Date(d + 'T12:00:00');
+  if (orgDateFormat === 'YYYY-MM-DD') {
+    const p = (n) => String(n).padStart(2, '0');
+    return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`;
+  }
+  if (orgDateFormat === 'DD/MM/YYYY') {
+    return dt.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+  return dt.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
 };

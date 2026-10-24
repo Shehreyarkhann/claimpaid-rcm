@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../auth';
+import { api } from '../api';
 
 function BrandPanel() {
   return (
@@ -116,7 +117,12 @@ function GoogleButton({ onCredential, text }) {
   );
 }
 
-function MfaChallenge({ mfaToken, email, onBack }) {
+// MfaChallenge props:
+//   purpose: undefined | 'enroll' | 'org-enforce' (org-wide enforcement)
+//   enforcedBanner: show the "Your organization requires two-factor
+//     authentication" banner (org-enforced login / switch / mid-session flows)
+//   onVerified: optional callback after a successful verification
+function MfaChallenge({ mfaToken, email, onBack, purpose, enforcedBanner, onVerified }) {
   const { verifyMfa, resendMfa } = useAuth();
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState(null);
@@ -161,7 +167,10 @@ function MfaChallenge({ mfaToken, email, onBack }) {
     const code = digits.join('');
     if (code.length !== 6) return;
     setError(null); setBusy(true);
-    try { await verifyMfa(mfaToken, code); }
+    try {
+      await verifyMfa(mfaToken, code, purpose);
+      if (onVerified) onVerified();
+    }
     catch (err) {
       setError(err.message);
       setDigits(['', '', '', '', '', '']);
@@ -179,7 +188,7 @@ function MfaChallenge({ mfaToken, email, onBack }) {
   const resend = async () => {
     setError(null); setResent(false);
     try {
-      await resendMfa(mfaToken);
+      await resendMfa(mfaToken, purpose);
       setResent(true);
       setCooldown(60);
       setDigits(['', '', '', '', '', '']);
@@ -192,6 +201,14 @@ function MfaChallenge({ mfaToken, email, onBack }) {
       <BrandPanel />
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-sm space-y-5">
+          {enforcedBanner && (
+            <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-center">
+              <div className="text-sm font-bold text-amber-900">Your organization requires two-factor authentication</div>
+              <p className="text-xs text-amber-800 mt-1">
+                Complete this one-time verification to continue. This also turns on two-factor for your account.
+              </p>
+            </div>
+          )}
           <div className="text-center">
             <div className="w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center text-2xl mx-auto mb-4">🔐</div>
             <h2 className="text-2xl font-bold tracking-tight text-slate-900">Check your email</h2>
@@ -238,20 +255,85 @@ function MfaChallenge({ mfaToken, email, onBack }) {
   );
 }
 
+// Shown when a signed-in member hits the org-wide MFA block — either because
+// an API call returned 403 mfaRequired (flag flipped mid-session), or because
+// an org-switch returned an mfa step (initialToken provided, code already sent).
+// Never a dead end: complete the email-code flow, or sign out to use another
+// workspace. Verifying enrolls the user (mfa_enabled = 1) and issues a full
+// session for the enforced org, then the app reloads into the normal flow.
+export function OrgMfaRequiredScreen({ initialToken, orgName }) {
+  const { user, logout } = useAuth();
+  const [mfaToken, setMfaToken] = useState(initialToken || null);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => { setMfaToken(initialToken || null); }, [initialToken]);
+
+  const sendCode = async () => {
+    setSending(true); setError(null);
+    try {
+      const r = await api.orgMfaChallenge();
+      setMfaToken(r.mfaToken);
+    } catch (e) { setError(e.message); }
+    finally { setSending(false); }
+  };
+
+  if (mfaToken) {
+    return (
+      <MfaChallenge
+        mfaToken={mfaToken}
+        email={user?.email}
+        purpose="org-enforce"
+        enforcedBanner
+        onBack={() => { setMfaToken(null); setError(null); }}
+        onVerified={() => window.location.reload()}
+      />
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex bg-white">
+      <BrandPanel />
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div className="w-full max-w-sm space-y-5 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center text-2xl mx-auto">🛡️</div>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+            Your organization requires two-factor authentication
+          </h2>
+          <p className="text-sm text-slate-500 leading-relaxed">
+            {orgName ? <><strong className="text-slate-700">{orgName}</strong> requires every member to verify with a one-time email code. </> : null}
+            This is a one-time setup — after you verify, two-factor stays on for your account and you won't see this again.
+          </p>
+          {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}
+          <button onClick={sendCode} disabled={sending} className="btn btn-primary w-full !py-3 disabled:opacity-50">
+            {sending ? 'Sending…' : 'Send verification code'}
+          </button>
+          <p className="text-xs text-slate-400">
+            The code goes to <strong className="text-slate-600">{user?.email}</strong>. No access to that inbox? Ask your workspace owner to update your email address.
+          </p>
+          <button onClick={logout} className="text-sm text-slate-400 hover:text-slate-600">
+            Sign out
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Login({ goSignup, goForgot }) {
   const { login, googleLogin } = useAuth();
   const [email, setEmail] = useState('demo@pulsercm.com');
   const [password, setPassword] = useState('demo1234');
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [mfaToken, setMfaToken] = useState(null);
+  const [mfa, setMfa] = useState(null); // { token, orgEnforced }
 
   const submit = async (e) => {
     e.preventDefault();
     setError(null); setBusy(true);
     try {
       const result = await login(email, password);
-      if (result?.mfaRequired) setMfaToken(result.mfaToken);
+      if (result?.mfaRequired) setMfa({ token: result.mfaToken, orgEnforced: result.orgEnforced });
     }
     catch (err) { setError(err.message); }
     finally { setBusy(false); }
@@ -261,14 +343,22 @@ export function Login({ goSignup, goForgot }) {
     setError(null); setBusy(true);
     try {
       const result = await googleLogin(idToken);
-      if (result?.mfaRequired) setMfaToken(result.mfaToken);
+      if (result?.mfaRequired) setMfa({ token: result.mfaToken, orgEnforced: result.orgEnforced });
     }
     catch (err) { setError(err.message); }
     finally { setBusy(false); }
   };
 
-  if (mfaToken) {
-    return <MfaChallenge mfaToken={mfaToken} email={email} onBack={() => setMfaToken(null)} />;
+  if (mfa) {
+    return (
+      <MfaChallenge
+        mfaToken={mfa.token}
+        email={email}
+        onBack={() => setMfa(null)}
+        purpose={mfa.orgEnforced ? 'org-enforce' : undefined}
+        enforcedBanner={mfa.orgEnforced}
+      />
+    );
   }
 
   return (

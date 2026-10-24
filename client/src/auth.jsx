@@ -28,17 +28,20 @@ export function AuthProvider({ children }) {
     if (!res.ok) throw new Error(data.error || 'Login failed');
     if (data.mfaRequired) {
       // Password was correct — second factor needed. Do NOT store a session yet.
-      return { mfaRequired: true, mfaToken: data.mfaToken };
+      // orgEnforced: the workspace requires it (not just the user's own opt-in).
+      return { mfaRequired: true, mfaToken: data.mfaToken, orgEnforced: !!data.orgEnforced, message: data.message };
     }
     localStorage.setItem('pulse_token', data.token);
     setUser(data.user);
     return data.user;
   };
 
-  const verifyMfa = async (mfaToken, code) => {
+  // purpose: undefined | 'enroll' | 'org-enforce' (org-wide MFA enforcement —
+  // verifying enrolls the user and issues a session for the enforced org).
+  const verifyMfa = async (mfaToken, code, purpose) => {
     const res = await fetch('/api/auth/mfa/verify', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mfaToken, code }),
+      body: JSON.stringify({ mfaToken, code, purpose }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Verification failed');
@@ -47,10 +50,10 @@ export function AuthProvider({ children }) {
     return data.user;
   };
 
-  const resendMfa = async (mfaToken) => {
+  const resendMfa = async (mfaToken, purpose) => {
     const res = await fetch('/api/auth/mfa/resend', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mfaToken }),
+      body: JSON.stringify({ mfaToken, purpose }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Could not resend code');
@@ -78,7 +81,7 @@ export function AuthProvider({ children }) {
     if (!res.ok) throw new Error(data.error || 'Google sign-in failed');
     if (data.mfaRequired) {
       // Google verified the email, but the account requires a second factor
-      return { mfaRequired: true, mfaToken: data.mfaToken };
+      return { mfaRequired: true, mfaToken: data.mfaToken, orgEnforced: !!data.orgEnforced, message: data.message };
     }
     localStorage.setItem('pulse_token', data.token);
     setUser(data.user);
