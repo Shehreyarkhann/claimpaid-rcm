@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../auth';
 import { api, fmtMoney2 } from '../api';
 import { Modal, EmptyState, PageHeader, Skeleton, useToast } from '../components/ui';
+import { CANNED_REPLIES } from '../cannedReplies';
 
 const PLAN_LABEL = { starter: 'Starter', pro: 'Pro + AI', ai: 'AI Only', enterprise: 'Enterprise', trial: 'Trial' };
 const PLAN_BADGE = { starter: 'badge-blue', pro: 'badge-violet', ai: 'badge-amber', enterprise: 'badge-green', trial: 'badge-blue' };
@@ -866,7 +867,19 @@ function TicketDrawer({ ticketId, onClose, onChanged }) {
                 ))}
               </div>
 
-              <label className="label !text-slate-400">Reply to customer</label>
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <label className="label !text-slate-400 !mb-0">Reply to customer</label>
+                <select value="" onChange={(e) => {
+                  const c = CANNED_REPLIES.find((x) => x.id === e.target.value);
+                  if (c) setReply((prev) => (prev ? prev + '\n\n' + c.body : c.body));
+                  e.target.value = '';
+                }}
+                  className="input !bg-slate-800 !border-slate-700 !text-white !text-xs !py-1.5 !w-auto ml-auto"
+                  aria-label="Insert canned reply">
+                  <option value="">Canned replies…</option>
+                  {CANNED_REPLIES.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
+                </select>
+              </div>
               <textarea value={reply} onChange={(e) => setReply(e.target.value)} rows={3}
                 className="input !bg-slate-800 !border-slate-700 !text-white mb-3" placeholder="Write a reply… (sending moves the ticket to pending)" />
               <button onClick={sendReply} disabled={busy || !reply.trim()} className="btn btn-primary !text-sm mb-6">
@@ -920,6 +933,10 @@ function SupportTab() {
   return (
     <div>
       {openId && <TicketDrawer ticketId={openId} onClose={() => setOpenId(null)} onChanged={load} />}
+      <div className="text-xs text-slate-500 mb-3">
+        Our promise: reply within <span className="text-slate-300 font-semibold">one business day</span>.
+        Tickets past their SLA show as <span className="text-rose-300 font-semibold">OVERDUE</span>.
+      </div>
       <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl overflow-hidden">
         <table className="w-full tbl !text-slate-300">
           <thead><tr className="!text-slate-500"><th></th><th>Subject</th><th>From</th><th>Workspace</th><th>SLA</th><th>Replies</th><th>Received</th></tr></thead>

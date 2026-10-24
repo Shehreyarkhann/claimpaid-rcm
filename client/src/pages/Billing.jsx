@@ -349,7 +349,7 @@ export default function Billing({ onBaaRequired }) {
               </ul>
               <div className="mt-5">
                 <button className="btn btn-ghost w-full"
-                  onClick={() => { window.location.href = 'mailto:hello@claimpaid.io?subject=ClaimPaid Enterprise'; }}>
+                  onClick={() => { window.location.href = 'mailto:support@claimpaid.io?subject=ClaimPaid Enterprise'; }}>
                   Talk to us
                 </button>
               </div>

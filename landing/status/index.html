@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>System Status — ClaimPaid</title>
+<meta name="description" content="Live status of ClaimPaid services."/>
+<link rel="icon" href="/claimpaid-icon.webp"/>
+<style>
+:root{--navy:#0b1220;--navy2:#0f172a;--panel:#111c33;--green:#10b981;--green-lt:#34d399;--amber:#f59e0b;--rose:#f43f5e;--txt:#e8eefc;--mut:#93a0bd;--line:rgba(255,255,255,.08)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--navy);color:var(--txt);font-family:Inter,system-ui,sans-serif;min-height:100vh}
+.wrap{max-width:760px;margin:0 auto;padding:0 24px}
+header{padding:28px 0;border-bottom:1px solid var(--line)}
+header .row{display:flex;align-items:center;gap:12px}
+header img{width:32px;height:32px}
+header h1{font-size:20px;font-weight:800}
+header h1 span{color:var(--green-lt)}
+.banner{margin:32px 0 8px;padding:20px 24px;border-radius:16px;border:1px solid var(--line);background:var(--panel);display:flex;align-items:center;gap:14px}
+.banner .dot{width:14px;height:14px;border-radius:50%;flex-shrink:0}
+.dot.ok{background:var(--green);box-shadow:0 0 12px var(--green)}
+.dot.degraded{background:var(--amber);box-shadow:0 0 12px var(--amber)}
+.dot.down{background:var(--rose);box-shadow:0 0 12px var(--rose)}
+.dot.checking{background:var(--mut)}
+.banner .t{font-size:18px;font-weight:700}
+.banner .s{font-size:13px;color:var(--mut);margin-top:2px}
+.cards{display:grid;gap:12px;margin:20px 0 8px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 20px;display:flex;align-items:center;gap:14px}
+.card .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.card .name{font-weight:700;font-size:15px}
+.card .meta{font-size:12px;color:var(--mut);margin-top:2px}
+.card .lat{margin-left:auto;font-size:12px;color:var(--mut);white-space:nowrap}
+h2{font-size:16px;font-weight:700;margin:36px 0 12px}
+.incident{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 20px;margin-bottom:10px}
+.incident .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.incident .date{font-size:12px;color:var(--mut)}
+.incident .st{font-size:11px;font-weight:700;padding:2px 10px;border-radius:999px;text-transform:uppercase;letter-spacing:.5px}
+.st.resolved{background:rgba(16,185,129,.15);color:var(--green-lt);border:1px solid rgba(16,185,129,.3)}
+.st.monitoring{background:rgba(245,158,11,.15);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.st.investigating,.st.identified{background:rgba(244,63,94,.15);color:#fda4af;border:1px solid rgba(244,63,94,.3)}
+.incident .title{font-weight:700;font-size:14px;margin-top:6px}
+.incident .det{font-size:13px;color:var(--mut);margin-top:4px}
+footer{border-top:1px solid var(--line);margin-top:48px;padding:24px 0 40px;font-size:13px;color:var(--mut)}
+footer a{color:var(--green-lt);text-decoration:none}
+.refresh{font-size:12px;color:var(--mut);margin-top:16px}
+.refresh button{background:none;border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px}
+.refresh button:hover{border-color:var(--green)}
+</style>
+</head>
+<body>
+<header><div class="wrap"><div class="row">
+<img src="/claimpaid-icon.webp" alt="ClaimPaid"/>
+<h1>ClaimPaid <span>status</span></h1>
+</div></div></header>
+<div class="wrap">
+<div class="banner" id="banner"><span class="dot checking" id="bannerDot"></span>
+<div><div class="t" id="bannerTitle">Checking systems…</div><div class="s" id="bannerSub">Probing each service now.</div></div>
+</div>
+<div class="cards" id="cards"></div>
+<div class="refresh"><span id="lastChecked"></span> · <button onclick="runChecks()">Refresh now</button> · auto-refreshes every 60 seconds</div>
+<h2>Incident history</h2>
+<div id="incidents"><p style="color:var(--mut);font-size:13px">Loading…</p></div>
+</div>
+<footer><div class="wrap">© 2026 ClaimPaid · <a href="/">claimpaid.io</a> · <a href="mailto:support@claimpaid.io">support@claimpaid.io</a></div></footer>
+<script>
+const COMPONENTS = [
+  { id: 'rcm', name: 'ClaimPaid RCM app', url: '/api/health', ok: (b) => b && b.status === 'ok' },
+  { id: 'ai', name: 'ClaimPaid AI', url: '/ai/api/health', ok: (b) => b && b.status === 'ok' },
+  { id: 'web', name: 'Website', url: null, ok: null }, // this page loaded = website works
+];
+const LABEL = { ok: 'Operational', degraded: 'Degraded', down: 'Down', checking: 'Checking…' };
+
+async function probe(c) {
+  if (!c.url) return { state: 'ok', ms: null, note: "you're reading it" };
+  const t0 = performance.now();
+  try {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 8000);
+    const r = await fetch(c.url, { cache: 'no-store', signal: ctl.signal });
+    clearTimeout(timer);
+    const ms = Math.round(performance.now() - t0);
+    if (!r.ok) return { state: 'down', ms, note: 'HTTP ' + r.status };
+    let body = null;
+    try { body = await r.json(); } catch (e) {}
+    return c.ok(body) ? { state: 'ok', ms } : { state: 'degraded', ms, note: 'unexpected response' };
+  } catch (e) {
+    return { state: 'down', ms: null, note: 'no response' };
+  }
+}
+
+async function runChecks() {
+  const cards = document.getElementById('cards');
+  cards.innerHTML = COMPONENTS.map((c) =>
+    `<div class="card" id="card-${c.id}"><span class="dot checking"></span><div><div class="name">${c.name}</div><div class="meta">Checking…</div></div><span class="lat"></span></div>`
+  ).join('');
+  const results = await Promise.all(COMPONENTS.map(async (c) => ({ c, r: await probe(c) })));
+  let worst = 'ok';
+  for (const { c, r } of results) {
+    if (r.state === 'down') worst = 'down';
+    else if (r.state === 'degraded' && worst === 'ok') worst = 'degraded';
+    const el = document.getElementById('card-' + c.id);
+    el.querySelector('.dot').className = 'dot ' + r.state;
+    el.querySelector('.meta').textContent = LABEL[r.state] + (r.note ? ' — ' + r.note : '');
+    el.querySelector('.lat').textContent = r.ms === null ? '' : r.ms + ' ms';
+  }
+  const b = { dot: document.getElementById('bannerDot'), title: document.getElementById('bannerTitle'), sub: document.getElementById('bannerSub') };
+  b.dot.className = 'dot ' + worst;
+  b.title.textContent = worst === 'ok' ? 'All systems operational' : worst === 'degraded' ? 'Some systems degraded' : 'Some systems down';
+  b.sub.textContent = worst === 'ok' ? 'Everything is running normally.' : 'We are aware and working on it. Email support@claimpaid.io if you need help.';
+  document.getElementById('lastChecked').textContent = 'Last checked ' + new Date().toLocaleTimeString();
+}
+
+async function loadIncidents() {
+  const box = document.getElementById('incidents');
+  try {
+    const r = await fetch('incidents.json', { cache: 'no-store' });
+    const data = await r.json();
+    const items = (data.incidents || []).slice().reverse();
+    if (!items.length) { box.innerHTML = '<p style="color:var(--mut);font-size:13px">No incidents recorded.</p>'; return; }
+    box.innerHTML = items.map((i) =>
+      `<div class="incident"><div class="top"><span class="date">${i.date}</span><span class="st ${i.status}">${i.status}</span></div><div class="title">${i.title}</div>${i.details ? `<div class="det">${i.details}</div>` : ''}</div>`
+    ).join('');
+  } catch (e) {
+    box.innerHTML = '<p style="color:var(--mut);font-size:13px">Incident log unavailable.</p>';
+  }
+}
+
+runChecks();
+loadIncidents();
+setInterval(runChecks, 60000);
+</script>
+</body>
+</html>
