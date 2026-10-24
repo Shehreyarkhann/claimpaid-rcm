@@ -17,7 +17,7 @@ export default function FloatingChat() {
   return (
     <>
       {open && (
-        <div className="fixed bottom-24 right-6 z-50 w-[380px] h-[560px] max-h-[70vh] rounded-2xl overflow-hidden shadow-2xl border border-slate-200 bg-white flex flex-col">
+        <div className="fixed bottom-[168px] lg:bottom-24 right-4 lg:right-6 z-50 w-[calc(100vw-2rem)] sm:w-[380px] h-[560px] max-h-[70vh] rounded-2xl overflow-hidden shadow-2xl border border-slate-200 bg-white flex flex-col">
           <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-violet-600 to-violet-700 text-white">
             <div className="flex items-center gap-2">
               <span className="text-xl">🤖</span>
@@ -38,7 +38,7 @@ export default function FloatingChat() {
       <button
         onClick={() => setOpen(!open)}
         aria-label="Chat with ClaimPaid AI"
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-xl flex items-center justify-center text-2xl transition-transform hover:scale-110 active:scale-95"
+        className="fixed bottom-[92px] lg:bottom-6 right-4 lg:right-6 z-50 w-14 h-14 rounded-full shadow-xl flex items-center justify-center text-2xl transition-transform hover:scale-110 active:scale-95"
         style={{ background: 'linear-gradient(135deg,#8b5cf6,#6d28d9)' }}
       >
         {open ? <span className="text-white text-xl">✕</span> : '🤖'}
