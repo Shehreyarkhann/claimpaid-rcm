@@ -24,7 +24,7 @@
 #   - seeds demo orgs (RCM + AI Payer Policy Handbook KB) on fresh DBs
 #   - installs systemd services (auto-restart, start on boot)
 #   - configures nginx reverse proxy (/ -> :4000, /ai/ -> :4001) + Let's Encrypt SSL
-#   - daily SQLite backups (7-day rotation)
+#   - daily age-encrypted SQLite backups (7-day rotation)
 #
 # Idempotent: safe to re-run (it will rebuild + restart everything).
 set -euo pipefail
@@ -397,20 +397,80 @@ certbot --nginx -d "${DOMAIN}" -d "www.${DOMAIN}" --non-interactive --agree-tos 
   echo "   certbot --nginx -d ${DOMAIN} -d www.${DOMAIN} --redirect"
 }
 
-# ---------- daily SQLite backups ----------
-echo "==> Daily DB backups (7-day rotation)"
+# ---------- daily SQLite backups (age-encrypted, 7-day rotation) ----------
+echo "==> Daily DB backups (age-encrypted, 7-day rotation)"
+# age: single static binary, packaged in Ubuntu 24.04
+command -v age >/dev/null 2>&1 || { apt-get update -qq && apt-get install -y -qq age; }
+command -v age-keygen >/dev/null 2>&1 || { apt-get update -qq && apt-get install -y -qq age; }
+
+# Backup encryption key: generated ONCE on this droplet, root-only (0600),
+# never in git, never printed. It protects backup FILES — notably any copy
+# that ever leaves this disk. Honest threat model: docs/BACKUP-ENCRYPTION.md
+BACKUP_KEY_FILE="${BACKUP_KEY_FILE:-/root/.claimpaid-backup.agekey}"
+if [[ ! -s "${BACKUP_KEY_FILE}" ]]; then
+  age-keygen -o "${BACKUP_KEY_FILE}" 2>/dev/null
+  chmod 600 "${BACKUP_KEY_FILE}"
+  echo "  new backup encryption key generated at ${BACKUP_KEY_FILE} (0600 root-only)"
+fi
+PUBKEY_ONCE="$(grep -m1 '^# public key:' "${BACKUP_KEY_FILE}" | awk '{print $4}' || true)"
+[[ -n "${PUBKEY_ONCE}" ]] || { echo "!! backup key unreadable: ${BACKUP_KEY_FILE}" >&2; exit 1; }
+
 mkdir -p /var/backups/claimpaid
 cat > /etc/cron.daily/claimpaid-backup <<EOF
 #!/bin/sh
-# online-safe SQLite backups, keeps 7 days
-sqlite3 '${APP_DIR}/server/rcm.db' ".backup '/var/backups/claimpaid/rcm-\$(date +%F).db'" 2>/dev/null || \
-  cp '${APP_DIR}/server/rcm.db' '/var/backups/claimpaid/rcm-\$(date +%F).db'
-sqlite3 '${AI_DIR}/server/askbase.db' ".backup '/var/backups/claimpaid/ai-\$(date +%F).db'" 2>/dev/null || \
-  cp '${AI_DIR}/server/askbase.db' '/var/backups/claimpaid/ai-\$(date +%F).db'
-find /var/backups/claimpaid -name '*.db' -mtime +7 -delete
+# Online-safe SQLite backups, encrypted with age (X25519), keeps 7 days.
+# Each backup is decrypt-verified before its plaintext is deleted, so only
+# .db.age files remain on disk.
+set -u
+BDIR=/var/backups/claimpaid
+KEYFILE='${BACKUP_KEY_FILE}'
+PUBKEY=\$(grep -m1 '^# public key:' "\$KEYFILE" 2>/dev/null | awk '{print \$4}')
+[ -n "\$PUBKEY" ] || { echo "\$(date -Iseconds) !! backup key unreadable: \$KEYFILE" >&2; exit 1; }
+STAMP=\$(date +%F)
+backup_one() {
+  src="\$1"; name="\$2"
+  tmp="\$BDIR/\$name-\$STAMP.db"
+  enc="\$tmp.age"
+  if command -v sqlite3 >/dev/null 2>&1; then
+    sqlite3 "\$src" ".backup '\$tmp'" 2>/dev/null || cp "\$src" "\$tmp"
+  else
+    cp "\$src" "\$tmp"
+  fi
+  if age -r "\$PUBKEY" -o "\$enc" "\$tmp" && \
+     age --decrypt -i "\$KEYFILE" -o "\$tmp.verify" "\$enc" && \
+     cmp -s "\$tmp" "\$tmp.verify"; then
+    rm -f "\$tmp" "\$tmp.verify"
+    echo "\$(date -Iseconds) backup ok: \$enc"
+  else
+    echo "\$(date -Iseconds) !! backup FAILED for \$src -- plaintext kept at \$tmp, investigate before it rotates" >&2
+    rm -f "\$tmp.verify"
+    exit 1
+  fi
+}
+backup_one '${APP_DIR}/server/rcm.db' rcm
+backup_one '${AI_DIR}/server/askbase.db' ai
+find "\$BDIR" -name '*.db.age' -mtime +7 -delete
 EOF
 chmod +x /etc/cron.daily/claimpaid-backup
+
+# One-time: encrypt any plaintext backups left behind by older deploys
+for f in /var/backups/claimpaid/*.db; do
+  [ -e "$f" ] || continue
+  if age -r "${PUBKEY_ONCE}" -o "${f}.age" "$f" && \
+     age --decrypt -i "${BACKUP_KEY_FILE}" -o "${f}.verify" "${f}.age" && \
+     cmp -s "$f" "${f}.verify"; then
+    rm -f "$f" "${f}.verify"
+    echo "  encrypted legacy backup: $(basename "${f}.age")"
+  else
+    echo "  !! could not encrypt legacy backup $f -- left in place" >&2
+    rm -f "${f}.verify"
+  fi
+done
+
+# Prove it works right now: a failure here aborts the deploy loudly (check the log)
+/etc/cron.daily/claimpaid-backup
 chown -R "${APP_USER}:${APP_USER}" /var/backups/claimpaid
+echo "  backups encrypted: /var/backups/claimpaid (*.db.age, 7-day rotation)"
 
 # ---------- status ----------
 sleep 3
@@ -430,5 +490,5 @@ fi
 echo "  Logs:    journalctl -u claimpaid-rcm -f   |   journalctl -u claimpaid-ai -f"
 echo "  Restart: systemctl restart claimpaid-rcm claimpaid-ai"
 echo "  Update:  re-run this script (git pull + rebuild + restart)"
-echo "  Backups: /var/backups/claimpaid (daily, 7-day rotation)"
+echo "  Backups: /var/backups/claimpaid (daily, age-encrypted, 7-day rotation)"
 echo "================================================================="

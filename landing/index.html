@@ -26,6 +26,7 @@
 {"@type":"Question","name":"How do real-time eligibility checks work?","acceptedAnswer":{"@type":"Answer","text":"ClaimPaid runs real-time 270/271 eligibility transactions against configured payer vendors (demo mode available for evaluation — it never silently falls back to demo data). Eligibility results stop CO-50 non-covered-service denials before claims go out."}},
 {"@type":"Question","name":"Which EHR integrations does ClaimPaid support?","acceptedAnswer":{"@type":"Answer","text":"ClaimPaid connects to athenahealth via OAuth2 to sync patient and claim data. Other EHR integrations are evaluated per organization."}},
 {"@type":"Question","name":"Where does my data go when I use ClaimPaid's AI features?","acceptedAnswer":{"@type":"Answer","text":"ClaimPaid AI runs on private infrastructure — your documents and claim data are not sent to third-party AI APIs. That's the local-first design: your data stays in your environment. We make no HIPAA certification claims — we simply keep your data on infrastructure you can trust and let you sign a BAA."}},
+{"@type":"Question","name":"Is my data encrypted?","acceptedAnswer":{"@type":"Answer","text":"Database backups are encrypted with age (X25519) the moment they are written, and each backup is decrypt-verified before its plaintext is deleted. All traffic uses TLS. Servers run on DigitalOcean droplets — DigitalOcean does not encrypt droplet local disks at rest, so encrypted-volume deployment is available for practices that need provider-level encryption of live data. No HIPAA certification claims are made: no such certification exists."}},
 {"@type":"Question","name":"Does ClaimPaid write appeal letters automatically?","acceptedAnswer":{"@type":"Answer","text":"Yes — it drafts payer-specific appeal letters from denial reason codes using 8 built-in templates plus custom per-organization templates. The AI-assisted coding helper suggests codes from a 370-code library, always with a human in the loop — unverified codes are hard-blocked from submission."}},
 {"@type":"Question","name":"Which payers' timely-filing deadlines does ClaimPaid track?","acceptedAnswer":{"@type":"Answer","text":"Aetna (120 days), Cigna (180), UnitedHealthcare (90), Anthem (180), Medicare (365), NY Medicaid (90), and Humana (180) — with custom payers and deadlines configurable per organization."}},
 {"@type":"Question","name":"Can I use ClaimPaid AI without the RCM platform?","acceptedAnswer":{"@type":"Answer","text":"Yes — ClaimPaid AI standalone is $99/month at claimpaid.io/ai/. Support is handled through a two-way helpdesk with a 24-hour response SLA."}},
@@ -138,6 +139,7 @@ section{padding:110px 0;position:relative}
 .faq details p{padding:0 24px 22px;color:var(--mut);line-height:1.7;font-size:15px}
 h2{font-size:clamp(32px,4.4vw,52px);font-weight:800;letter-spacing:-1.5px;line-height:1.1;margin-bottom:18px}
 .sec-sub{color:var(--mut);font-size:17px;max-width:620px;line-height:1.65;margin-bottom:56px}
+.sec-note{color:var(--mut);font-size:14px;max-width:720px;line-height:1.7;margin-top:28px;padding:18px 22px;border:1px dashed var(--line);border-radius:14px;background:rgba(255,255,255,.015)}
 .reveal{opacity:0;transform:translateY(36px);transition:opacity .8s ease,transform .8s cubic-bezier(.22,1,.36,1)}
 .reveal.in{opacity:1;transform:none}
 /* problem */
@@ -423,6 +425,18 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
   </div>
 </div></section>
 
+<section id="security"><div class="wrap">
+  <div class="sec-tag reveal">SECURITY</div>
+  <h2 class="reveal">Plain-talk security.<br/><span class="grad">No hand-waving.</span></h2>
+  <p class="sec-sub reveal">Exactly what protects your data — and what doesn't. No "military-grade" adjectives, no certifications that don't exist.</p>
+  <div class="bento">
+    <div class="bcard reveal"><span class="ico">🔐</span><h3>Encrypted backups</h3><p>Every database backup is encrypted with age (X25519) the moment it's written — then decrypt-verified before the plaintext is deleted. A stolen backup file is useless without the key.</p></div>
+    <div class="bcard reveal"><span class="ico">🖊️</span><h3>BAA e-signing</h3><p>Sign your Business Associate Agreement electronically inside the app, before your first real claim touches the system.</p></div>
+    <div class="bcard reveal"><span class="ico">🏠</span><h3>Local-first AI</h3><p>ClaimPaid AI runs on our own server. Your notes and claims are never sent to a third-party AI API.</p></div>
+    <div class="bcard reveal"><span class="ico">📋</span><h3>Audit-logged</h3><p>Plan changes, data deletes, MFA resets — sensitive actions are written to a tamper-evident audit log.</p></div>
+  </div>
+  <p class="sec-note reveal">Straight talk: our servers run on DigitalOcean droplets, and DigitalOcean does not encrypt droplet local disks at rest — so we encrypt what moves (backups), enforce TLS everywhere, and keep your data off third-party AI APIs. Need provider-level encryption of live data too? Encrypted-volume deployment is available — <a class="glink" href="mailto:support@claimpaid.io">talk to us</a>.</p>
+</div></section>
 <section id="pricing"><div class="wrap">
   <div class="sec-tag reveal">PRICING</div>
   <div class="reveal"><span class="badge-no1">★ PRO + AI — THE COMPLETE PACKAGE</span></div>
@@ -471,6 +485,7 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
     <details class="reveal"><summary>How do real-time eligibility checks work?</summary><p>ClaimPaid runs real-time 270/271 eligibility transactions against configured payer vendors — with a clearly labeled demo mode for evaluation, never a silent fallback to fake data. Eligibility results stop CO-50 non-covered-service denials before claims go out.</p></details>
     <details class="reveal"><summary>Which EHR integrations does ClaimPaid support?</summary><p>ClaimPaid connects to athenahealth via OAuth2 to sync patient and claim data. Other EHR integrations are evaluated per organization.</p></details>
     <details class="reveal"><summary>Where does my data go when I use ClaimPaid's AI features?</summary><p>ClaimPaid AI runs on private infrastructure — your documents and claim data are not sent to third-party AI APIs. That's the local-first design: your data stays in your environment. We make no HIPAA certification claims — we simply keep your data on infrastructure you can trust and let you sign a BAA.</p></details>
+    <details class="reveal"><summary>Is my data encrypted?</summary><p>Database backups are encrypted with age (X25519) the moment they're written, and each backup is decrypt-verified before its plaintext is deleted. All traffic uses TLS. Our servers run on DigitalOcean droplets — DigitalOcean does not encrypt droplet local disks at rest, so for practices that need provider-level encryption of live data, encrypted-volume deployment is available. We make no HIPAA certification claims: no such certification exists.</p></details>
     <details class="reveal"><summary>Does ClaimPaid write appeal letters automatically?</summary><p>Yes. It drafts payer-specific appeal letters from the denial reason code using 8 built-in templates (timely filing, medical necessity, authorization, coding, eligibility, duplicate, bundling, experimental), plus custom templates per organization. The AI-assisted coding helper suggests codes from a 370-code library with a human always in the loop — unverified codes are hard-blocked from submission.</p></details>
     <details class="reveal"><summary>Which payers' timely-filing deadlines does ClaimPaid track?</summary><p>Seven major payers out of the box: Aetna (120 days), Cigna (180), UnitedHealthcare (90), Anthem (180), Medicare (365), NY Medicaid (90), and Humana (180) — with custom payers and deadlines configurable per organization. Related guides: <a class="glink" href="/blog/timely-filing-limits-by-payer-2026/">timely-filing limits by payer</a>, <a class="glink" href="/blog/aetna-timely-filing-denial-appeal/">appealing an Aetna timely-filing denial</a>, <a class="glink" href="/blog/medicare-timely-filing-deadline/">Medicare's timely-filing deadline</a>.</p></details>
     <details class="reveal"><summary>Can I use ClaimPaid AI without the RCM platform?</summary><p>Yes. ClaimPaid AI is available as a standalone $99/month plan at claimpaid.io/ai/ — upload any documents (policies, contracts, manuals), ask questions in plain language, and get cited answers. RCM Pro customers get it included with one shared login.</p></details>
