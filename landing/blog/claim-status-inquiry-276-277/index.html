@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>276/277 Claim Status Inquiry Explained</title>
+<meta name="description" content="The 276/277 claim status inquiry: how to check claim status electronically, what the 277 response contains, and when to use it instead of the phone."/>
+<link rel="canonical" href="https://claimpaid.io/blog/claim-status-inquiry-276-277/"/>
+<meta name="robots" content="index, follow, max-image-preview:large"/>
+<meta property="og:type" content="article"/>
+<meta property="og:site_name" content="ClaimPaid"/>
+<meta property="og:title" content="276/277 Claim Status Inquiry Explained"/>
+<meta property="og:description" content="276/277 claim status inquiry: check claim status electronically instead of calling the payer."/>
+<meta property="og:url" content="https://claimpaid.io/blog/claim-status-inquiry-276-277/"/>
+<meta property="og:image" content="https://picsum.photos/seed/cp-claim-status-inquiry-276-277-hero/1200/630"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="276/277 Claim Status Inquiry Explained"/>
+<meta name="twitter:description" content="The 276/277 claim status inquiry: how to check claim status electronically, what the 277 response contains, and when to use it instead of the phone."/>
+<meta name="twitter:image" content="https://picsum.photos/seed/cp-claim-status-inquiry-276-277-hero/1200/630"/>
+<link rel="icon" type="image/webp" href="/claimpaid-icon.webp"/>
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "Article", "headline": "276/277 Claim Status Inquiry Explained", "datePublished": "2026-10-24", "dateModified": "2026-10-24", "author": {"@type": "Organization", "name": "ClaimPaid", "url": "https://claimpaid.io/"}, "publisher": {"@type": "Organization", "name": "ClaimPaid", "url": "https://claimpaid.io/", "logo": {"@type": "ImageObject", "url": "https://claimpaid.io/claimpaid-icon.webp"}}, "mainEntityOfPage": {"@type": "WebPage", "@id": "https://claimpaid.io/blog/claim-status-inquiry-276-277/"}, "image": "https://picsum.photos/seed/cp-claim-status-inquiry-276-277-hero/1200/630", "description": "The 276/277 claim status inquiry: how to check claim status electronically, what the 277 response contains, and when to use it instead of the phone."}
+</script>
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "What is a 276 transaction?", "acceptedAnswer": {"@type": "Answer", "text": "The 276 (Health Care Claim Status Request) is the HIPAA-standard electronic request asking a payer for a claim's current status. You send it with the claim's identifiers \u2014 member ID, dates of service, billed amount, and claim number if known."}}, {"@type": "Question", "name": "What is a 277 transaction?", "acceptedAnswer": {"@type": "Answer", "text": "The 277 (Health Care Claim Status Notification) is the payer's response to a 276, reporting the claim's status with standardized status category and status codes \u2014 received, pending/in process, or finalized with the adjudication outcome."}}, {"@type": "Question", "name": "Can 276/277 replace calling the payer?", "acceptedAnswer": {"@type": "Answer", "text": "For routine status checks, yes \u2014 that's what it's for. Keep phone calls for exceptions: stale or contradictory statuses, reprocessing requests, timely-filing disputes, and payers whose 277 data lags their internal systems."}}, {"@type": "Question", "name": "How often should I run 276 status checks?", "acceptedAnswer": {"@type": "Answer", "text": "A common cadence: check claims with no acknowledgment after 7 days, no remittance after 30 days, and re-check pending claims every 14 days. Match 277 responses back to your work queues automatically."}}, {"@type": "Question", "name": "Do all payers support 276/277?", "acceptedAnswer": {"@type": "Answer", "text": "No \u2014 support varies by payer and line of business. Confirm 276/277 support during payer enrollment before building follow-up workflows around it."}}]}
+</script>
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Home", "item": "https://claimpaid.io/"}, {"@type": "ListItem", "position": 2, "name": "Blog", "item": "https://claimpaid.io/blog/"}, {"@type": "ListItem", "position": 3, "name": "276/277 Claim Status Inquiry Explained", "item": "https://claimpaid.io/blog/claim-status-inquiry-276-277/"}]}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+
+:root{--navy:#0b1220;--navy2:#0f172a;--panel:#111c33;--green:#10b981;--green-lt:#34d399;--violet:#8b5cf6;--violet-lt:#a78bfa;--txt:#e8eefc;--mut:#93a0bd;--line:rgba(255,255,255,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--navy);color:var(--txt);font-family:'Inter',system-ui,sans-serif;line-height:1.75}
+h1,h2,h3{font-family:'Sora',sans-serif;line-height:1.3}
+.wrap{max-width:780px;margin:0 auto;padding:0 24px}
+.grad{background:linear-gradient(92deg,var(--green-lt),var(--violet-lt));-webkit-background-clip:text;background-clip:text;color:transparent}
+nav{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(14px);background:rgba(11,18,32,.85);border-bottom:1px solid var(--line)}
+.nav-in{max-width:1100px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:68px}
+.logo{display:flex;align-items:center;gap:10px;font-family:'Sora';font-weight:800;font-size:21px;letter-spacing:-.4px;text-decoration:none;color:var(--txt)}
+.logo img{width:34px;height:34px;border-radius:9px;box-shadow:0 0 18px rgba(16,185,129,.45)}
+.logo span{color:var(--green-lt)}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{color:var(--mut);text-decoration:none;font-size:14.5px;font-weight:500}
+.nav-links a:hover{color:#fff}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:15px;border-radius:12px;padding:13px 26px;text-decoration:none;border:none;transition:transform .25s,box-shadow .25s;cursor:pointer}
+.btn-green{background:linear-gradient(135deg,#10b981,#059669);color:#04120c;box-shadow:0 8px 28px rgba(16,185,129,.35)}
+.btn-green:hover{transform:translateY(-3px);box-shadow:0 14px 40px rgba(16,185,129,.5)}
+.btn-sm{padding:10px 20px;font-size:14px}
+article{padding:140px 0 60px}
+.crumb{font-size:13px;color:var(--mut);margin-bottom:18px}
+.crumb a{color:var(--green-lt);text-decoration:none}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--green-lt);background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);padding:5px 12px;border-radius:100px;margin-bottom:18px}
+article h1{font-size:clamp(30px,4.5vw,46px);font-weight:800;letter-spacing:-1.2px;margin-bottom:14px}
+.byline{color:var(--mut);font-size:14px;margin-bottom:34px}
+.answer{background:linear-gradient(160deg,rgba(16,185,129,.1),rgba(16,185,129,.03));border:1px solid rgba(16,185,129,.4);border-left:4px solid var(--green);border-radius:14px;padding:22px 26px;margin-bottom:38px}
+.answer .lbl{font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--green-lt);margin-bottom:10px}
+.answer p{font-size:16px;margin:0}
+.prose h2{font-size:26px;font-weight:700;letter-spacing:-.5px;margin:44px 0 16px}
+.prose h3{font-size:19px;font-weight:700;margin:30px 0 12px;color:#fff}
+.prose p{margin:0 0 18px;color:#c9d2e8}
+.prose ul,.prose ol{margin:0 0 20px 22px;color:#c9d2e8}
+.prose li{margin-bottom:10px}
+.prose strong{color:#fff}
+.prose a{color:var(--green-lt);text-decoration:underline;text-underline-offset:3px}
+table{width:100%;border-collapse:collapse;margin:24px 0;font-size:14.5px}
+th{background:rgba(16,185,129,.1);color:#fff;text-align:left;padding:12px 14px;font-family:'Sora';font-size:13.5px}
+td{padding:12px 14px;border-top:1px solid var(--line);color:#c9d2e8;vertical-align:top}
+tr:hover td{background:rgba(255,255,255,.02)}
+.faq{margin:44px 0}
+.faq-item{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 24px;margin-bottom:14px}
+.faq-item h3{font-size:16.5px;margin:0 0 8px;color:#fff}
+.faq-item p{margin:0;font-size:14.5px;color:#c9d2e8}
+.cta{background:linear-gradient(140deg,rgba(16,185,129,.14),rgba(139,92,246,.1));border:1px solid rgba(16,185,129,.4);border-radius:20px;padding:40px;text-align:center;margin:50px 0}
+.cta h2{font-size:26px;margin-bottom:12px}
+.cta p{color:var(--mut);margin-bottom:24px;max-width:520px;margin-left:auto;margin-right:auto}
+footer{border-top:1px solid var(--line);padding:40px 0;color:var(--mut);font-size:13.5px}
+.foot{max-width:1100px;margin:0 auto;padding:0 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px}
+.foot a{color:var(--mut);text-decoration:none}
+.foot a:hover{color:var(--green-lt)}
+.foot-links{display:flex;gap:22px}
+.note{font-size:13.5px;color:var(--mut);background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.3);border-radius:12px;padding:16px 20px;margin:26px 0}
+@media(max-width:640px){.nav-links a:not(.btn){display:none}table{font-size:13px}}
+
+
+.hero-img{width:100%;height:auto;aspect-ratio:1200/630;object-fit:cover;border-radius:18px;margin:8px 0 34px;border:1px solid var(--line);background:var(--panel)}
+.mid-img{width:100%;height:auto;aspect-ratio:1200/630;object-fit:cover;border-radius:16px;margin:30px 0 8px;border:1px solid var(--line);background:var(--panel)}
+.img-cap{font-size:13px;color:var(--mut);text-align:center;margin:0 0 28px}
+.statbox{background:linear-gradient(140deg,rgba(16,185,129,.14),rgba(139,92,246,.1));border:1px solid rgba(16,185,129,.4);border-radius:16px;padding:28px 30px;margin:34px 0;text-align:center}
+.statbox .num{font-family:'Sora',sans-serif;font-size:46px;font-weight:800;letter-spacing:-1px;background:linear-gradient(92deg,var(--green-lt),var(--violet-lt));-webkit-background-clip:text;background-clip:text;color:transparent}
+.statbox .cap{font-size:14px;color:var(--mut);margin-top:8px;max-width:560px;margin-left:auto;margin-right:auto}
+.pullquote{border-left:4px solid var(--violet);padding:8px 0 8px 26px;margin:34px 0;font-size:19px;font-style:italic;color:#fff;line-height:1.6}
+.flow{display:flex;align-items:stretch;margin:32px 0;flex-wrap:wrap}
+.flow .step{flex:1;min-width:150px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center;font-size:14px;color:#c9d2e8}
+.flow .step .n{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:var(--green-lt);font-weight:700;font-size:13px;margin-bottom:10px}
+.flow .arr{align-self:center;color:var(--green-lt);font-size:22px;padding:0 6px}
+@media(max-width:640px){.flow .arr{display:none}.flow .step{min-width:100%;margin-bottom:8px}}
+
+
+.related{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 26px;margin:36px 0}
+.related h3{font-size:15px;margin:0 0 10px;color:#fff}
+.related ul{margin:0 0 0 20px;color:#c9d2e8}
+.related li{margin-bottom:8px;font-size:14.5px}
+.related a{color:var(--green-lt);text-decoration:underline;text-underline-offset:3px}
+
+</style>
+</head>
+<body>
+<nav><div class="nav-in">
+  <a class="logo" href="/"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo"/>Claim<span>Paid</span></a>
+  <div class="nav-links"><a href="/">Product</a><a href="/blog/">Blog</a><a class="btn btn-green btn-sm" href="/app/">Get started</a></div>
+</div></nav>
+
+<article><div class="wrap">
+<div class="crumb"><a href="/">Home</a> / <a href="/blog/">Blog</a> / 276/277 Claim Status Inquiry Explained</div>
+<span class="tag">EDI</span>
+<h1>276/277 Claim Status Inquiry Explained</h1>
+<div class="byline">ClaimPaid · October 24, 2026 · 6 min read</div>
+<img class="hero-img" src="https://picsum.photos/seed/cp-claim-status-inquiry-276-277-hero/1200/630" alt="Illustration for the 276/277 claim status inquiry guide" loading="lazy" width="1200" height="630"/>
+
+<div class="answer">
+<div class="lbl">The short answer</div>
+<p>The <strong>276</strong> is the electronic claim status request; the <strong>277</strong> is the payer's response. Send a 276 with the claim's identifiers (member ID, dates of service, billed amount, claim number if you have one) and the 277 returns the claim's current status — received, pending, finalized — without a phone call. Use 276/277 batches for routine follow-up and reserve phone calls for stuck claims that need a human.</p>
+</div>
+
+<div class="prose">
+
+
+<p>Claim follow-up is where billing teams lose their afternoons: one payer portal per payer, hold music per payer, a different rep with a different answer per call. The 276/277 transaction pair exists to replace most of that with a single electronic round-trip. If your clearinghouse supports it — most do — it's the highest-leverage EDI transaction most teams underuse.</p>
+
+<h2>What the 276 and 277 actually are</h2>
+<p>The pair is part of the same HIPAA X12 family as the <a href="/blog/837p-vs-835-explained/">837, 835, 999, and 277CA</a>:</p>
+<ul>
+<li><strong>276 — Health Care Claim Status Request.</strong> You send it. It identifies the claim (member ID, dates of service, billed amount, claim control number if known) and asks: where is this claim?</li>
+<li><strong>277 — Health Care Claim Status Notification.</strong> The payer sends it back. It reports the claim's status using standardized status category and status codes — received, pending/in process, finalized, and the adjudication outcome.</li>
+</ul>
+<p>There's also the <strong>unsolicited 277 (277U)</strong>, which some payers push proactively when a claim's status changes — but the workhorse is the solicited 276/277 request-response pair.</p>
+
+<div class="flow"><div class="step"><div class="n">1</div><br/>Build a 276 batch for claims with no response past your follow-up window</div><div class="arr">→</div><div class="step"><div class="n">2</div><br/>Send through your clearinghouse</div><div class="arr">→</div><div class="step"><div class="n">3</div><br/>Read the 277: received, pending, or finalized</div><div class="arr">→</div><div class="step"><div class="n">4</div><br/>Route: finalized → work the outcome; pending → diary; stuck → call</div></div>
+
+<h2>What's in a 277 response</h2>
+<p>The 277 returns the claim's status in standardized codes: a <strong>status category</strong> (the broad bucket — acknowledged/received, pending, finalized) and <strong>status codes</strong> with more specific detail. What you're really asking is one of three questions:</p>
+<ul>
+<li><strong>Did you get it?</strong> If the payer has no record of the claim, stop and check your <a href="/blog/837p-vs-835-explained/">277CA acknowledgments</a> and clearinghouse reports — the claim may never have arrived.</li>
+<li><strong>Is it moving?</strong> "Pending" with a recent status date is fine; "pending" unchanged for 45 days is a stuck claim.</li>
+<li><strong>Is it done?</strong> Finalized means there's an adjudication decision — go read the <a href="/blog/how-to-read-835-remittance-advice/">835</a> instead of asking the rep to read it to you.</li>
+</ul>
+
+<h2>When the phone still wins</h2>
+<p>The 276/277 doesn't replace every call. Pick up the phone when the 277 status is stale or contradictory, when you need a supervisor-level decision (reprocessing requests, timely-filing disputes), or when the payer's 277 responses are unreliable — some payers' status data lags their internal systems by days. The right division of labor: <strong>276/277 for routine status, phone for exceptions</strong>.</p>
+
+<img class="mid-img" src="https://picsum.photos/seed/cp-claim-status-inquiry-276-277-mid/1200/630" alt="Illustration of a claim status request and response flowing between provider and payer" loading="lazy" width="1200" height="630"/><div class="img-cap">One 276 can replace a phone call — a batch of them replaces a whole afternoon of them.</div>
+
+<h2>Making 276/277 part of the workflow</h2>
+<ul>
+<li><strong>Batch by age.</strong> Run 276 requests on a schedule: claims with no 277CA after 7 days, no 835 after 30 days, pending claims re-checked every 14 days.</li>
+<li><strong>Match the 277 to your worklist.</strong> Status responses should update claim work queues automatically — a "finalized" status with no matching 835 is itself a follow-up trigger.</li>
+<li><strong>Track payer responsiveness.</strong> If one payer's 277s are consistently stale, that's data for your <a href="/blog/denial-management-kpis/">payer performance tracking</a> — and for deciding which claims genuinely need calls.</li>
+<li><strong>Confirm 276/277 support during enrollment.</strong> Not every payer supports the transaction for every line of business; verify before building the workflow around it.</li>
+</ul>
+
+
+<div class="related"><h3>Related reading</h3><ul><li><a href="/blog/837p-vs-835-explained/">837P vs 835 Explained: What Each EDI File Does</a></li><li><a href="/blog/how-to-appeal-denied-claim/">How to Appeal a Denied Medical Claim: Step-by-Step</a></li><li><a href="/blog/eligibility-verification-checklist/">Patient Eligibility Verification Checklist</a></li></ul></div>
+
+<div class="faq"><h2>Frequently asked questions</h2><div class="faq-item"><h3>What is a 276 transaction?</h3><p>The 276 (Health Care Claim Status Request) is the HIPAA-standard electronic request asking a payer for a claim's current status. You send it with the claim's identifiers — member ID, dates of service, billed amount, and claim number if known.</p></div><div class="faq-item"><h3>What is a 277 transaction?</h3><p>The 277 (Health Care Claim Status Notification) is the payer's response to a 276, reporting the claim's status with standardized status category and status codes — received, pending/in process, or finalized with the adjudication outcome.</p></div><div class="faq-item"><h3>Can 276/277 replace calling the payer?</h3><p>For routine status checks, yes — that's what it's for. Keep phone calls for exceptions: stale or contradictory statuses, reprocessing requests, timely-filing disputes, and payers whose 277 data lags their internal systems.</p></div><div class="faq-item"><h3>How often should I run 276 status checks?</h3><p>A common cadence: check claims with no acknowledgment after 7 days, no remittance after 30 days, and re-check pending claims every 14 days. Match 277 responses back to your work queues automatically.</p></div><div class="faq-item"><h3>Do all payers support 276/277?</h3><p>No — support varies by payer and line of business. Confirm 276/277 support during payer enrollment before building follow-up workflows around it.</p></div></div>
+</div>
+
+<div class="cta">
+<h2>Stop losing revenue to denials</h2>
+<p>ClaimPaid tracks every denied claim through a structured appeal pipeline — deadlines, documentation, payer-specific appeal letters, and follow-up — so nothing slips through the cracks.</p>
+<a class="btn btn-green" href="/#pricing">See plans — from $199/mo →</a>
+</div>
+</div>
+</article>
+<footer><div class="foot">
+  <a class="logo" href="/" style="font-size:17px"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo" style="width:28px;height:28px"/>Claim<span>Paid</span></a>
+  <div class="foot-links"><a href="/blog/">Blog</a><a href="/legal/terms">Terms</a><a href="/legal/privacy">Privacy</a><a href="mailto:support@claimpaid.io">support@claimpaid.io</a></div>
+  <div>© 2026 ClaimPaid · Get your claims paid.</div>
+</div></footer>
+</body>
+</html>

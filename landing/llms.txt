@@ -7,7 +7,7 @@
 - **Denial management**: Track every denied claim through a structured appeal pipeline from denial to paid.
 - **Automated appeal letters**: Generates payer-specific appeal letters from denial reason codes, with 8 built-in templates plus custom per-organization templates.
 - **Timely filing tracker**: Deadline tracking for major US payers (Aetna 120 days, Cigna 180, UnitedHealthcare 90, Anthem 180, Medicare 365, NY Medicaid 90, Humana 180).
-- **Claim scrubber**: 13 pre-billing validation rules catch errors before claims go out.
+- **Claim scrubber**: 15 pre-billing validation rules catch errors before claims go out.
 - **Smart worklists**: Prioritized daily work queues for billers, sorted by dollar impact and deadline urgency.
 - **835 ERA import / 837P export**: Standard healthcare EDI transaction support.
 - **Prior authorization tracking**: Manage auths and link them to appeals.
@@ -58,6 +58,18 @@ In-depth, practical guides for medical billing teams (also at https://claimpaid.
 - **Write-Off vs Adjustment vs Bad Debt: What's the Difference?** — https://claimpaid.io/blog/write-off-vs-adjustment/ — contractual adjustments, write-offs, bad debt — definitions, accounting, compliance guardrails.
 - **How to Fight a Timely Filing Denial** — https://claimpaid.io/blog/fight-timely-filing-denial/ — CO-29 appeals with 277CA proof, exception cases, prevention.
 - **RCM Software Buyer's Guide: What to Look For** — https://claimpaid.io/blog/rcm-software-buyers-guide/ — evaluation criteria — scrubbing, denial workflow, ERA, eligibility, reporting, integration, pricing.
+
+- **How to Appeal an Aetna Timely Filing Denial (CO-29)** — https://claimpaid.io/blog/aetna-timely-filing-denial-appeal/ — Aetna's 120-day rule, appealing through Availity Essentials with 277CA proof, exceptions, prevention.
+- **Medicare Timely Filing Deadline: The One-Calendar-Year Rule** — https://claimpaid.io/blog/medicare-timely-filing-deadline/ — December 31 deadline calculation, narrow exceptions, provider liability on late claims.
+- **How to Read an 835 Remittance Advice** — https://claimpaid.io/blog/how-to-read-835-remittance-advice/ — CAS segments, CARC/RARC codes, PLB adjustments, building denial worklists from ERA data.
+- **276/277 Claim Status Inquiry Explained** — https://claimpaid.io/blog/claim-status-inquiry-276-277/ — electronic claim status requests and responses, when to use instead of calling the payer.
+- **Corrected Claim vs Appeal: When to File Each** — https://claimpaid.io/blog/corrected-claim-vs-appeal/ — frequency codes 7 and 8, CMS-1500 box 22, UB-04 bill types, the timely-filing trap.
+- **Rejected vs Denied Claims: What's the Difference?** — https://claimpaid.io/blog/rejected-vs-denied-claim/ — rejections never reached adjudication; denials were processed and refused; different next steps.
+- **What Is a Clearinghouse in Medical Billing?** — https://claimpaid.io/blog/what-is-clearinghouse-medical-billing/ — EDI translation, front-end edits, 999/277CA acknowledgments, clearinghouse vs direct submission.
+- **CMS-1500 vs UB-04: Which Claim Form to Use** — https://claimpaid.io/blog/cms-1500-vs-ub04/ — professional vs institutional forms, 837P/837I, edge cases like ASC split billing.
+- **Do Billing Companies Need a BAA? HIPAA Rules Explained** — https://claimpaid.io/blog/hipaa-baa-billing-company/ — business associate definition, required BAA elements, contract red flags, e-signing.
+- **How Long Do Insurers Have to Pay a Claim? Prompt-Pay Laws Explained** — https://claimpaid.io/blog/prompt-payment-laws-explained/ — state prompt-pay deadlines, Medicare's 30-day standard, the ERISA exception, late-payment remedies.
+- **ClaimPaid vs Legacy Billing Software: What to Compare** — https://claimpaid.io/compare/ — criteria-based evaluation: trial availability, transparent pricing, AI coding assistance, BAA e-signing, local-first AI; honest fit/misfit notes.
 
 ## Optional
 

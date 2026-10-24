@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>How to Read an 835 Remittance Advice: CARC, RARC & PLB Explained</title>
+<meta name="description" content="Decode the 835 remittance advice: CAS segments, CARC and RARC codes, PLB adjustments, and how to turn ERA data into denial worklists."/>
+<link rel="canonical" href="https://claimpaid.io/blog/how-to-read-835-remittance-advice/"/>
+<meta name="robots" content="index, follow, max-image-preview:large"/>
+<meta property="og:type" content="article"/>
+<meta property="og:site_name" content="ClaimPaid"/>
+<meta property="og:title" content="How to Read an 835 Remittance Advice: CARC, RARC & PLB Explained"/>
+<meta property="og:description" content="The 835 decoded: CAS segments, CARC/RARC codes, and PLB adjustments — how billers read remittance advice."/>
+<meta property="og:url" content="https://claimpaid.io/blog/how-to-read-835-remittance-advice/"/>
+<meta property="og:image" content="https://picsum.photos/seed/cp-how-to-read-835-remittance-advice-hero/1200/630"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="How to Read an 835 Remittance Advice: CARC, RARC & PLB Explained"/>
+<meta name="twitter:description" content="Decode the 835 remittance advice: CAS segments, CARC and RARC codes, PLB adjustments, and how to turn ERA data into denial worklists."/>
+<meta name="twitter:image" content="https://picsum.photos/seed/cp-how-to-read-835-remittance-advice-hero/1200/630"/>
+<link rel="icon" type="image/webp" href="/claimpaid-icon.webp"/>
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "Article", "headline": "How to Read an 835 Remittance Advice: CARC, RARC & PLB Explained", "datePublished": "2026-10-24", "dateModified": "2026-10-24", "author": {"@type": "Organization", "name": "ClaimPaid", "url": "https://claimpaid.io/"}, "publisher": {"@type": "Organization", "name": "ClaimPaid", "url": "https://claimpaid.io/", "logo": {"@type": "ImageObject", "url": "https://claimpaid.io/claimpaid-icon.webp"}}, "mainEntityOfPage": {"@type": "WebPage", "@id": "https://claimpaid.io/blog/how-to-read-835-remittance-advice/"}, "image": "https://picsum.photos/seed/cp-how-to-read-835-remittance-advice-hero/1200/630", "description": "Decode the 835 remittance advice: CAS segments, CARC and RARC codes, PLB adjustments, and how to turn ERA data into denial worklists."}
+</script>
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "What is the CAS segment on an 835?", "acceptedAnswer": {"@type": "Answer", "text": "The CAS (claim adjustment) segment carries each payment adjustment with a group code (CO/PR/OA/PI/CR), a CARC reason code explaining why, and an optional RARC remark code adding detail. It appears at both the claim and service-line levels."}}, {"@type": "Question", "name": "What do the 835 group codes mean?", "acceptedAnswer": {"@type": "Answer", "text": "CO (contractual obligation) is the payer's write-off and not billable to the patient; PR (patient responsibility) is deductible, coinsurance, or copay and is billable; OA (other adjustment) is owed by neither party; PI is payer-initiated; CR is a correction or reversal."}}, {"@type": "Question", "name": "What is the difference between CARC and RARC codes?", "acceptedAnswer": {"@type": "Answer", "text": "The CARC (Claim Adjustment Reason Code) is the primary standardized reason for an adjustment, such as CO-29 timely filing. The RARC (Remittance Advice Remark Code) adds supplemental detail \u2014 for example, exactly which information is missing behind a CO-16."}}, {"@type": "Question", "name": "What is the PLB segment on an 835?", "acceptedAnswer": {"@type": "Answer", "text": "The PLB (provider-level balance) segment records adjustments that apply to the whole payment rather than a single claim \u2014 most commonly prior overpayment recoveries, interest, or capitation adjustments. It explains why a deposit doesn't match the sum of paid claims."}}, {"@type": "Question", "name": "How do I turn an 835 into a denial worklist?", "acceptedAnswer": {"@type": "Answer", "text": "Filter CAS entries by group code (CO denials go to appeals, PR to patient billing), group by CARC to find patterns worth fixing at the root cause, and reconcile the PLB before closing the payment batch."}}]}
+</script>
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Home", "item": "https://claimpaid.io/"}, {"@type": "ListItem", "position": 2, "name": "Blog", "item": "https://claimpaid.io/blog/"}, {"@type": "ListItem", "position": 3, "name": "How to Read an 835 Remittance Advice", "item": "https://claimpaid.io/blog/how-to-read-835-remittance-advice/"}]}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+
+:root{--navy:#0b1220;--navy2:#0f172a;--panel:#111c33;--green:#10b981;--green-lt:#34d399;--violet:#8b5cf6;--violet-lt:#a78bfa;--txt:#e8eefc;--mut:#93a0bd;--line:rgba(255,255,255,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--navy);color:var(--txt);font-family:'Inter',system-ui,sans-serif;line-height:1.75}
+h1,h2,h3{font-family:'Sora',sans-serif;line-height:1.3}
+.wrap{max-width:780px;margin:0 auto;padding:0 24px}
+.grad{background:linear-gradient(92deg,var(--green-lt),var(--violet-lt));-webkit-background-clip:text;background-clip:text;color:transparent}
+nav{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(14px);background:rgba(11,18,32,.85);border-bottom:1px solid var(--line)}
+.nav-in{max-width:1100px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:68px}
+.logo{display:flex;align-items:center;gap:10px;font-family:'Sora';font-weight:800;font-size:21px;letter-spacing:-.4px;text-decoration:none;color:var(--txt)}
+.logo img{width:34px;height:34px;border-radius:9px;box-shadow:0 0 18px rgba(16,185,129,.45)}
+.logo span{color:var(--green-lt)}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{color:var(--mut);text-decoration:none;font-size:14.5px;font-weight:500}
+.nav-links a:hover{color:#fff}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:15px;border-radius:12px;padding:13px 26px;text-decoration:none;border:none;transition:transform .25s,box-shadow .25s;cursor:pointer}
+.btn-green{background:linear-gradient(135deg,#10b981,#059669);color:#04120c;box-shadow:0 8px 28px rgba(16,185,129,.35)}
+.btn-green:hover{transform:translateY(-3px);box-shadow:0 14px 40px rgba(16,185,129,.5)}
+.btn-sm{padding:10px 20px;font-size:14px}
+article{padding:140px 0 60px}
+.crumb{font-size:13px;color:var(--mut);margin-bottom:18px}
+.crumb a{color:var(--green-lt);text-decoration:none}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--green-lt);background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);padding:5px 12px;border-radius:100px;margin-bottom:18px}
+article h1{font-size:clamp(30px,4.5vw,46px);font-weight:800;letter-spacing:-1.2px;margin-bottom:14px}
+.byline{color:var(--mut);font-size:14px;margin-bottom:34px}
+.answer{background:linear-gradient(160deg,rgba(16,185,129,.1),rgba(16,185,129,.03));border:1px solid rgba(16,185,129,.4);border-left:4px solid var(--green);border-radius:14px;padding:22px 26px;margin-bottom:38px}
+.answer .lbl{font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--green-lt);margin-bottom:10px}
+.answer p{font-size:16px;margin:0}
+.prose h2{font-size:26px;font-weight:700;letter-spacing:-.5px;margin:44px 0 16px}
+.prose h3{font-size:19px;font-weight:700;margin:30px 0 12px;color:#fff}
+.prose p{margin:0 0 18px;color:#c9d2e8}
+.prose ul,.prose ol{margin:0 0 20px 22px;color:#c9d2e8}
+.prose li{margin-bottom:10px}
+.prose strong{color:#fff}
+.prose a{color:var(--green-lt);text-decoration:underline;text-underline-offset:3px}
+table{width:100%;border-collapse:collapse;margin:24px 0;font-size:14.5px}
+th{background:rgba(16,185,129,.1);color:#fff;text-align:left;padding:12px 14px;font-family:'Sora';font-size:13.5px}
+td{padding:12px 14px;border-top:1px solid var(--line);color:#c9d2e8;vertical-align:top}
+tr:hover td{background:rgba(255,255,255,.02)}
+.faq{margin:44px 0}
+.faq-item{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 24px;margin-bottom:14px}
+.faq-item h3{font-size:16.5px;margin:0 0 8px;color:#fff}
+.faq-item p{margin:0;font-size:14.5px;color:#c9d2e8}
+.cta{background:linear-gradient(140deg,rgba(16,185,129,.14),rgba(139,92,246,.1));border:1px solid rgba(16,185,129,.4);border-radius:20px;padding:40px;text-align:center;margin:50px 0}
+.cta h2{font-size:26px;margin-bottom:12px}
+.cta p{color:var(--mut);margin-bottom:24px;max-width:520px;margin-left:auto;margin-right:auto}
+footer{border-top:1px solid var(--line);padding:40px 0;color:var(--mut);font-size:13.5px}
+.foot{max-width:1100px;margin:0 auto;padding:0 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px}
+.foot a{color:var(--mut);text-decoration:none}
+.foot a:hover{color:var(--green-lt)}
+.foot-links{display:flex;gap:22px}
+.note{font-size:13.5px;color:var(--mut);background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.3);border-radius:12px;padding:16px 20px;margin:26px 0}
+@media(max-width:640px){.nav-links a:not(.btn){display:none}table{font-size:13px}}
+
+
+.hero-img{width:100%;height:auto;aspect-ratio:1200/630;object-fit:cover;border-radius:18px;margin:8px 0 34px;border:1px solid var(--line);background:var(--panel)}
+.mid-img{width:100%;height:auto;aspect-ratio:1200/630;object-fit:cover;border-radius:16px;margin:30px 0 8px;border:1px solid var(--line);background:var(--panel)}
+.img-cap{font-size:13px;color:var(--mut);text-align:center;margin:0 0 28px}
+.statbox{background:linear-gradient(140deg,rgba(16,185,129,.14),rgba(139,92,246,.1));border:1px solid rgba(16,185,129,.4);border-radius:16px;padding:28px 30px;margin:34px 0;text-align:center}
+.statbox .num{font-family:'Sora',sans-serif;font-size:46px;font-weight:800;letter-spacing:-1px;background:linear-gradient(92deg,var(--green-lt),var(--violet-lt));-webkit-background-clip:text;background-clip:text;color:transparent}
+.statbox .cap{font-size:14px;color:var(--mut);margin-top:8px;max-width:560px;margin-left:auto;margin-right:auto}
+.pullquote{border-left:4px solid var(--violet);padding:8px 0 8px 26px;margin:34px 0;font-size:19px;font-style:italic;color:#fff;line-height:1.6}
+.flow{display:flex;align-items:stretch;margin:32px 0;flex-wrap:wrap}
+.flow .step{flex:1;min-width:150px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center;font-size:14px;color:#c9d2e8}
+.flow .step .n{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:var(--green-lt);font-weight:700;font-size:13px;margin-bottom:10px}
+.flow .arr{align-self:center;color:var(--green-lt);font-size:22px;padding:0 6px}
+@media(max-width:640px){.flow .arr{display:none}.flow .step{min-width:100%;margin-bottom:8px}}
+
+
+.related{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 26px;margin:36px 0}
+.related h3{font-size:15px;margin:0 0 10px;color:#fff}
+.related ul{margin:0 0 0 20px;color:#c9d2e8}
+.related li{margin-bottom:8px;font-size:14.5px}
+.related a{color:var(--green-lt);text-decoration:underline;text-underline-offset:3px}
+
+</style>
+</head>
+<body>
+<nav><div class="nav-in">
+  <a class="logo" href="/"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo"/>Claim<span>Paid</span></a>
+  <div class="nav-links"><a href="/">Product</a><a href="/blog/">Blog</a><a class="btn btn-green btn-sm" href="/app/">Get started</a></div>
+</div></nav>
+
+<article><div class="wrap">
+<div class="crumb"><a href="/">Home</a> / <a href="/blog/">Blog</a> / How to Read an 835 Remittance Advice</div>
+<span class="tag">EDI</span>
+<h1>How to Read an 835 Remittance Advice</h1>
+<div class="byline">ClaimPaid · October 24, 2026 · 8 min read</div>
+<img class="hero-img" src="https://picsum.photos/seed/cp-how-to-read-835-remittance-advice-hero/1200/630" alt="Illustration for the 835 remittance advice reading guide" loading="lazy" width="1200" height="630"/>
+
+<div class="answer">
+<div class="lbl">The short answer</div>
+<p>The 835's <strong>CAS segment</strong> carries each adjustment as a group code (CO, PR, OA, PI, CR) plus a CARC reason code and an optional RARC remark code. Read adjustments at the claim and service-line levels, then check the <strong>PLB segment</strong> for provider-level adjustments like overpayment recoveries. Every denial worklist starts with this file — learn its grammar and denials stop being mysteries.</p>
+</div>
+
+<div class="prose">
+
+
+<p>The 835 — the electronic remittance advice, or ERA — is the payer's answer to your 837 claim file. It says what was paid, what was adjusted, and why. Billers who can read an 835 fluently work denials in minutes; billers who can't are stuck calling payer reps to translate. Here's the grammar.</p>
+
+<h2>The CAS segment: where adjustments live</h2>
+<p>Almost everything you need is in the CAS (claim adjustment) segment, which appears at both the claim level and the service-line level. Each CAS entry has three parts:</p>
+<ul>
+<li><strong>Group code</strong> — who owns the adjustment: <strong>CO</strong> (contractual obligation — the payer's write-off, not billable), <strong>PR</strong> (patient responsibility — deductible, coinsurance, copay), <strong>OA</strong> (other adjustment — neither payer nor patient owes it), <strong>PI</strong> (payer-initiated), <strong>CR</strong> (correction/reversal).</li>
+<li><strong>CARC</strong> — the Claim Adjustment Reason Code: the standardized "why" (for example, CO-29 timely filing, CO-97 bundling, CO-16 missing information). CARCs are maintained as a national standard code set.</li>
+<li><strong>RARC</strong> — the Remittance Advice Remark Code: supplemental detail that sharpens the CARC (for example, which specific information is missing for a CO-16).</li>
+</ul>
+<p>The group code is the first thing to read: CO-97 means the payer absorbed the reduction (don't bill the patient); PR-1 means it's deductible (bill the patient). Misreading the group code is how practices accidentally balance-bill patients for contractual adjustments.</p>
+
+<table>
+<tr><th>Segment</th><th>What it tells you</th><th>Where to look first</th></tr>
+<tr><td><strong>BPR</strong></td><td>Payment totals, payment method, EFT/check trace numbers</td><td>Reconciling the deposit to the ERA</td></tr>
+<tr><td><strong>CAS</strong></td><td>Every adjustment: group code + CARC + RARC, at claim and line level</td><td>Building denial worklists</td></tr>
+<tr><td><strong>PLB</strong></td><td>Provider-level adjustments: overpayment recoveries, interest, capitation</td><td>Explaining "missing" payment dollars</td></tr>
+<tr><td><strong>MOA / MIA</strong></td><td>Medicare-specific outpatient/inpatient remittance remarks</td><td>Medicare claim reconciliation</td></tr>
+</table>
+
+<h2>The PLB segment: where dollars disappear</h2>
+<p>When the check (or EFT) doesn't match the sum of the paid claims, the difference is usually in the <strong>PLB segment</strong> — provider-level adjustments that apply to the whole payment, not a single claim. The classic example: the payer recovers a prior overpayment by withholding it from this week's payment. The PLB explains the shortfall; without reading it, the payment looks wrong and the A/R looks off. See <a href="/blog/era-vs-eob-difference/">ERA vs EOB</a> for how the 835 compares to paper remits.</p>
+
+<h2>Turning the 835 into a denial worklist</h2>
+<p>Reading the file is step one; working it is step two:</p>
+<ol>
+<li><strong>Filter CAS entries by group code.</strong> CO adjustments with denial CARCs are your appeal queue; PR adjustments are your patient-statement queue.</li>
+<li><strong>Group by CARC.</strong> Ten CO-16s from one payer is a pattern, not ten problems — fix the root cause once. Our <a href="/blog/top-claim-denial-reasons-fixes/">denial reasons guide</a> maps the common CARCs to fixes.</li>
+<li><strong>Reconcile the PLB</strong> before closing the payment batch — every withheld dollar needs a home.</li>
+<li><strong>Feed the patterns upstream.</strong> Recurring CARCs are front-end failures; the fix belongs in your <a href="/blog/what-is-claim-scrubbing/">claim scrubber</a> rules, not in your appeals queue.</li>
+</ol>
+
+<img class="mid-img" src="https://picsum.photos/seed/cp-how-to-read-835-remittance-advice-mid/1200/630" alt="Illustration of a remittance advice document with adjustment codes highlighted" loading="lazy" width="1200" height="630"/><div class="img-cap">Every adjustment on an 835 follows the same grammar: group code + reason code + remark code.</div>
+
+<h2>Common reading mistakes</h2>
+<ul>
+<li><strong>Ignoring line-level CAS.</strong> Claim-level CAS shows the headline; line-level CAS shows which service was actually denied — you need both to write the appeal.</li>
+<li><strong>Treating RARCs as optional.</strong> The CARC says "missing information"; the RARC says <em>which</em> information. Appeals written from the CARC alone get denied again.</li>
+<li><strong>Skipping the PLB.</strong> Unexplained payment shortfalls are almost always PLB adjustments, not payer errors.</li>
+<li><strong>Reading the ERA but not the 277CA.</strong> The 835 answers adjudicated claims; the <a href="/blog/837p-vs-835-explained/">277CA</a> answers whether the claim was received at all. Different questions, different files.</li>
+</ul>
+<div class="note"><strong>835 vs EOB:</strong> the 835 is the electronic version of the paper explanation of benefits — same payment answers, machine-readable format. If your payers still send paper EOBs, <a href="/blog/era-vs-eob-difference/">ERA enrollment</a> is one of the highest-ROI projects a billing team can run.</div>
+
+
+<div class="related"><h3>Related reading</h3><ul><li><a href="/blog/era-vs-eob-difference/">ERA vs EOB: What's the Difference?</a></li><li><a href="/blog/837p-vs-835-explained/">837P vs 835 Explained: What Each EDI File Does</a></li><li><a href="/blog/denial-management-kpis/">Denial Management KPIs Every Billing Team Should Track</a></li></ul></div>
+
+<div class="faq"><h2>Frequently asked questions</h2><div class="faq-item"><h3>What is the CAS segment on an 835?</h3><p>The CAS (claim adjustment) segment carries each payment adjustment with a group code (CO/PR/OA/PI/CR), a CARC reason code explaining why, and an optional RARC remark code adding detail. It appears at both the claim and service-line levels.</p></div><div class="faq-item"><h3>What do the 835 group codes mean?</h3><p>CO (contractual obligation) is the payer's write-off and not billable to the patient; PR (patient responsibility) is deductible, coinsurance, or copay and is billable; OA (other adjustment) is owed by neither party; PI is payer-initiated; CR is a correction or reversal.</p></div><div class="faq-item"><h3>What is the difference between CARC and RARC codes?</h3><p>The CARC (Claim Adjustment Reason Code) is the primary standardized reason for an adjustment, such as CO-29 timely filing. The RARC (Remittance Advice Remark Code) adds supplemental detail — for example, exactly which information is missing behind a CO-16.</p></div><div class="faq-item"><h3>What is the PLB segment on an 835?</h3><p>The PLB (provider-level balance) segment records adjustments that apply to the whole payment rather than a single claim — most commonly prior overpayment recoveries, interest, or capitation adjustments. It explains why a deposit doesn't match the sum of paid claims.</p></div><div class="faq-item"><h3>How do I turn an 835 into a denial worklist?</h3><p>Filter CAS entries by group code (CO denials go to appeals, PR to patient billing), group by CARC to find patterns worth fixing at the root cause, and reconcile the PLB before closing the payment batch.</p></div></div>
+</div>
+
+<div class="cta">
+<h2>Stop losing revenue to denials</h2>
+<p>ClaimPaid tracks every denied claim through a structured appeal pipeline — deadlines, documentation, payer-specific appeal letters, and follow-up — so nothing slips through the cracks.</p>
+<a class="btn btn-green" href="/#pricing">See plans — from $199/mo →</a>
+</div>
+</div>
+</article>
+<footer><div class="foot">
+  <a class="logo" href="/" style="font-size:17px"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo" style="width:28px;height:28px"/>Claim<span>Paid</span></a>
+  <div class="foot-links"><a href="/blog/">Blog</a><a href="/legal/terms">Terms</a><a href="/legal/privacy">Privacy</a><a href="mailto:support@claimpaid.io">support@claimpaid.io</a></div>
+  <div>© 2026 ClaimPaid · Get your claims paid.</div>
+</div></footer>
+</body>
+</html>
