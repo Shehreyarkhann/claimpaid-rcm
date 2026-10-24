@@ -624,6 +624,10 @@ function initSchema() {
     );
   `);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_ehrenc_org_status ON ehr_encounters(org_id, status);`);
+  // Auto-pull (deploy #42): per-connection toggle + per-encounter outcome.
+  if (!columnExists('ehr_connections', 'auto_convert')) db.exec('ALTER TABLE ehr_connections ADD COLUMN auto_convert INTEGER NOT NULL DEFAULT 1');
+  if (!columnExists('ehr_encounters', 'auto_created')) db.exec('ALTER TABLE ehr_encounters ADD COLUMN auto_created INTEGER NOT NULL DEFAULT 0');
+  if (!columnExists('ehr_encounters', 'convert_note')) db.exec('ALTER TABLE ehr_encounters ADD COLUMN convert_note TEXT');
 
   // Per-org athenahealth app credentials (env ATHENA_CLIENT_ID/SECRET preferred).
   if (!columnExists('orgs', 'ehr_athena_client_id')) db.exec('ALTER TABLE orgs ADD COLUMN ehr_athena_client_id TEXT');

@@ -11,7 +11,7 @@ const { db } = require('../db');
 const { authRequired, roleRequired, requireProduct } = require('../auth');
 const { PROVIDERS, syncEncounters } = require('../ehr/providers');
 const athena = require('../ehr/athenahealth');
-const { createClaimDraft, resolvePayerId } = require('./claims');
+const { convertEncounter } = require('../ehr/convert');
 
 const router = express.Router();
 
@@ -55,7 +55,7 @@ router.get('/athena/callback', async (req, res) => {
 router.use(authRequired, requireProduct('rcm'));
 const canWrite = roleRequired('owner', 'biller');
 
-const CONN_PUBLIC_COLS = 'id, org_id, provider, status, practice_id, auth_mode, last_sync_at, last_error, created_at, updated_at';
+const CONN_PUBLIC_COLS = 'id, org_id, provider, status, practice_id, auth_mode, auto_convert, last_sync_at, last_error, created_at, updated_at';
 
 function orgEhrRow(orgId) {
   return db.prepare(
@@ -156,14 +156,18 @@ router.post('/disconnect', roleRequired('owner'), (req, res) => {
   res.json({ ok: true });
 });
 
-// ---- sync -------------------------------------------------------------------
-
-// POST /api/ehr/sync — owner/biller; pulls new encounters from connected providers.
-router.post('/sync', canWrite, async (req, res) => {
-  const orgRow = orgEhrRow(req.orgId);
-  const conns = db.prepare(`SELECT * FROM ehr_connections WHERE org_id = ? AND status = 'connected'`).all(req.orgId);
-  if (!conns.length) return res.status(400).json({ error: 'No connected EHR — connect the demo EHR or athenahealth first.' });
-
+// ---- sync + auto-pull -------------------------------------------------------
+//
+// runSyncForOrg pulls new encounters for every connected provider, then —
+// for connections with auto_convert on — turns every still-'new' encounter
+// into a claim draft automatically (deploy #42). Synced encounters are
+// completed visits only (athena sync filters to checked-out appointments),
+// so a closed encounter landing in the inbox and becoming a draft is the
+// same event. Held encounters keep their reason in convert_note and are
+// retried on the next sync. Shared by the manual route and the scheduler.
+async function runSyncForOrg(orgId, userId) {
+  const orgRow = orgEhrRow(orgId);
+  const conns = db.prepare(`SELECT * FROM ehr_connections WHERE org_id = ? AND status = 'connected'`).all(orgId);
   const summary = { synced: [], errors: [] };
   for (const conn of conns) {
     try {
@@ -176,7 +180,7 @@ router.post('/sync', canWrite, async (req, res) => {
            patient_dob, payer_name, date_of_service, cpt_codes, icd_codes, rendering_provider, raw_payload)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
       for (const e of encounters) {
-        const r = ins.run(req.orgId, conn.id, e.ehr_encounter_id, e.ehr_patient_id || null,
+        const r = ins.run(orgId, conn.id, e.ehr_encounter_id, e.ehr_patient_id || null,
           e.patient_first || '', e.patient_last || '', e.patient_dob || null, e.payer_name || null,
           e.date_of_service || null, JSON.stringify(e.cpt_codes || []), JSON.stringify(e.icd_codes || []),
           e.rendering_provider || null, e.raw_payload ? JSON.stringify(e.raw_payload) : null);
@@ -190,7 +194,24 @@ router.post('/sync', canWrite, async (req, res) => {
           token_expires_at = COALESCE(?, token_expires_at), updated_at = datetime('now')
         WHERE id = ?`).run(upd.last_sync_at, upd.status, upd.last_error,
         tokenUpdate?.access_token || null, tokenUpdate?.refresh_token || null, tokenUpdate?.token_expires_at || null, conn.id);
-      summary.synced.push({ provider: conn.provider, new_encounters: added, seen: encounters.length });
+
+      // Auto-pull: convert every open encounter on this connection.
+      let autoCreated = 0;
+      const autoFailed = [];
+      if (conn.auto_convert) {
+        const open = db.prepare(`
+          SELECT * FROM ehr_encounters WHERE org_id = ? AND connection_id = ? AND status = 'new'
+          ORDER BY id ASC LIMIT 200
+        `).all(orgId, conn.id);
+        for (const enc of open) {
+          const r = convertEncounter(orgId, userId, enc, { auto: true });
+          if (r.ok) autoCreated++;
+          else if (autoFailed.length < 10) {
+            autoFailed.push({ encounter_id: enc.id, patient: `${enc.patient_first || ''} ${enc.patient_last || ''}`.trim(), reason: r.error });
+          }
+        }
+      }
+      summary.synced.push({ provider: conn.provider, new_encounters: added, seen: encounters.length, auto_created: autoCreated, auto_failed: autoFailed });
       if (errors.length) summary.errors.push({ provider: conn.provider, errors: errors.slice(0, 5) });
     } catch (e) {
       db.prepare(`UPDATE ehr_connections SET status='error', last_error=?, updated_at=datetime('now') WHERE id = ?`)
@@ -198,7 +219,25 @@ router.post('/sync', canWrite, async (req, res) => {
       summary.errors.push({ provider: conn.provider, errors: [e.message] });
     }
   }
-  res.json(summary);
+  return summary;
+}
+
+// POST /api/ehr/sync — owner/biller; pulls new encounters (+ auto-pull).
+router.post('/sync', canWrite, async (req, res) => {
+  const any = db.prepare(`SELECT COUNT(*) AS n FROM ehr_connections WHERE org_id = ? AND status = 'connected'`).get(req.orgId);
+  if (!any.n) return res.status(400).json({ error: 'No connected EHR — connect the demo EHR or athenahealth first.' });
+  res.json(await runSyncForOrg(req.orgId, req.user.id));
+});
+
+// POST /api/ehr/auto-convert { provider, enabled } — owner-only toggle.
+router.post('/auto-convert', roleRequired('owner'), (req, res) => {
+  const provider = (req.body?.provider || '').trim();
+  if (!PROVIDERS.includes(provider)) return res.status(400).json({ error: `Unknown EHR provider: ${provider || '(none)'}` });
+  const enabled = req.body?.enabled ? 1 : 0;
+  const row = db.prepare('SELECT id FROM ehr_connections WHERE org_id = ? AND provider = ?').get(req.orgId, provider);
+  if (!row) return res.status(404).json({ error: 'No such EHR connection' });
+  db.prepare(`UPDATE ehr_connections SET auto_convert = ?, updated_at = datetime('now') WHERE id = ?`).run(enabled, row.id);
+  res.json({ ok: true, provider, auto_convert: enabled });
 });
 
 // ---- encounter inbox --------------------------------------------------------
@@ -246,44 +285,16 @@ router.get('/encounters/:id', (req, res) => {
 });
 
 // POST /api/ehr/encounters/:id/convert — owner/biller; creates a claim draft
-// via the SAME code path as the claims API (no duplication).
+// via the shared converter (same code path as auto-pull).
 router.post('/encounters/:id/convert', canWrite, (req, res) => {
   const enc = db.prepare('SELECT * FROM ehr_encounters WHERE id = ? AND org_id = ?').get(req.params.id, req.orgId);
   if (!enc) return res.status(404).json({ error: 'Encounter not found' });
-  if (enc.status === 'converted') return res.status(400).json({ error: 'Encounter already converted to a claim' });
-  if (enc.status === 'ignored') return res.status(400).json({ error: 'Encounter was ignored — un-ignore it first' });
-
-  const payerName = (enc.payer_name || '').trim();
-  if (!payerName || !resolvePayerId(req.orgId, payerName)) {
-    return res.status(400).json({
-      error: payerName
-        ? `Payer "${payerName}" is not in your organization's payer list — add it in Filing Rules first, then convert.`
-        : 'This encounter has no payer recorded — add payer info before converting.',
-    });
+  const r = convertEncounter(req.orgId, req.user.id, enc, { auto: false });
+  if (!r.ok) {
+    if (r.errors) return res.status(400).json({ errors: r.errors });
+    return res.status(r.status || 400).json({ error: r.error });
   }
-  const cpts = safeJson(enc.cpt_codes);
-  const icds = safeJson(enc.icd_codes);
-  const dos = (enc.date_of_service || '').slice(0, 10);
-  const claimNumber = `EHR-${dos.replace(/-/g, '')}-${enc.id}`;
-  try {
-    const claim = createClaimDraft(req.orgId, req.user.id, {
-      claim_number: claimNumber,
-      patient_name: `${enc.patient_first || ''} ${enc.patient_last || ''}`.trim() || 'Unknown',
-      payer: payerName,
-      service_date: /^\d{4}-\d{2}-\d{2}$/.test(dos) ? dos : new Date().toISOString().slice(0, 10),
-      billed_amount: 0, // draft — the biller completes amounts in the claim editor
-      cpt_codes: cpts.join(', '),
-      icd_codes: icds.join(', '),
-      rendering_provider: enc.rendering_provider || undefined,
-      patient_dob: enc.patient_dob || undefined,
-    });
-    db.prepare(`UPDATE ehr_encounters SET status='converted', converted_claim_id=? WHERE id = ?`).run(claim.id, enc.id);
-    res.status(201).json({ ok: true, claim_id: claim.id, claim_number: claim.claim_number });
-  } catch (e) {
-    if (e.status === 400) return res.status(400).json({ errors: e.validationErrors });
-    if (e.status === 409) return res.status(409).json({ error: e.message });
-    throw e;
-  }
+  res.status(201).json({ ok: true, claim_id: r.claim.id, claim_number: r.claim.claim_number });
 });
 
 // POST /api/ehr/encounters/:id/ignore — owner/biller.
@@ -296,3 +307,4 @@ router.post('/encounters/:id/ignore', canWrite, (req, res) => {
 });
 
 module.exports = router;
+module.exports.runSyncForOrg = runSyncForOrg;

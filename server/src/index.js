@@ -135,3 +135,42 @@ app.listen(PORT, () => {
     console.log('WARNING: JWT_SECRET not set — using dev default. Set it in production.');
   }
 });
+
+// ---- EHR auto-pull scheduler (deploy #42) ----
+// Every EHR_AUTOPULL_MINUTES (default 15), sync every org that has a
+// connected EHR with auto_convert on, so closed encounters become claim
+// drafts without anyone pressing Sync. Manual sync uses the same code path.
+// Disable with EHR_AUTOPULL=off.
+if (process.env.EHR_AUTOPULL !== 'off' && typeof ehrRoutes.runSyncForOrg === 'function') {
+  const { db: schedDb } = require('./db');
+  const intervalMin = Math.max(1, parseInt(process.env.EHR_AUTOPULL_MINUTES || '15', 10) || 15);
+  let autopullRunning = false;
+  const runAutopull = async () => {
+    if (autopullRunning) return;
+    autopullRunning = true;
+    try {
+      const orgs = schedDb.prepare(`
+        SELECT DISTINCT org_id FROM ehr_connections
+        WHERE status = 'connected' AND auto_convert = 1
+      `).all();
+      for (const { org_id } of orgs) {
+        try {
+          const s = await ehrRoutes.runSyncForOrg(org_id, null);
+          const created = (s.synced || []).reduce((n, x) => n + (x.auto_created || 0), 0);
+          const fresh = (s.synced || []).reduce((n, x) => n + (x.new_encounters || 0), 0);
+          if (fresh || created) console.log(`[ehr-autopull] org ${org_id}: ${fresh} new encounters, ${created} draft claims auto-created`);
+          for (const e of s.errors || []) console.log(`[ehr-autopull] org ${org_id} ${e.provider}: ${e.errors.join(' | ')}`);
+        } catch (e) {
+          console.log(`[ehr-autopull] org ${org_id} failed: ${e.message}`);
+        }
+      }
+    } catch (e) {
+      console.log(`[ehr-autopull] sweep failed: ${e.message}`);
+    } finally {
+      autopullRunning = false;
+    }
+  };
+  setTimeout(runAutopull, 5 * 60 * 1000).unref();
+  setInterval(runAutopull, intervalMin * 60 * 1000).unref();
+  console.log(`EHR auto-pull: every ${intervalMin} min for connected orgs (EHR_AUTOPULL=off to disable)`);
+}

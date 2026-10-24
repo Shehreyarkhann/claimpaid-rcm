@@ -95,7 +95,7 @@ export default function Ehr({ onViewClaim }) {
     setSyncing(true);
     try {
       const s = await api.ehr.sync();
-      const parts = (s.synced || []).map((x) => `${x.provider}: ${x.new_encounters} new`);
+      const parts = (s.synced || []).map((x) => `${x.provider}: ${x.new_encounters} new${x.auto_created ? `, ${x.auto_created} draft claims auto-created` : ''}`);
       toast.success(parts.length ? `Sync complete — ${parts.join(', ')}` : 'Sync complete');
       if ((s.errors || []).length) toast.error(s.errors.map((x) => x.errors.join('; ')).join(' | '));
       load();
@@ -139,6 +139,23 @@ export default function Ehr({ onViewClaim }) {
     } catch (e) { toast.error(e.message); } finally { setBusy(null); }
   };
 
+  const toggleAutoConvert = async (provider, enabled) => {
+    setBusy(`ac-${provider}`);
+    try {
+      await api.ehr.setAutoConvert(provider, enabled);
+      toast.success(enabled ? 'Auto-pull on — closed encounters will become claim drafts automatically' : 'Auto-pull off');
+      load();
+    } catch (e) { toast.error(e.message); } finally { setBusy(null); }
+  };
+
+  const autoPullRow = (conn) => (conn?.status === 'connected' ? (
+    <label className="flex items-center gap-2 text-xs text-slate-600 mt-3 cursor-pointer select-none">
+      <input type="checkbox" checked={!!conn.auto_convert} disabled={!isOwner || busy === `ac-${conn.provider}`}
+        onChange={(e) => toggleAutoConvert(conn.provider, e.target.checked)} />
+      Auto-pull: create claim drafts automatically
+    </label>
+  ) : null);
+
   const statusBadge = (s) => (
     <span className={`badge ${s === 'connected' ? 'badge-green' : s === 'error' ? 'badge-red' : 'badge-slate'}`}>{s}</span>
   );
@@ -155,7 +172,9 @@ export default function Ehr({ onViewClaim }) {
       </div>
       <p className="text-sm text-slate-500 mb-6 max-w-3xl leading-relaxed">
         Pull recent encounters from your EHR and convert them into claim drafts — no more retyping
-        patient, payer, and code data. Sync is manual for now; automatic sync is a planned follow-up.
+        patient, payer, and code data. With auto-pull on (per connection, below), closed encounters
+        become claim drafts automatically — a background sync runs every 15 minutes, and “Sync now”
+        does the same on demand. Drafts are never submitted; a biller completes the amounts first.
       </p>
 
       <div className="grid md:grid-cols-2 gap-4 mb-8">
@@ -193,6 +212,7 @@ export default function Ehr({ onViewClaim }) {
               isOwner && <button className="btn btn-sm" onClick={() => disconnect('athenahealth')} disabled={busy === 'athenahealth'}>Disconnect</button>
             )}
           </div>
+          {autoPullRow(athenaConn)}
           {!athenaConfigured && (
             <p className="text-xs text-amber-700 mt-3">⚠ No athenahealth app credentials yet — {isOwner ? 'open App settings to add them.' : 'an owner must add them in App settings.'}</p>
           )}
@@ -223,6 +243,7 @@ export default function Ehr({ onViewClaim }) {
               {busy === 'demo' ? 'Enabling…' : 'Enable demo EHR'}
             </button>
           )}
+          {autoPullRow(demoConn)}
         </div>
 
         {/* Out of scope — honest */}
@@ -281,7 +302,12 @@ export default function Ehr({ onViewClaim }) {
                 <tr key={e.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
                   <td className="px-4 py-3 font-medium text-slate-900">{e.patient_first} {e.patient_last}</td>
                   <td className="px-4 py-3 text-slate-600">{e.date_of_service || '—'}</td>
-                  <td className="px-4 py-3 text-slate-600">{e.payer_name || <span className="text-amber-600">no payer</span>}</td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {e.payer_name || <span className="text-amber-600">no payer</span>}
+                    {e.status === 'new' && e.convert_note && (
+                      <div className="text-xs text-amber-700 mt-1 max-w-[240px] whitespace-normal">⚠ Auto-pull held: {e.convert_note}</div>
+                    )}
+                  </td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-600">{(e.cpt_codes || []).join(', ') || '—'}</td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-600">{(e.icd_codes || []).join(', ') || '—'}</td>
                   <td className="px-4 py-3">
@@ -302,7 +328,10 @@ export default function Ehr({ onViewClaim }) {
                       </>
                     )}
                     {e.status === 'converted' && e.converted_claim_id && (
-                      <button className="btn btn-sm" onClick={() => onViewClaim && onViewClaim(e.converted_claim_id)}>View claim</button>
+                      <>
+                        {!!e.auto_created && <span className="badge badge-green mr-1">auto-created</span>}
+                        <button className="btn btn-sm" onClick={() => onViewClaim && onViewClaim(e.converted_claim_id)}>View claim</button>
+                      </>
                     )}
                     {e.status === 'ignored' && <span className="text-xs text-slate-400">ignored</span>}
                   </td>
