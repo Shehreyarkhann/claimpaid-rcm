@@ -7,3 +7,7 @@ dist/
 .env
 # dev screenshots (not part of the app)
 /*.png
+
+# produced media assets — kept locally, out of the repo
+landing-snapshots/
+video-training/

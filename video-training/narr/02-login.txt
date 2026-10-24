@@ -1,1 +1,0 @@
-We start at the login screen. Pulse is multi-tenant, so every billing company gets its own private workspace — your data never mixes with anyone else's. I'll sign in with our demo account. Notice there's no watered-down demo mode here — this is the exact login your team will use every morning.
