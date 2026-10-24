@@ -336,6 +336,7 @@ export const api = {
     encounter: (id) => get(`/api/ehr/encounters/${id}`),
     convert: (id) => authFetch(`/api/ehr/encounters/${id}/convert`, { method: 'POST' }).then(handle),
     ignore: (id) => authFetch(`/api/ehr/encounters/${id}/ignore`, { method: 'POST' }).then(handle),
+    unignore: (id) => authFetch(`/api/ehr/encounters/${id}/unignore`, { method: 'POST' }).then(handle),
     getAthenaConfig: () => get('/api/ehr/athena/config'),
     saveAthenaConfig: (data) =>
       authFetch('/api/ehr/athena/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(handle),

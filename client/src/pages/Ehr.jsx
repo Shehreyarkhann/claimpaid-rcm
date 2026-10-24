@@ -127,6 +127,12 @@ export default function Ehr({ onViewClaim }) {
     catch (e) { toast.error(e.message); } finally { setBusy(null); }
   };
 
+  const unignore = async (id) => {
+    setBusy(`u${id}`);
+    try { await api.ehr.unignore(id); load(); }
+    catch (e) { toast.error(e.message); } finally { setBusy(null); }
+  };
+
   const openAthenaSetup = async () => {
     try {
       const c = await api.ehr.getAthenaConfig();
@@ -355,7 +361,11 @@ export default function Ehr({ onViewClaim }) {
                         <button className="btn btn-sm" onClick={() => onViewClaim && onViewClaim(e.converted_claim_id)}>View claim</button>
                       </>
                     )}
-                    {e.status === 'ignored' && <span className="text-xs text-slate-400">ignored</span>}
+                    {e.status === 'ignored' && (
+                      canWrite
+                        ? <button className="btn btn-sm btn-outline" onClick={() => unignore(e.id)} disabled={busy === `u${e.id}`}>{busy === `u${e.id}` ? '…' : 'Restore'}</button>
+                        : <span className="text-xs text-slate-400">ignored</span>
+                    )}
                   </td>
                 </tr>
               ))}

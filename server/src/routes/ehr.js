@@ -345,5 +345,16 @@ router.post('/encounters/:id/ignore', canWrite, (req, res) => {
   res.json({ ok: true });
 });
 
+// POST /api/ehr/encounters/:id/unignore — owner/biller. Restores an ignored
+// encounter to the inbox (convert.js's own error copy tells users to
+// "un-ignore it first" — this is the endpoint that makes that possible).
+router.post('/encounters/:id/unignore', canWrite, (req, res) => {
+  const enc = db.prepare('SELECT id, status FROM ehr_encounters WHERE id = ? AND org_id = ?').get(req.params.id, req.orgId);
+  if (!enc) return res.status(404).json({ error: 'Encounter not found' });
+  if (enc.status === 'converted') return res.status(400).json({ error: 'Encounter already converted to a claim' });
+  db.prepare(`UPDATE ehr_encounters SET status='new', convert_note=NULL WHERE id = ?`).run(enc.id);
+  res.json({ ok: true });
+});
+
 module.exports = router;
 module.exports.runSyncForOrg = runSyncForOrg;
