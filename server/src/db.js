@@ -219,6 +219,10 @@ function initSchema() {
   // Org-wide MFA enforcement (workstream C): owners can require every member to
   // complete the email-code MFA flow before getting a session for this org.
   if (!columnExists('orgs', 'mfa_required')) db.exec('ALTER TABLE orgs ADD COLUMN mfa_required INTEGER NOT NULL DEFAULT 0');
+  // Canonical home for the MFA enrollment flag. authRequired (auth.js) selects
+  // users.mfa_enabled on every request, so the column must exist independent of
+  // whether mfa.js was loaded — previously this migration lived in mfa.js only.
+  if (!columnExists('users', 'mfa_enabled')) db.exec('ALTER TABLE users ADD COLUMN mfa_enabled INTEGER NOT NULL DEFAULT 0');
   if (!columnExists('orgs', 'trial_ends_at')) db.exec('ALTER TABLE orgs ADD COLUMN trial_ends_at TEXT');
   // Backfill: existing paying customers and the demo org skip the onboarding funnel
   db.exec(`UPDATE orgs SET onboarding_completed_at = datetime('now') WHERE onboarding_completed_at IS NULL

@@ -33,7 +33,8 @@ const MAX_ATTEMPTS = 5;
 const RESEND_COOLDOWN_SEC = 60;
 
 function ensureSchema() {
-  db.exec(`ALTER TABLE users ADD COLUMN mfa_enabled INTEGER NOT NULL DEFAULT 0`);
+  // NOTE: users.mfa_enabled is migrated canonically in db.js initSchema()
+  // (auth.js selects it on every request). This only owns the mfa_codes table.
   db.exec(`
     CREATE TABLE IF NOT EXISTS mfa_codes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,16 +49,8 @@ function ensureSchema() {
     CREATE INDEX IF NOT EXISTS idx_mfa_user ON mfa_codes(user_id);
   `);
 }
-// ALTER TABLE fails if column exists — ignore that specific error
-try { ensureSchema(); } catch (e) {
-  if (!/duplicate column name/i.test(e.message)) throw e;
-  db.exec(`CREATE TABLE IF NOT EXISTS mfa_codes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL REFERENCES users(id),
-    code_hash TEXT NOT NULL, expires_at TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0,
-    used INTEGER NOT NULL DEFAULT 0, purpose TEXT NOT NULL DEFAULT 'login',
-    created_at TEXT NOT NULL DEFAULT (datetime('now')));`);
-  db.exec(`CREATE INDEX IF NOT EXISTS idx_mfa_user ON mfa_codes(user_id);`);
-}
+// mfa_codes table creation is idempotent (CREATE TABLE IF NOT EXISTS)
+ensureSchema();
 
 function issueMfaToken(userId, orgEnforceId = null) {
   return jwt.sign(
