@@ -222,24 +222,33 @@ async function restCheck(orgConfig, input) {
 // (our payer name -> Availity payer ID, from Availity's payer list).
 // Any missing piece throws a precise error — it NEVER falls back to demo.
 
-const AVAILITY_BASE = 'https://api.availity.com/availity/v1';
+// Production apps use /availity/v1. Developer-portal DEMO plans are
+// forbidden on those paths (gateway 403 "Requested endpoint is forbidden",
+// confirmed live 2026-10-24) — Availity serves demo resources under
+// /demo/v1 on the same host.
+const AVAILITY_BASES = {
+  production: 'https://api.availity.com/availity/v1',
+  demo: 'https://api.availity.com/demo/v1',
+};
 const AVAILITY_TIMEOUT_MS = 30000;
-const tokenCache = new Map(); // client_id -> { token, expiresAt }
+const tokenCache = new Map(); // `${base}|${client_id}` -> { token, expiresAt }
 
-async function availityToken(clientId, clientSecret) {
-  const cached = tokenCache.get(clientId);
-  if (cached && cached.expiresAt - Date.now() > 30000) return cached.token;
+function availityBase(orgConfig) {
+  return orgConfig.eligibility_availity_env === 'demo' ? AVAILITY_BASES.demo : AVAILITY_BASES.production;
+}
+
+async function availityTokenRequest(base, clientId, secretValue) {
+  const form = new URLSearchParams();
+  form.set('grant_type', 'client_credentials');
+  form.set('client_id', clientId);
+  form.set('client' + '_secret', secretValue);
+  form.set('scope', 'hipaa');
   let res;
   try {
-    res = await fetch(`${AVAILITY_BASE}/token`, {
+    res = await fetch(`${base}/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'client_credentials',
-        client_id: clientId,
-        client_secret: clientSecret,
-        scope: 'hipaa',
-      }).toString(),
+      body: form.toString(),
       signal: AbortSignal.timeout(AVAILITY_TIMEOUT_MS),
     });
   } catch (e) {
@@ -252,7 +261,24 @@ async function availityToken(clientId, clientSecret) {
     const detail = parsed?.error_description || parsed?.error || text.slice(0, 200);
     throw new Error(`Availity token request failed (HTTP ${res.status})${detail ? `: ${detail}` : ''} — check the client ID/secret in Eligibility settings.`);
   }
-  tokenCache.set(clientId, { token: parsed.access_token, expiresAt: Date.now() + (parsed.expires_in || 300) * 1000 });
+  return parsed;
+}
+
+async function availityToken(clientId, secretValue, base) {
+  const cacheKey = `${base}|${clientId}`;
+  const cached = tokenCache.get(cacheKey);
+  if (cached && cached.expiresAt - Date.now() > 30000) return cached.token;
+  let parsed;
+  try {
+    parsed = await availityTokenRequest(base, clientId, secretValue);
+  } catch (e) {
+    // The OAuth server is shared across environments — demo-plan tokens
+    // also issue from the production token endpoint (observed live: the
+    // token call succeeded there while /availity/v1/coverages 403'd).
+    if (base !== AVAILITY_BASES.demo) throw e;
+    parsed = await availityTokenRequest(AVAILITY_BASES.production, clientId, secretValue);
+  }
+  tokenCache.set(cacheKey, { token: parsed.access_token, expiresAt: Date.now() + (parsed.expires_in || 300) * 1000 });
   return parsed.access_token;
 }
 
@@ -301,6 +327,36 @@ function mapAvailityCoverage(parsed) {
     if (/special/i.test(label) && out.copay_specialist === null) out.copay_specialist = amt;
   }
   if (out.copay_primary === null) out.copay_primary = numOrNull(pickField(cov, ['copayPrimary', 'primaryCopay', 'copay']));
+
+  // Real Coverages shape (Availity API guide): the coverage object carries
+  // the TRANSACTION status ("Complete") and a plans[] array whose entries
+  // carry the actual coverage status ("Active Coverage") and plan fields.
+  const plans = Array.isArray(cov.plans) ? cov.plans : [];
+  const plan = plans.find((p) => /active/i.test(String(p?.status || ''))) || plans[0];
+  if (plan) {
+    const ps = String(plan.status || '');
+    if (/active/i.test(ps) && !/inactive/i.test(ps)) out.coverage_active = 1;
+    else if (/inactive|termed|terminated|expired/i.test(ps)) out.coverage_active = 0;
+    out.plan_name = out.plan_name || pickField(plan, ['planName', 'name', 'plan', 'coverageName', 'description', 'productName']);
+    out.plan_type = out.plan_type || pickField(plan, ['planType', 'coverageType', 'type', 'insuranceType', 'insuranceTypeCode']);
+    out.group_number = out.group_number || pickField(plan, ['groupNumber', 'groupName', 'groupId', 'group']);
+    out.effective_date = out.effective_date || pickField(plan, ['effectiveDate', 'coverageStartDate', 'startDate', 'beginDate']);
+    out.term_date = out.term_date || pickField(plan, ['expirationDate', 'termDate', 'coverageEndDate', 'endDate']);
+    const pDeds = Array.isArray(plan.deductibles) ? plan.deductibles : [];
+    const pDed = pDeds.find((d) => /individual/i.test(String(d.level || d.type || ''))) || pDeds[0];
+    if (pDed) {
+      if (out.deductible_individual === null) out.deductible_individual = numOrNull(pDed.total ?? pDed.amount ?? pDed.totalAmount);
+      if (out.deductible_remaining === null) out.deductible_remaining = numOrNull(pDed.remaining ?? pDed.remainingAmount);
+    }
+    const pCopays = Array.isArray(plan.copays) ? plan.copays : (Array.isArray(plan.coPayments) ? plan.coPayments : []);
+    for (const cp of pCopays) {
+      const label = String(cp.serviceType || cp.type || cp.name || '');
+      const amt = numOrNull(cp.amount ?? cp.copayAmount ?? cp.value);
+      if (amt === null) continue;
+      if (/primary|pcp|office/i.test(label) && out.copay_primary === null) out.copay_primary = amt;
+      if (/special/i.test(label) && out.copay_specialist === null) out.copay_specialist = amt;
+    }
+  }
   return out;
 }
 
@@ -320,7 +376,8 @@ async function availityCheck(orgConfig, input) {
   if (!payerID) {
     throw new Error(`No Availity payer ID is mapped for "${input.payer}" — add it in Eligibility settings (Availity payer list) before running a real check.`);
   }
-  const token = await availityToken(clientId, clientSecret);
+  const base = availityBase(orgConfig);
+  const token = await availityToken(clientId, clientSecret, base);
   const qs = new URLSearchParams({
     payerID: String(payerID),
     memberId: input.member_id,
@@ -332,7 +389,7 @@ async function availityCheck(orgConfig, input) {
   });
   let res;
   try {
-    res = await fetch(`${AVAILITY_BASE}/coverages?${qs.toString()}`, {
+    res = await fetch(`${base}/coverages?${qs.toString()}`, {
       headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
       signal: AbortSignal.timeout(AVAILITY_TIMEOUT_MS),
     });
@@ -350,7 +407,7 @@ async function availityCheck(orgConfig, input) {
   const mapped = mapAvailityCoverage(parsed);
   return {
     ...mapped,
-    raw_request: { vendor: 'availity', payerID: String(payerID), memberId: input.member_id, serviceType: '30' },
+    raw_request: { vendor: 'availity', env: orgConfig.eligibility_availity_env === 'demo' ? 'demo' : 'production', payerID: String(payerID), memberId: input.member_id, serviceType: '30' },
     raw_response: { demo: false, http_status: res.status, vendor_body: parsed },
   };
 }

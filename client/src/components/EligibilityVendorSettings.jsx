@@ -7,7 +7,7 @@ import { useToast } from './ui';
 export default function EligibilityVendorSettings() {
   const toast = useToast();
   const [form, setForm] = useState({ vendor: 'demo', endpoint: '', api_key: '', auth_scheme: 'Bearer' });
-  const [av, setAv] = useState({ client_id: '', client_secret: '', payer_map_lines: '' });
+  const [av, setAv] = useState({ client_id: '', client_secret: '', payer_map_lines: '', env: 'production' });
   const [avSecretSet, setAvSecretSet] = useState(false);
   const [keySet, setKeySet] = useState(false);
   const [customHeader, setCustomHeader] = useState('');
@@ -26,7 +26,7 @@ export default function EligibilityVendorSettings() {
         const pm = JSON.parse(c.availity_payer_map || '{}');
         lines = Object.entries(pm).map(([k, v]) => `${k} = ${v}`).join('\n');
       } catch { lines = ''; }
-      setAv({ client_id: c.availity_client_id || '', client_secret: '', payer_map_lines: lines });
+      setAv({ client_id: c.availity_client_id || '', client_secret: '', payer_map_lines: lines, env: c.availity_env === 'demo' ? 'demo' : 'production' });
       setAvSecretSet(!!c.availity_client_secret_set);
     }).catch(() => {});
   }, []);
@@ -47,6 +47,7 @@ export default function EligibilityVendorSettings() {
           if (m.length >= 2 && m[0].trim()) map[m[0].trim()] = m.slice(1).join('=').trim();
         }
         payload.availity_client_id = av.client_id.trim();
+        payload.availity_env = av.env;
         payload.availity_payer_map = JSON.stringify(map);
         if (av.client_secret) payload.availity_client_secret = av.client_secret;
       }
@@ -97,6 +98,17 @@ export default function EligibilityVendorSettings() {
               <label className="label">Availity Client Secret * {avSecretSet && !av.client_secret && <span className="text-emerald-600 font-normal">(saved — leave blank to keep)</span>}</label>
               <input className="input" type="password" value={av.client_secret} onChange={(e) => setAv({ ...av, client_secret: e.target.value })}
                 placeholder={avSecretSet ? '••••••••' : 'Paste client secret'} autoComplete="new-password" />
+            </div>
+            <div>
+              <label className="label">Environment</label>
+              <select className="input" value={av.env} onChange={(e) => setAv({ ...av, env: e.target.value })}>
+                <option value="production">Production (Standard plan)</option>
+                <option value="demo">Demo (developer-portal demo plan)</option>
+              </select>
+              <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                Demo-plan credentials are rejected by the production endpoints — pick Demo until your
+                Standard plan is approved, then switch to Production (same credentials screen in Availity).
+              </p>
             </div>
             <div className="sm:col-span-2">
               <label className="label">Payer map — one per line: Your payer name = Availity payer ID</label>

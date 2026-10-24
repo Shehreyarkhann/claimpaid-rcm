@@ -520,6 +520,9 @@ function initSchema() {
   if (!columnExists('orgs', 'eligibility_availity_client_id')) db.exec('ALTER TABLE orgs ADD COLUMN eligibility_availity_client_id TEXT');
   if (!columnExists('orgs', 'eligibility_availity_client_secret')) db.exec('ALTER TABLE orgs ADD COLUMN eligibility_availity_client_secret TEXT');
   if (!columnExists('orgs', 'eligibility_availity_payer_map')) db.exec('ALTER TABLE orgs ADD COLUMN eligibility_availity_payer_map TEXT');
+  // Demo-plan credentials are forbidden on the production gateway paths —
+  // Availity serves demo resources under /demo/v1 (deploy #47).
+  if (!columnExists('orgs', 'eligibility_availity_env')) db.exec("ALTER TABLE orgs ADD COLUMN eligibility_availity_env TEXT NOT NULL DEFAULT 'production'");
 
   // ---- Transmission outbox (deploy #46 step 4) ----
   // One durable row per claim per transmission attempt, so the queue state

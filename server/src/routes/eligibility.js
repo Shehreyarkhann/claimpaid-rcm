@@ -15,7 +15,7 @@ function orgEligConfig(orgId) {
   const o = db.prepare(
     `SELECT eligibility_vendor, eligibility_endpoint, eligibility_api_key, eligibility_auth_scheme,
             eligibility_availity_client_id, eligibility_availity_client_secret,
-            eligibility_availity_payer_map, billing_npi
+            eligibility_availity_payer_map, eligibility_availity_env, billing_npi
      FROM orgs WHERE id = ?`
   ).get(orgId) || {};
   return {
@@ -26,6 +26,7 @@ function orgEligConfig(orgId) {
     availity_client_id: o.eligibility_availity_client_id || '',
     availity_client_secret_set: !!o.eligibility_availity_client_secret,
     availity_payer_map: o.eligibility_availity_payer_map || '',
+    availity_env: o.eligibility_availity_env === 'demo' ? 'demo' : 'production',
     billing_npi: o.billing_npi || '',
   };
 }
@@ -108,6 +109,7 @@ router.post('/check', canWrite, async (req, res) => {
       eligibility_availity_client_id: cfg.availity_client_id,
       eligibility_availity_client_secret: rawOrg.eligibility_availity_client_secret || '',
       eligibility_availity_payer_map: cfg.availity_payer_map,
+      eligibility_availity_env: cfg.availity_env,
       billing_npi: cfg.billing_npi,
     }, { ...b, payer: payerName });
   } catch (e) {
@@ -206,6 +208,10 @@ router.put('/config', ownerOnly, (req, res) => {
   if (b.availity_client_id !== undefined) { updates.push('eligibility_availity_client_id = ?'); params.push((b.availity_client_id || '').trim() || null); }
   if (b.availity_client_secret) { updates.push('eligibility_availity_client_secret = ?'); params.push(b.availity_client_secret); }
   if (b.availity_payer_map !== undefined) { updates.push('eligibility_availity_payer_map = ?'); params.push((b.availity_payer_map || '').trim() || null); }
+  if (b.availity_env !== undefined) {
+    if (!['production', 'demo'].includes(b.availity_env)) return res.status(400).json({ error: 'Availity environment must be production or demo' });
+    updates.push('eligibility_availity_env = ?'); params.push(b.availity_env);
+  }
   if (b.api_key !== undefined && b.api_key !== '') {
     updates.push('eligibility_api_key = ?');
     params.push(b.api_key);

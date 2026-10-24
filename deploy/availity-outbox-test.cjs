@@ -21,16 +21,33 @@ async function partA() {
   console.log('Part A — Availity adapter (stubbed fetch)');
   const { runCheck } = require('../server/src/eligibility/vendors');
   let tokenCalls = 0;
+  const calls = [];
   const realFetch = global.fetch;
+  // The shape Availity's own API guide documents for Coverages responses:
+  // transaction status on the coverage, coverage status + plan fields in plans[].
+  const REAL_SHAPE = {
+    totalCount: 1, count: 1,
+    coverages: [{
+      id: 'cov-1', status: 'Complete', statusCode: '4',
+      payer: { name: 'HUMANA', payerId: 'HUMANA' },
+      plans: [{
+        status: 'Active Coverage', planName: 'Humana Gold Plus HMO', groupNumber: 'GRP-9',
+        effectiveDate: '2026-01-01', expirationDate: '2026-12-31',
+      }],
+    }],
+  };
   global.fetch = async (url, opts = {}) => {
     const u = String(url);
+    calls.push(u);
     const json = (obj, status = 200) => ({ ok: status < 300, status, text: async () => JSON.stringify(obj) });
     if (u.includes('/token')) {
       tokenCalls++;
       if ((opts.body || '').includes('bad-secret')) return json({ error: 'invalid_client' }, 401);
+      if (u.includes('/demo/v1/token') && (opts.body || '').includes('cid-fb')) return json({ error: 'not_found' }, 404);
       return json({ access_token: 'tok-123', expires_in: 300 });
     }
     if (u.includes('/coverages')) {
+      if (u.includes('memberId=REALSHAPE')) return json(REAL_SHAPE);
       if (!u.includes('payerID=AETNA')) return json({ message: 'unknown payer' }, 400);
       return json({
         coverages: [{
@@ -69,6 +86,21 @@ async function partA() {
     threw = '';
     try { await runCheck('availity', { ...cfg, billing_npi: '' }, input); } catch (e) { threw = e.message; }
     check('missing NPI throws precise error', /billing NPI/.test(threw), threw);
+
+    // Real documented response shape: plans[] drives active + plan fields.
+    const rs = await runCheck('availity', { ...cfg, eligibility_availity_client_id: 'cid-shape' }, { ...input, member_id: 'REALSHAPE' });
+    check('real shape: Active Coverage in plans[] maps to active', rs.coverage_active === 1, JSON.stringify(rs).slice(0, 160));
+    check('real shape: plan name/group/dates from plans[]', rs.plan_name === 'Humana Gold Plus HMO' && rs.group_number === 'GRP-9' && rs.effective_date === '2026-01-01' && rs.term_date === '2026-12-31', JSON.stringify(rs).slice(0, 200));
+
+    // Demo environment: requests route to /demo/v1, not /availity/v1.
+    calls.length = 0;
+    const rd = await runCheck('availity', { ...cfg, eligibility_availity_client_id: 'cid-demo', eligibility_availity_env: 'demo' }, input);
+    check('demo env: check succeeds', rd.coverage_active === 1, JSON.stringify(rd).slice(0, 120));
+    check('demo env: coverages called on /demo/v1', calls.some((u) => u.startsWith('https://api.availity.com/demo/v1/coverages')), calls.join(' | ').slice(0, 200));
+
+    // Demo token endpoint missing -> production token endpoint fallback.
+    const rf = await runCheck('availity', { ...cfg, eligibility_availity_client_id: 'cid-fb', eligibility_availity_env: 'demo' }, input);
+    check('demo env: token fallback to production auth host works', rf.coverage_active === 1, JSON.stringify(rf).slice(0, 120));
   } finally {
     global.fetch = realFetch;
   }
