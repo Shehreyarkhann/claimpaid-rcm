@@ -263,6 +263,29 @@ async function handleWebhook(req, res) {
   }
 
   try {
+    if (event.type === 'checkout.session.completed' && event.data.object?.metadata?.statement_id) {
+      // Patient statement payment (deploy #50): a Payment Link checkout
+      // carrying statement metadata. Settled through the same allocation
+      // the manual-payment path uses; external id makes redelivery safe.
+      const session = event.data.object;
+      const stmtId = Number(session.metadata.statement_id);
+      const stmtOrgId = Number(session.metadata.org_id);
+      const amount = (Number(session.amount_total) || 0) / 100;
+      try {
+        const core = require('../statements-core');
+        const stmtRow = db.prepare('SELECT id FROM patient_statements WHERE id = ? AND org_id = ?').get(stmtId, stmtOrgId);
+        if (stmtRow && amount > 0) {
+          core.recordPayment(db, {
+            orgId: stmtOrgId, statementId: stmtId, amount, method: 'stripe',
+            externalId: `stripe:${session.payment_intent || session.id}`,
+          });
+          console.log(`Billing: statement ${stmtId} payment $${amount.toFixed(2)} via Stripe`);
+        }
+      } catch (e) {
+        console.error('Statement webhook settle failed:', e.message);
+      }
+      return res.json({ received: true });
+    }
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
       const orgId = Number(session.metadata?.org_id);

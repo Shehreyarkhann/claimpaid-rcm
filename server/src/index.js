@@ -78,6 +78,7 @@ app.use('/api/legal', legalRoutes);
 app.use('/api/transmission', transmissionRoutes);
 app.use('/api/ehr', ehrRoutes);
 app.use('/api/coding', codingRoutes);
+app.use('/api/statements', require('./routes/statements'));
 app.use('/api/settings', settingsRoutes);
 app.use('/api', apiV1Routes); // /api/v1/* — developer API keys only
 

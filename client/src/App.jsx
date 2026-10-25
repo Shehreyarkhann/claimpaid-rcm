@@ -16,6 +16,7 @@ import Authorizations from './pages/Authorizations';
 import Eligibility from './pages/Eligibility';
 import Transmission from './pages/Transmission';
 import Era from './pages/Era';
+import Statements from './pages/Statements';
 import Ehr from './pages/Ehr';
 import AuditLog from './pages/AuditLog';
 import LetterTemplates from './pages/LetterTemplates';
@@ -225,6 +226,7 @@ function Workspace() {
       {page === 'elig' && <Eligibility initialPrefill={deepLink?.prefill} onConsumed={() => setDeepLink(null)} />}
       {page === 'transmit' && <Transmission />}
       {page === 'era' && <Era />}
+      {page === 'statements' && <Statements />}
       {page === 'ehr' && <Ehr onViewClaim={(claimId) => go('claims', { claimId })} />}
       {page === 'audit' && <AuditLog />}
       {page === 'billing' && <Billing onBaaRequired={() => go('compliance')} />}

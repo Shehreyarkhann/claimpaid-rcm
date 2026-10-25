@@ -173,6 +173,7 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
     { id: 'elig', label: 'Eligibility', icon: ICONS.elig },
     { id: 'transmit', label: 'Transmission', icon: ICONS.send || ICONS.elig },
     { id: 'era', label: 'ERA Posting', icon: ICONS.reports },
+    { id: 'statements', label: 'Patient Statements', icon: ICONS.reports },
     { id: 'ehr', label: 'EHR', icon: ICONS.ehr },
     { id: 'reports', label: 'Reports', icon: ICONS.reports },
     { id: 'playbook', label: 'Playbook', icon: ICONS.playbook },

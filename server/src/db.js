@@ -759,6 +759,58 @@ function initSchema() {
   if (!columnExists('claims', 'adjustment_amount')) db.exec('ALTER TABLE claims ADD COLUMN adjustment_amount REAL NOT NULL DEFAULT 0');
   if (!columnExists('claims', 'patient_resp_amount')) db.exec('ALTER TABLE claims ADD COLUMN patient_resp_amount REAL NOT NULL DEFAULT 0');
   if (!columnExists('claims', 'payer_icn')) db.exec('ALTER TABLE claims ADD COLUMN payer_icn TEXT');
+
+  // ---- Patient statements (deploy #50) -------------------------------------
+  // Patient responsibility comes from the ERA rollup on claims
+  // (patient_resp_amount); statement payments allocate back onto claims as
+  // patient_paid_amount. A claim sits on at most one ACTIVE statement
+  // (draft/open/partially_paid) at a time — enforced in statements-core.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS patient_statements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      statement_number TEXT NOT NULL,
+      patient_name TEXT NOT NULL,
+      member_id TEXT,
+      amount_due REAL NOT NULL DEFAULT 0,
+      amount_paid REAL NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'draft',
+      payment_link_id TEXT,
+      payment_link_url TEXT,
+      due_date TEXT,
+      created_by INTEGER REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      sent_at TEXT,
+      paid_at TEXT
+    );
+    CREATE TABLE IF NOT EXISTS statement_lines (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      statement_id INTEGER NOT NULL REFERENCES patient_statements(id),
+      claim_id INTEGER NOT NULL REFERENCES claims(id),
+      claim_number TEXT,
+      service_date TEXT,
+      payer_name TEXT,
+      billed REAL NOT NULL DEFAULT 0,
+      insurance_paid REAL NOT NULL DEFAULT 0,
+      adjustments REAL NOT NULL DEFAULT 0,
+      patient_resp REAL NOT NULL DEFAULT 0,
+      amount REAL NOT NULL DEFAULT 0,
+      allocated_paid REAL NOT NULL DEFAULT 0
+    );
+    CREATE TABLE IF NOT EXISTS statement_payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      statement_id INTEGER NOT NULL REFERENCES patient_statements(id),
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      amount REAL NOT NULL,
+      method TEXT NOT NULL DEFAULT 'manual',
+      external_id TEXT UNIQUE,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_stmt_org ON patient_statements(org_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_stmt_lines_stmt ON statement_lines(statement_id);
+    CREATE INDEX IF NOT EXISTS idx_stmt_pay_stmt ON statement_payments(statement_id);
+  `);
+  if (!columnExists('claims', 'patient_paid_amount')) db.exec('ALTER TABLE claims ADD COLUMN patient_paid_amount REAL NOT NULL DEFAULT 0');
 }
 
 // Thin wrapper so route code keeps working with .prepare().get()/.all()/.run()

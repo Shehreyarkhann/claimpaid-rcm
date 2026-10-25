@@ -124,6 +124,23 @@ export const api = {
         body: JSON.stringify({ claim_id: claimId, post: !!post }),
       }).then(handle),
   },
+  statements: {
+    balances: () => get('/api/statements/balances'),
+    list: () => get('/api/statements'),
+    detail: (id) => get(`/api/statements/${id}`),
+    generate: (data) =>
+      authFetch('/api/statements/generate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      }).then(handle),
+    paymentLink: (id) => authFetch(`/api/statements/${id}/payment-link`, { method: 'POST' }).then(handle),
+    recordPayment: (id, data) =>
+      authFetch(`/api/statements/${id}/payments`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      }).then(handle),
+    void: (id) => authFetch(`/api/statements/${id}/void`, { method: 'POST' }).then(handle),
+  },
   claimDetail: (id) => get(`/api/claims/${id}`),
   // Prior authorizations
   authzList: (params = {}) => get(`/api/authz?${new URLSearchParams(params)}`),
