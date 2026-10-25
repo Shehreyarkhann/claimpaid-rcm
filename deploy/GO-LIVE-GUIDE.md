@@ -211,8 +211,8 @@ What it does (~10–15 min, mostly unattended):
 - clones both repos to `/opt/claimpaid-rcm` and `/opt/claimpaid-ai`
 - builds both frontends, installs backend deps
 - writes both `server/.env` files (random JWT secrets)
-- seeds demo data: RCM demo org (`demo@pulsercm.com` / `demo1234`) and the
-  AI Payer Policy Handbook KB (`demo@askbase.com` / `demo1234`)
+- NO demo seeding since deploy #52 (market launch): fresh DBs start empty;
+  the first signup creates the first org. Demo accounts were removed.
   (first AI boot downloads the embeddings model, ~90MB — allow a few minutes)
 - installs systemd services `claimpaid-rcm` + `claimpaid-ai` (auto-restart, boot)
 - nginx: `/` → RCM, `/ai/` → AI, then Let's Encrypt HTTPS
@@ -248,9 +248,9 @@ Open these and check:
 | URL | Expect |
 |---|---|
 | `https://claimpaid.io/` | Landing page, new logo, all sections |
-| `https://claimpaid.io/app/` | Login screen → demo login works |
+| `https://claimpaid.io/app/` | Login screen renders; signup works |
 | `https://claimpaid.io/app/` → Settings → Billing & Plan | Plan cards, "not enabled" notice gone once Stripe is wired |
-| `https://claimpaid.io/ai/app/` | AI login → demo login → Payer Policy Handbook answers with citations |
+| `https://claimpaid.io/ai/app/` | AI login (RCM account) → Payer Policy Handbook answers with citations |
 | Stripe test checkout | Click "Choose Starter" → Stripe test page → pay with `4242…` → redirected back → plan shows **active** |
 | `https://claimpaid.io/api/health` | `{"status":"ok"}` |
 

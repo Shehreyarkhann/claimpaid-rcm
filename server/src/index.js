@@ -41,12 +41,8 @@ app.use(express.json());
 
 initSchema();
 
-// Auto-seed on first run if no orgs exist
-const orgCount = db.prepare('SELECT COUNT(*) AS n FROM orgs').get().n;
-if (orgCount === 0) {
-  console.log('No organizations — seeding demo data...');
-  require('./seed.js');
-}
+// No auto-seed (market launch, deploy #52): a fresh database starts empty
+// and the first signup creates the first organization.
 
 // Public client config (Google OAuth client ID for the sign-in button;
 // null hides the button gracefully). No auth — contains nothing secret.

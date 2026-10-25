@@ -16,12 +16,28 @@ const nativeFetch = global.fetch;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function login() {
-  const res = await nativeFetch(API + '/api/auth/login', {
+  // No demo account exists since deploy #52 — the harness uses its own
+  // gate user: login if present, otherwise sign up (fresh local DBs).
+  const creds = { email: 'gate@smoke.local', password: 'Gate1234!' };
+  let res = await nativeFetch(API + '/api/auth/login', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'demo@pulsercm.com', password: 'demo1234' }),
+    body: JSON.stringify(creds),
   });
-  const d = await res.json();
+  let d = await res.json();
+  if (!d.token) {
+    res = await nativeFetch(API + '/api/auth/signup', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orgName: 'Gate Smoke Co', name: 'Gate User', ...creds }),
+    });
+    d = await res.json();
+  }
   if (!d.token) throw new Error('login failed: ' + JSON.stringify(d).slice(0, 120));
+  // A fresh gate org lands on the onboarding wizard, not the app shell —
+  // complete it (idempotent: the endpoint returns already_completed).
+  await nativeFetch(API + '/api/onboarding/complete', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + d.token },
+    body: JSON.stringify({ plan: 'pro', goals: ['reduce-denials'] }),
+  });
   return d.token;
 }
 

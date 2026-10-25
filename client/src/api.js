@@ -343,8 +343,6 @@ export const api = {
   },
   ehr: {
     connections: () => get('/api/ehr/connections'),
-    connectDemo: () =>
-      authFetch('/api/ehr/connect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ provider: 'demo' }) }).then(handle),
     disconnect: (provider) =>
       authFetch('/api/ehr/disconnect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ provider }) }).then(handle),
     athenaAuthorize: () => get('/api/ehr/athena/authorize'),

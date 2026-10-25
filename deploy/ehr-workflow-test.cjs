@@ -1,9 +1,12 @@
-// ehr-workflow-test.cjs — deploy #46 verification: the COMPLETE EHR workflow
-// exactly as a user walks it:
-//   connect demo EHR → sync → inbox → manual convert → draft opens →
-//   manually complete the draft (amounts/codes via the claim editor's API) →
+// ehr-workflow-test.cjs — deploy #46 verification (reworked in #52 after the
+// demo EHR provider was removed): the COMPLETE EHR workflow exactly as a
+// user walks it. Encounters are staged directly in the test DB under an
+// athenahealth connection (the athena transport itself is covered by the
+// athena-* suites); everything downstream is exercised over HTTP:
+//   inbox → manual convert → draft opens → manually complete the draft →
 //   ignore → convert blocked → restore (un-ignore) → convert succeeds →
-//   auto-pull converts the rest → double-convert blocked.
+//   auto-convert converts the rest (production convertEncounter, auto mode)
+//   → double-convert blocked.
 'use strict';
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -49,21 +52,41 @@ async function api(method, p, body, token) {
   check('signup', s.status === 201, JSON.stringify(s.data));
   const t = s.data.token;
 
-  // The org's payer list (demo encounters bill these names).
+  // The org's payer list (staged encounters bill these names).
   for (const name of ['Aetna', 'Cigna', 'UnitedHealthcare', 'Anthem', 'Medicare', 'Humana']) {
     await api('POST', '/api/claims/meta/payers', { name, type: 'Commercial' }, t);
   }
 
-  const conn = await api('POST', '/api/ehr/connect', { provider: 'demo' }, t);
-  check('demo EHR connected', conn.status === 200, JSON.stringify(conn.data));
+  // Demo connect is gone (#52): the endpoint now refuses it.
+  const connDemo = await api('POST', '/api/ehr/connect', { provider: 'demo' }, t);
+  check('demo EHR connect refused', connDemo.status === 400, JSON.stringify(connDemo.data));
 
-  // Auto-pull OFF first: stage only, so we can walk the manual path.
-  const off = await api('POST', '/api/ehr/auto-convert', { provider: 'demo', enabled: false }, t);
+  // Stage an athenahealth connection + encounters directly in the test DB.
+  const { DatabaseSync } = require('node:sqlite');
+  const raw = new DatabaseSync(DB);
+  raw.exec('PRAGMA busy_timeout = 5000');
+  const orgRow = raw.prepare("SELECT id FROM orgs WHERE name = 'Workflow Org'").get();
+  const orgId = orgRow.id;
+  const connId = Number(raw.prepare(`INSERT INTO ehr_connections (org_id, provider, status, auth_mode, auto_convert, updated_at)
+               VALUES (?, 'athenahealth', 'connected', '2legged', 0, datetime('now'))`).run(orgId).lastInsertRowid);
+  const insEnc = raw.prepare(`INSERT INTO ehr_encounters
+    (org_id, connection_id, ehr_encounter_id, ehr_patient_id, patient_first, patient_last,
+     patient_dob, payer_name, date_of_service, cpt_codes, icd_codes, rendering_provider, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')`);
+  const visits = [
+    ['ENC-1', 'PAT-1', 'Alice', 'Patient', '1985-03-12', 'Aetna', '2026-10-20', '99213', 'M54.5'],
+    ['ENC-2', 'PAT-2', 'Bob', 'Holder', '1980-06-20', 'Cigna', '2026-10-21', '99214', 'E11.9'],
+    ['ENC-3', 'PAT-3', 'Carol', 'Patient', '2012-03-15', 'Aetna', '2026-10-22', '99213', 'J06.9'],
+    ['ENC-4', 'PAT-4', 'Dan', 'Smith', '1975-01-30', 'Humana', '2026-10-23', '99212', 'I10'],
+  ];
+  for (const v of visits) {
+    insEnc.run(orgId, connId, v[0], v[1], v[2], v[3], v[4], v[5], v[6], JSON.stringify([v[7]]), JSON.stringify([v[8]]), 'Jane Provider');
+  }
+  check('staged 4 encounters in DB', raw.prepare('SELECT COUNT(*) AS n FROM ehr_encounters WHERE org_id = ?').get(orgId).n === 4);
+
+  // Auto-pull toggle exists for the athena connection (starts OFF via insert).
+  const off = await api('POST', '/api/ehr/auto-convert', { provider: 'athenahealth', enabled: false }, t);
   check('auto-pull off', off.status === 200 && off.data.auto_convert === 0, JSON.stringify(off.data));
-
-  const sync1 = await api('POST', '/api/ehr/sync', null, t);
-  const sx = (sync1.data.synced || [])[0] || {};
-  check('sync staged encounters, none auto-created', sync1.status === 200 && sx.new_encounters > 0 && !sx.auto_created, JSON.stringify(sync1.data).slice(0, 200));
 
   const listEncs = async (status) => {
     const d = (await api('GET', `/api/ehr/encounters?status=${status}`, null, t)).data;
@@ -111,13 +134,17 @@ async function api(method, p, body, token) {
   const cv2 = await api('POST', `/api/ehr/encounters/${enc2.id}/convert`, null, t);
   check('convert after restore succeeds', cv2.status === 201, JSON.stringify(cv2.data));
 
-  // --- Auto-pull converts the rest on the next sync ---
-  const on = await api('POST', '/api/ehr/auto-convert', { provider: 'demo', enabled: true }, t);
+  // --- Auto-convert converts the rest (the sync path's production code) ---
+  const on = await api('POST', '/api/ehr/auto-convert', { provider: 'athenahealth', enabled: true }, t);
   check('auto-pull back on', on.status === 200 && on.data.auto_convert === 1, JSON.stringify(on.data));
-  const sync2 = await api('POST', '/api/ehr/sync', null, t);
-  const sx2 = (sync2.data.synced || [])[0] || {};
+  process.env.DB_PATH = DB;
+  const { db } = require('../server/src/db');
+  const { convertEncounter } = require('../server/src/ehr/convert');
+  const owner = db.prepare('SELECT id FROM users WHERE email = ?').get('wf@test.co');
+  const staged = db.prepare("SELECT * FROM ehr_encounters WHERE org_id = ? AND status = 'new'").all(orgId);
+  for (const e of staged) convertEncounter(orgId, owner.id, e, { auto: true });
   const stillNew = await listEncs('new');
-  check('auto-pull left no convertible encounters behind', stillNew.length === 0, `still new: ${stillNew.length}, sync=${JSON.stringify(sx2).slice(0, 160)}`);
+  check('auto-convert left no convertible encounters behind', stillNew.length === 0, `still new: ${stillNew.length}`);
   const autoMade = (await listEncs('converted')).filter((e) => e.auto_created);
   check('auto-created drafts are flagged', autoMade.length > 0, `auto=${autoMade.length}`);
 

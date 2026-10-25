@@ -343,8 +343,8 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
           {eligibility ? (
             <div className="grid sm:grid-cols-3 gap-x-6 gap-y-2 text-xs">
               <div><span className="text-slate-500">Vendor </span>
-                <span className={`badge ml-1 ${eligibility.vendor === 'demo' ? 'badge-amber' : 'badge-green'}`}>
-                  {eligibility.vendor === 'demo' ? 'Demo (synthetic)' : 'Live REST'}
+                <span className={`badge ml-1 ${eligibility.vendor ? 'badge-green' : 'badge-amber'}`}>
+                  {eligibility.vendor === 'availity' ? 'Availity' : eligibility.vendor === 'rest' ? 'Live REST' : 'Not configured'}
                 </span></div>
               <div><span className="text-slate-500">Endpoint </span>
                 <span className="text-slate-200">{eligibility.configured ? 'Configured' : '—'}</span></div>

@@ -21,7 +21,7 @@
 #   - installs Node.js 22, nginx, certbot
 #   - creates a dedicated `claimpaid` user, clones both repos
 #   - builds both clients, installs server deps, writes server/.env files
-#   - seeds demo orgs (RCM + AI Payer Policy Handbook KB) on fresh DBs
+#   - fresh DBs start empty (no demo seeding since deploy #52)
 #   - installs systemd services (auto-restart, start on boot)
 #   - configures nginx reverse proxy (/ -> :4000, /ai/ -> :4001) + Let's Encrypt SSL
 #   - daily age-encrypted SQLite backups (7-day rotation)
@@ -36,7 +36,6 @@ AI_REPO_URL="${AI_REPO_URL:?Set AI_REPO_URL, e.g. AI_REPO_URL=https://github.com
 APP_DIR="${APP_DIR:-/opt/claimpaid-rcm}"
 AI_DIR="${AI_DIR:-/opt/claimpaid-ai}"
 APP_USER="${APP_USER:-claimpaid}"
-SEED_DEMO="${SEED_DEMO:-true}"          # seed demo org + claims + AI KB
 # ClaimPaid AI answers: local Ollama model (private — no external APIs, no data leaves the server).
 # Override with LLM_PROVIDER=openai|groq|together + LLM_API_KEY for cloud models.
 LLM_PROVIDER="${LLM_PROVIDER:-ollama}"
@@ -238,7 +237,6 @@ cat > "${AI_DIR}/server/.env" <<EOF
 PORT=4001
 NODE_ENV=production
 JWT_SECRET=${AI_JWT_SECRET}
-SEED_DEMO=false
 LLM_PROVIDER=${LLM_PROVIDER}
 LLM_API_KEY=${LLM_API_KEY}
 LLM_MODEL=${LLM_MODEL}
@@ -250,31 +248,9 @@ EOF
 chmod 600 "${AI_DIR}/server/.env"
 chown "${APP_USER}:${APP_USER}" "${AI_DIR}/server/.env"
 
-# ---------- seed demo data (fresh DB only) ----------
-if [[ "${SEED_DEMO}" == "true" && ! -f "${APP_DIR}/server/rcm.db" ]]; then
-  echo "==> Seeding RCM demo data"
-  sudo -u "${APP_USER}" bash -lc "
-    cd '${APP_DIR}/server' && npm run seed && node src/seed-authz.js
-  "
-fi
-if [[ "${SEED_DEMO}" == "true" && ! -f "${AI_DIR}/server/askbase.db" ]]; then
-  echo "==> Seeding AI demo data (Payer Policy Handbook KB)"
-  echo "    (first boot downloads the embeddings model ~90MB — may take a few minutes)"
-  sudo -u "${APP_USER}" bash -lc "
-    set -e
-    cd '${AI_DIR}/server'
-    SEED_DEMO=true PORT=4001 node src/index.js > /tmp/claimpaid-ai-seed.log 2>&1 &
-    SRV=\$!
-    for i in \$(seq 1 60); do
-      if curl -fsS --max-time 3 http://127.0.0.1:4001/api/health >/dev/null 2>&1; then break; fi
-      sleep 10
-    done
-    curl -fsS --max-time 5 http://127.0.0.1:4001/api/health >/dev/null || { echo 'AI seed server did not start'; kill \$SRV 2>/dev/null || true; exit 1; }
-    node seed-payer-kb.js
-    kill \$SRV 2>/dev/null || true; wait 2>/dev/null || true
-    echo '    AI demo seed complete'
-  "
-fi
+# ---------- no demo seeding (market launch, deploy #52) ----------
+# Fresh installs start empty; the first signup creates the first org.
+# The public handbook/support KBs are seeded per-org by the apps themselves.
 
 # ---------- systemd services ----------
 echo "==> Installing systemd services"
@@ -497,8 +473,8 @@ systemctl is-active --quiet claimpaid-rcm && RCM_OK="yes"
 systemctl is-active --quiet claimpaid-ai && AI_OK="yes"
 if [[ -n "${RCM_OK}" ]]; then
   echo "  ClaimPaid is LIVE:  https://${DOMAIN}/"
-  echo "    App:  https://${DOMAIN}/app   (demo@pulsercm.com / demo1234)"
-  echo "    AI:   https://${DOMAIN}/ai/app  (demo@askbase.com / demo1234)"
+  echo "    App:  https://${DOMAIN}/app"
+  echo "    AI:   https://${DOMAIN}/ai/app"
 else
   echo "  !! RCM service failed — check: journalctl -u claimpaid-rcm -n 50"
 fi

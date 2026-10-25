@@ -87,7 +87,7 @@ function makeDom() {
 
 // Realistic mock shapes per endpoint (must match real API shapes — an [] mock
 // for an object-shaped endpoint produces false crashes).
-const fakeUser = { id: 1, org_id: 1, email: 'demo@pulsercm.com', name: 'Demo Owner', role: 'owner', orgName: 'Demo Billing Co.' };
+const fakeUser = { id: 1, org_id: 1, email: 'gate@smoke.local', name: 'Gate User', role: 'owner', orgName: 'Gate Test Co.' };
 const mocks = {
   '/api/auth/me': fakeUser,
   '/api/auth/orgs': [{ id: 1, name: 'Demo Billing Co.', role: 'owner' }],

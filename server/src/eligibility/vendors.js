@@ -3,9 +3,9 @@
 // Honest architecture: a real 270/271 check requires a clearinghouse/vendor
 // account (pVerify, Eligible, Availity, Change Healthcare) PLUS payer enrollment
 // for each payer you check against. Until the org configures one, everything
-// runs through the `demo` vendor, whose responses are clearly labeled synthetic.
-// Demo results are NEVER presented as real — the API returns demo:true and the
-// UI shows a "DEMO MODE — synthetic data" banner.
+// runs through the org's configured vendor (Availity or a generic REST
+// endpoint). There is no demo vendor: an unconfigured org gets a clear
+// error instead of synthetic data (removed at market launch, deploy #52).
 //
 // `runCheck(vendorName, orgConfig, input)` resolves to a normalized benefit object:
 //   { coverage_active, plan_name, plan_type, group_number,
@@ -40,67 +40,6 @@ function validateInput(input) {
   if (!payer) errors.push('Payer is required');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dos)) errors.push('Date of service must be YYYY-MM-DD');
   return { errors, clean: { patient_first: first, patient_last: last, dob: input.dob, member_id: memberId, payer, date_of_service: dos } };
-}
-
-// ---- demo vendor ------------------------------------------------------------
-// Deterministic synthetic 271-style response. Same member_id → same benefits
-// (stable hash), ~85% of member IDs resolve to active coverage.
-
-const DEMO_PLANS = [
-  { plan_name: 'Choice Plus PPO', plan_type: 'PPO', copay_primary: 25, copay_specialist: 50, deductible_individual: 1500, oop_max: 6000 },
-  { plan_name: 'Open Access Plus', plan_type: 'PPO', copay_primary: 20, copay_specialist: 40, deductible_individual: 1000, oop_max: 5000 },
-  { plan_name: 'Select HMO', plan_type: 'HMO', copay_primary: 30, copay_specialist: 60, deductible_individual: 0, oop_max: 4500 },
-  { plan_name: 'High Deductible Health Plan', plan_type: 'HDHP', copay_primary: 0, copay_specialist: 0, deductible_individual: 3500, oop_max: 7000 },
-  { plan_name: 'Preferred Provider Plan', plan_type: 'PPO', copay_primary: 35, copay_specialist: 70, deductible_individual: 2000, oop_max: 8000 },
-];
-
-function hashToUnit(str) {
-  const h = crypto.createHash('sha256').update(str.toLowerCase()).digest();
-  return h.readUInt32BE(0) / 0xffffffff;
-}
-
-function demoCheck(input) {
-  const u = hashToUnit(input.member_id + '|' + input.payer);
-  const u2 = hashToUnit('plan|' + input.member_id);
-  const u3 = hashToUnit('ded|' + input.member_id);
-  const active = u < 0.85;
-  const plan = DEMO_PLANS[Math.floor(u2 * DEMO_PLANS.length)];
-  const deductible_remaining = active ? Math.round(plan.deductible_individual * (0.15 + u3 * 0.85) * 100) / 100 : null;
-  const effYear = new Date().getFullYear();
-
-  const raw_response = {
-    demo: true,
-    note: 'SYNTHETIC — generated locally for workflow testing. Not a real 271 response.',
-    eb: active ? '1' : '6', // EB01: 1=Active Coverage, 6=Inactive
-    ...(!active ? {} : {
-      plan_name: plan.plan_name,
-      plan_type: plan.plan_type,
-      group_number: 'GRP-' + Math.floor(100000 + u3 * 899999),
-      copay_primary: plan.copay_primary,
-      copay_specialist: plan.copay_specialist,
-      deductible_individual: plan.deductible_individual,
-      deductible_remaining,
-      oop_max: plan.oop_max,
-      effective_date: `${effYear}-01-01`,
-      term_date: `${effYear}-12-31`,
-    }),
-  };
-
-  return {
-    coverage_active: active ? 1 : 0,
-    plan_name: active ? plan.plan_name : null,
-    plan_type: active ? plan.plan_type : null,
-    group_number: active ? raw_response.group_number : null,
-    copay_primary: active ? plan.copay_primary : null,
-    copay_specialist: active ? plan.copay_specialist : null,
-    deductible_individual: active ? plan.deductible_individual : null,
-    deductible_remaining,
-    oop_max: active ? plan.oop_max : null,
-    effective_date: active ? raw_response.effective_date : null,
-    term_date: active ? raw_response.term_date : null,
-    raw_request: { vendor: 'demo', input },
-    raw_response,
-  };
 }
 
 // ---- rest vendor ------------------------------------------------------------
@@ -430,9 +369,11 @@ async function runCheck(vendorName, orgConfig, input) {
   }
   if (vendorName === 'rest') return restCheck(orgConfig, clean);
   if (vendorName === 'availity') return availityCheck(orgConfig, clean);
-  // Unknown/missing vendor names fall back to demo ONLY when the org never
-  // configured a real vendor — a configured real vendor that fails throws.
-  return demoCheck(clean);
+  // No demo fallback (removed at market launch, deploy #52): an unconfigured
+  // org gets a clear error, never synthetic data.
+  const e = new Error('No eligibility vendor configured — connect Availity or a REST endpoint in Organization settings.');
+  e.status = 400;
+  throw e;
 }
 
-module.exports = { runCheck, validateInput, demoCheck, restCheck, availityCheck, mapAvailityCoverage, DEFAULT_FIELD_MAP };
+module.exports = { runCheck, validateInput, restCheck, availityCheck, mapAvailityCoverage, DEFAULT_FIELD_MAP };

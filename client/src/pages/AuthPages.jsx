@@ -322,8 +322,8 @@ export function OrgMfaRequiredScreen({ initialToken, orgName }) {
 
 export function Login({ goSignup, goForgot }) {
   const { login, googleLogin } = useAuth();
-  const [email, setEmail] = useState('demo@pulsercm.com');
-  const [password, setPassword] = useState('demo1234');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const [mfa, setMfa] = useState(null); // { token, orgEnforced }
@@ -384,7 +384,7 @@ export function Login({ goSignup, goForgot }) {
             New to ClaimPaid? <button type="button" onClick={goSignup} className="text-emerald-600 font-semibold hover:underline">Create an account</button>
           </p>
           <p className="text-xs text-slate-400 text-center bg-slate-50 rounded-xl px-4 py-3">
-            Demo login is pre-filled — just hit <strong>Sign in</strong> to explore.
+            New to ClaimPaid? <strong>Start your 30-day free trial</strong> — no card required.
           </p>
         </form>
       </div>

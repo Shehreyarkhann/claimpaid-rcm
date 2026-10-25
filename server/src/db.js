@@ -226,7 +226,7 @@ function initSchema() {
   if (!columnExists('orgs', 'trial_ends_at')) db.exec('ALTER TABLE orgs ADD COLUMN trial_ends_at TEXT');
   // Backfill: existing paying customers and the demo org skip the onboarding funnel
   db.exec(`UPDATE orgs SET onboarding_completed_at = datetime('now') WHERE onboarding_completed_at IS NULL
-           AND (stripe_subscription_id IS NOT NULL OR name = 'Demo Billing Co.')`);
+           AND stripe_subscription_id IS NOT NULL`);
 
   // Settings expansion (General / Notifications / Customization tabs)
   if (!columnExists('orgs', 'timezone')) db.exec(`ALTER TABLE orgs ADD COLUMN timezone TEXT NOT NULL DEFAULT 'America/New_York'`);
@@ -486,7 +486,7 @@ function initSchema() {
       member_id TEXT NOT NULL,
       payer TEXT NOT NULL,
       date_of_service TEXT NOT NULL,
-      vendor TEXT NOT NULL DEFAULT 'demo',
+      vendor TEXT NOT NULL DEFAULT 'rest',
       coverage_active INTEGER,
       plan_name TEXT,
       plan_type TEXT,
@@ -511,7 +511,7 @@ function initSchema() {
   // else on the droplet, which is NOT encrypted at rest. API keys stored here are
   // protected by DB file permissions and app-level access control only — same as the
   // rest of the app. Rotate the key at the vendor if the DB file is ever exposed.
-  if (!columnExists('orgs', 'eligibility_vendor')) db.exec("ALTER TABLE orgs ADD COLUMN eligibility_vendor TEXT NOT NULL DEFAULT 'demo'");
+  if (!columnExists('orgs', 'eligibility_vendor')) db.exec("ALTER TABLE orgs ADD COLUMN eligibility_vendor TEXT");
   if (!columnExists('orgs', 'eligibility_endpoint')) db.exec('ALTER TABLE orgs ADD COLUMN eligibility_endpoint TEXT');
   if (!columnExists('orgs', 'eligibility_api_key')) db.exec('ALTER TABLE orgs ADD COLUMN eligibility_api_key TEXT');
   if (!columnExists('orgs', 'eligibility_auth_scheme')) db.exec("ALTER TABLE orgs ADD COLUMN eligibility_auth_scheme TEXT NOT NULL DEFAULT 'Bearer'");
@@ -615,7 +615,7 @@ function initSchema() {
     CREATE TABLE IF NOT EXISTS ehr_connections (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       org_id INTEGER NOT NULL REFERENCES orgs(id),
-      provider TEXT NOT NULL CHECK (provider IN ('athenahealth','demo')),
+      provider TEXT NOT NULL CHECK (provider IN ('athenahealth')),
       status TEXT NOT NULL DEFAULT 'disconnected' CHECK (status IN ('disconnected','connected','error')),
       access_token TEXT,
       refresh_token TEXT,
@@ -811,6 +811,58 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_stmt_pay_stmt ON statement_payments(statement_id);
   `);
   if (!columnExists('claims', 'patient_paid_amount')) db.exec('ALTER TABLE claims ADD COLUMN patient_paid_amount REAL NOT NULL DEFAULT 0');
+  // ---- Market-launch cleanup (deploy #52, one-time) ----
+  // Removes pre-launch demo/junk data: the seeded Demo Billing Co. org, the
+  // early test orgs (abc, asd, AB Recoveries), the demo login, demo-EHR
+  // connections/encounters in surviving orgs, and synthetic demo-vendor
+  // eligibility history. Runs exactly once (marker row). Safety: orgs with
+  // a Stripe subscription or the super-admin's membership are never touched.
+  db.exec(`CREATE TABLE IF NOT EXISTS data_migrations (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL DEFAULT (datetime('now')));`);
+  if (!db.prepare('SELECT name FROM data_migrations WHERE name = ?').get('demo-junk-cleanup-52')) {
+   try {
+    // FK enforcement is ON for this connection and the generic sweep below
+    // deletes parents before some children — suspend it for the wipe (the
+    // same pattern orgDelete.js uses), restore it in the finally.
+    db.exec('PRAGMA foreign_keys = OFF');
+    const junkNames = ['Demo Billing Co.', 'abc', 'asd', 'AB Recoveries'];
+    const protectedOrgs = db.prepare(
+      "SELECT org_id FROM user_orgs WHERE user_id IN (SELECT id FROM users WHERE email = 'shehreyarkhann@outlook.com')"
+    ).all().map((r) => r.org_id);
+    const junkOrgs = db.prepare(
+      `SELECT id FROM orgs WHERE name IN (${junkNames.map(() => '?').join(',')}) AND stripe_subscription_id IS NULL`
+    ).all(...junkNames).map((r) => r.id).filter((id) => !protectedOrgs.includes(id));
+    const orgTables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map((r) => r.name)
+      .filter((t) => { try { return db.prepare(`PRAGMA table_info(${t})`).all().some((c) => c.name === 'org_id'); } catch { return false; } });
+    for (const oid of junkOrgs) {
+      const memberIds = db.prepare('SELECT user_id FROM user_orgs WHERE org_id = ?').all(oid).map((r) => r.user_id);
+      for (const t of orgTables) db.prepare(`DELETE FROM ${t} WHERE org_id = ?`).run(oid);
+      db.prepare('DELETE FROM user_orgs WHERE org_id = ?').run(oid);
+      for (const uid of memberIds) {
+        const left = db.prepare('SELECT COUNT(*) AS n FROM user_orgs WHERE user_id = ?').get(uid).n;
+        if (!left) db.prepare('DELETE FROM users WHERE id = ?').run(uid);
+      }
+      db.prepare('DELETE FROM orgs WHERE id = ?').run(oid);
+    }
+    // statement_lines carries no org_id (child of patient_statements) — sweep orphans.
+    db.prepare('DELETE FROM statement_lines WHERE statement_id NOT IN (SELECT id FROM patient_statements)').run();
+    // Demo login stragglers + demo artifacts in surviving orgs.
+    const demoUser = db.prepare("SELECT id FROM users WHERE email = 'demo@pulsercm.com'").get();
+    if (demoUser) {
+      db.prepare('DELETE FROM user_orgs WHERE user_id = ?').run(demoUser.id);
+      db.prepare('DELETE FROM users WHERE id = ?').run(demoUser.id);
+    }
+    db.prepare("DELETE FROM ehr_encounters WHERE connection_id IN (SELECT id FROM ehr_connections WHERE provider = 'demo')").run();
+    db.prepare("DELETE FROM ehr_connections WHERE provider = 'demo'").run();
+    db.prepare("DELETE FROM eligibility_lookups WHERE vendor = 'demo'").run();
+    db.prepare("UPDATE orgs SET eligibility_vendor = '' WHERE eligibility_vendor = 'demo'").run(); // NOT NULL on legacy DBs — '' reads as unconfigured
+    db.prepare("INSERT INTO data_migrations (name) VALUES ('demo-junk-cleanup-52')").run();
+    console.log(`[migration] demo-junk-cleanup-52: removed orgs [${junkOrgs.join(', ')}], demo artifacts purged`);
+   } catch (e) {
+    console.error('[migration] demo-junk-cleanup-52 FAILED (will retry next boot):', e.message);
+   } finally {
+    try { db.exec('PRAGMA foreign_keys = ON'); } catch {}
+   }
+  }
 }
 
 // Thin wrapper so route code keeps working with .prepare().get()/.all()/.run()

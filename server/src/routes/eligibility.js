@@ -8,7 +8,7 @@ router.use(authRequired, requireProduct('rcm'));
 const canWrite = roleRequired('owner', 'biller');
 const ownerOnly = roleRequired('owner');
 
-const ELIG_VENDORS = ['demo', 'rest', 'availity'];
+const ELIG_VENDORS = ['rest', 'availity'];
 
 // Org's eligibility vendor config (columns on orgs; see db.js for the at-rest note)
 function orgEligConfig(orgId) {
@@ -19,7 +19,7 @@ function orgEligConfig(orgId) {
      FROM orgs WHERE id = ?`
   ).get(orgId) || {};
   return {
-    vendor: ELIG_VENDORS.includes(o.eligibility_vendor) ? o.eligibility_vendor : 'demo',
+    vendor: ELIG_VENDORS.includes(o.eligibility_vendor) ? o.eligibility_vendor : null,
     endpoint: o.eligibility_endpoint || '',
     api_key: o.eligibility_api_key || '',
     auth_scheme: o.eligibility_auth_scheme || 'Bearer',
@@ -78,9 +78,8 @@ router.get('/stats', (req, res) => {
 
 // ================= REAL-TIME ELIGIBILITY (270/271-style) =================
 // Vendor-backed lookups stored in eligibility_lookups (separate from the manual
-// eligibility_checks log above). Until a real vendor is configured in Settings,
-// checks run against the `demo` vendor — responses are clearly labeled synthetic
-// and never presented as real.
+// eligibility_checks log above). A vendor must be configured in Settings —
+// there is no demo vendor (removed at market launch, deploy #52).
 
 // --- Run a real-time check ---
 router.post('/check', canWrite, async (req, res) => {
@@ -98,6 +97,9 @@ router.post('/check', canWrite, async (req, res) => {
   }
 
   const cfg = orgEligConfig(req.orgId);
+  if (!cfg.vendor) {
+    return res.status(400).json({ error: 'No eligibility vendor configured — connect Availity or a REST endpoint in Organization settings.' });
+  }
   let result;
   try {
     const rawOrg = db.prepare(
@@ -128,7 +130,7 @@ router.post('/check', canWrite, async (req, res) => {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     req.orgId, b.patient_first.trim(), b.patient_last.trim(), b.dob, b.member_id.trim(),
-    payerName, b.date_of_service, demo ? 'demo' : cfg.vendor,
+    payerName, b.date_of_service, cfg.vendor,
     result.coverage_active, result.plan_name, result.plan_type, result.group_number,
     result.copay_primary, result.copay_specialist, result.deductible_individual,
     result.deductible_remaining, result.oop_max, result.effective_date, result.term_date,
@@ -163,10 +165,10 @@ router.get('/lookup/:id', (req, res) => {
   res.json({ ...row, demo: row.vendor === 'demo' });
 });
 
-// --- Vendor mode (any org member — powers the demo banner) ---
+// --- Vendor mode (any org member — powers the vendor badge) ---
 router.get('/mode', (req, res) => {
   const cfg = orgEligConfig(req.orgId);
-  res.json({ vendor: cfg.vendor, demo: cfg.vendor === 'demo' });
+  res.json({ vendor: cfg.vendor, demo: false });
 });
 
 // --- Vendor config (owner only) ---
@@ -176,7 +178,7 @@ router.get('/config', ownerOnly, (req, res) => {
 
 router.put('/config', ownerOnly, (req, res) => {
   const b = req.body || {};
-  const vendor = (b.vendor || 'demo').trim();
+  const vendor = (b.vendor || '').trim();
   if (!ELIG_VENDORS.includes(vendor)) return res.status(400).json({ error: 'Invalid vendor' });
   const endpoint = (b.endpoint || '').trim();
   const auth_scheme = (b.auth_scheme || 'Bearer').trim() || 'Bearer';

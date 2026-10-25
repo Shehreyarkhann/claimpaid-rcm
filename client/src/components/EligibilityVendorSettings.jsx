@@ -3,10 +3,10 @@ import { api } from '../api';
 import { useToast } from './ui';
 
 // Owner-only: which eligibility vendor backs real-time checks.
-// Until a real vendor is configured, checks run against the clearly-labeled demo vendor.
+// Checks require a configured vendor (Availity or a custom REST endpoint).
 export default function EligibilityVendorSettings() {
   const toast = useToast();
-  const [form, setForm] = useState({ vendor: 'demo', endpoint: '', api_key: '', auth_scheme: 'Bearer' });
+  const [form, setForm] = useState({ vendor: 'availity', endpoint: '', api_key: '', auth_scheme: 'Bearer' });
   const [av, setAv] = useState({ client_id: '', client_secret: '', payer_map_lines: '', env: 'production' });
   const [avSecretSet, setAvSecretSet] = useState(false);
   const [keySet, setKeySet] = useState(false);
@@ -18,7 +18,7 @@ export default function EligibilityVendorSettings() {
   useEffect(() => {
     api.eligibility.getConfig().then((c) => {
       const preset = ['Bearer', 'Basic'].includes(c.auth_scheme) ? c.auth_scheme : 'custom';
-      setForm({ vendor: c.vendor || 'demo', endpoint: c.endpoint || '', api_key: '', auth_scheme: preset });
+      setForm({ vendor: c.vendor || 'availity', endpoint: c.endpoint || '', api_key: '', auth_scheme: preset });
       if (preset === 'custom') setCustomHeader(c.auth_scheme);
       setKeySet(!!c.api_key);
       let lines = '';
@@ -68,13 +68,12 @@ export default function EligibilityVendorSettings() {
       <div className="flex items-center gap-2.5 mb-1">
         <div className="text-xl">🩺</div>
         <div className="font-semibold text-slate-900">Eligibility vendor</div>
-        {form.vendor === 'demo' && <span className="badge badge-amber">DEMO MODE — synthetic data</span>}
       </div>
       <p className="text-sm text-slate-500 mb-5 max-w-2xl leading-relaxed">
-        Real-time eligibility checks (270/271-style) run against this vendor. A real vendor requires a
-        clearinghouse account — e.g. pVerify, Eligible, Availity, or Change Healthcare — <strong>plus
-        payer enrollment</strong> for every payer you check against. Until then, checks use clearly-labeled
-        synthetic demo responses so the workflow is fully testable.
+        Real-time eligibility checks (270/271-style) run against this vendor. A vendor account —
+        e.g. Availity, pVerify, Eligible, or Change Healthcare — <strong>plus payer enrollment</strong> for
+        every payer you check against is required. Until a vendor is saved here, real-time checks
+        return a "not configured" message instead of results.
       </p>
       {error && <div className="mb-4 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}
       {saved && <div className="mb-4 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">Vendor settings saved.</div>}
@@ -82,7 +81,6 @@ export default function EligibilityVendorSettings() {
         <div>
           <label className="label">Vendor</label>
           <select className="input" value={form.vendor} onChange={set('vendor')}>
-            <option value="demo">Demo (synthetic responses)</option>
             <option value="availity">Availity (Coverages API — free Essentials account)</option>
             <option value="rest">Custom REST API (pVerify / Eligible / …)</option>
           </select>

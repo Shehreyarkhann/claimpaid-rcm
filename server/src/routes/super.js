@@ -130,7 +130,7 @@ router.get('/orgs/:id', (req, res) => {
   const baa = db.prepare('SELECT * FROM baa_signatures WHERE org_id = ?').get(org.id) || null;
   const eligTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='eligibility_lookups'`).get();
   const eligibility = eligTable ? {
-    vendor: org.eligibility_vendor || 'demo',
+    vendor: org.eligibility_vendor || null,
     configured: !!(org.eligibility_endpoint && org.eligibility_endpoint.trim()),
     checks_30d: db.prepare(
       `SELECT COUNT(*) AS n FROM eligibility_lookups WHERE org_id = ? AND created_at >= datetime('now', '-30 days')`

@@ -5,9 +5,9 @@ import { useToast } from '../components/ui';
 import CodingAssistant from '../components/CodingAssistant';
 
 // EHR integration: pull encounters from the practice's EHR and convert them
-// into claim drafts. athenahealth is the live adapter; the demo provider
-// serves clearly-labeled synthetic encounters. Epic (certification ~$10k+,
-// 6-12 months) and eClinicalWorks (partner program) are honestly out of scope.
+// into claim drafts. athenahealth is the live adapter. Epic (certification
+// ~$10k+, 6-12 months) and eClinicalWorks (partner program) are honestly
+// out of scope.
 export default function Ehr({ onViewClaim }) {
   const { user } = useAuth();
   const toast = useToast();
@@ -68,13 +68,7 @@ export default function Ehr({ onViewClaim }) {
   useEffect(() => { load(); }, [tab]);
 
   const connFor = (p) => (conns || []).find((c) => c.provider === p);
-  const demoConn = connFor('demo');
   const athenaConn = connFor('athenahealth');
-
-  const connectDemo = async () => {
-    setBusy('demo'); try { await api.ehr.connectDemo(); toast.success('Demo EHR connected'); load(); }
-    catch (e) { toast.error(e.message); } finally { setBusy(null); }
-  };
 
   const disconnect = async (provider) => {
     if (!window.confirm(`Disconnect ${provider}? Stored tokens will be wiped.`)) return;
@@ -179,7 +173,7 @@ export default function Ehr({ onViewClaim }) {
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-2xl font-bold text-slate-900">EHR Integration</h1>
-        {canWrite && (demoConn?.status === 'connected' || athenaConn?.status === 'connected') && (
+        {canWrite && athenaConn?.status === 'connected' && (
           <button className="btn btn-primary" onClick={sync} disabled={syncing}>
             {syncing ? 'Syncing…' : '⟳ Sync now'}
           </button>
@@ -249,31 +243,6 @@ export default function Ehr({ onViewClaim }) {
           )}
         </div>
 
-        {/* Demo EHR */}
-        <div className="card p-6">
-          <div className="flex items-center justify-between mb-1">
-            <div className="font-semibold text-slate-900">Demo EHR</div>
-            {demoConn?.status === 'connected'
-              ? <span className="badge badge-amber">DEMO — synthetic encounters</span>
-              : <span className="badge badge-slate">not connected</span>}
-          </div>
-          <p className="text-sm text-slate-500 mb-4 leading-relaxed">
-            Synthetic encounters for testing the sync → convert workflow end-to-end.
-            Never real data — every encounter is clearly labeled.
-          </p>
-          {demoConn?.status === 'connected' ? (
-            <div className="flex gap-2 items-center flex-wrap">
-              <span className="text-xs text-slate-500">Last sync: {demoConn.last_sync_at ? new Date(demoConn.last_sync_at).toLocaleString() : 'never'}</span>
-              {isOwner && <button className="btn btn-sm" onClick={() => disconnect('demo')} disabled={busy === 'demo'}>Disable</button>}
-            </div>
-          ) : (
-            <button className="btn btn-sm" onClick={connectDemo} disabled={busy === 'demo'}>
-              {busy === 'demo' ? 'Enabling…' : 'Enable demo EHR'}
-            </button>
-          )}
-          {autoPullRow(demoConn)}
-        </div>
-
         {/* Out of scope — honest */}
         <div className="card p-6 opacity-75">
           <div className="flex items-center justify-between mb-1">
@@ -339,9 +308,7 @@ export default function Ehr({ onViewClaim }) {
                   <td className="px-4 py-3 font-mono text-xs text-slate-600">{(e.cpt_codes || []).join(', ') || '—'}</td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-600">{(e.icd_codes || []).join(', ') || '—'}</td>
                   <td className="px-4 py-3">
-                    {e.connection_provider === 'demo'
-                      ? <span className="badge badge-amber">demo</span>
-                      : <span className="badge badge-green">athenahealth</span>}
+                    <span className="badge badge-green">{e.connection_provider || 'athenahealth'}</span>
                   </td>
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     {e.status === 'new' && canWrite && (

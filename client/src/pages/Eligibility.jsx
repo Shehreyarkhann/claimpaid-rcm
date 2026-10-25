@@ -163,8 +163,7 @@ function RealTimeCheck({ payers, prefill, onConsumed, canWrite }) {
       setResult(r);
       const h = await api.eligibility.history(10);
       setHistory(h.lookups);
-      if (r.demo) toast.success('Check complete (demo response)');
-      else toast.success('Check complete');
+      toast.success('Check complete');
     } catch (e) { setError(e.message); }
     finally { setBusy(false); }
   };
@@ -181,12 +180,12 @@ function RealTimeCheck({ payers, prefill, onConsumed, canWrite }) {
       <div className="flex items-center gap-2.5 mb-1">
         <div className="text-xl">⚡</div>
         <div className="font-semibold text-slate-900">Real-time eligibility check</div>
-        {mode?.demo && <span className="badge badge-amber">DEMO MODE — synthetic data</span>}
-        {mode && !mode.demo && <span className="badge badge-green">LIVE VENDOR</span>}
+        {mode?.vendor && <span className="badge badge-green">LIVE VENDOR — {mode.vendor === 'availity' ? 'Availity' : 'Custom REST'}</span>}
+        {mode && !mode.vendor && <span className="badge badge-amber">NO VENDOR CONFIGURED</span>}
       </div>
       <p className="text-sm text-slate-500 mb-5 max-w-2xl leading-relaxed">
         Run a 270/271-style check against the payer before the visit.
-        {mode?.demo && ' Currently in demo mode — responses are synthetic. Connect a real vendor in Organization settings.'}
+        {mode && !mode.vendor && ' No eligibility vendor is configured yet — connect Availity or a REST endpoint in Organization settings to run real-time checks.'}
       </p>
       {error && <div className="mb-4 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}
 
@@ -220,11 +219,6 @@ function RealTimeCheck({ payers, prefill, onConsumed, canWrite }) {
             </div>
             <div className="text-white/80 text-xs">{result.payer} · DOS {result.date_of_service}</div>
           </div>
-          {result.demo && (
-            <div className="px-5 py-2.5 bg-amber-50 border-b border-amber-200 text-xs text-amber-800 font-medium">
-              DEMO MODE — synthetic response, not a real 271. Connect a real eligibility vendor in Organization settings.
-            </div>
-          )}
           <div className="px-5 py-4 grid sm:grid-cols-2 gap-x-8">
             <div>
               <BenefitRow label="Patient" value={`${result.patient_first} ${result.patient_last}`} />
@@ -265,7 +259,7 @@ function RealTimeCheck({ payers, prefill, onConsumed, canWrite }) {
                     <td>{h.coverage_active
                       ? <span className="badge badge-green">Active</span>
                       : <span className="badge badge-rose">Inactive</span>}</td>
-                    <td>{h.demo ? <span className="badge badge-amber">Demo</span> : <span className="badge badge-sky">Live</span>}</td>
+                    <td><span className="badge badge-sky">{h.vendor === 'availity' ? 'Availity' : 'Live'}</span></td>
                     <td className="text-slate-500 text-[13px]">{h.created_at?.slice(0, 16).replace('T', ' ')}</td>
                   </tr>
                 ))}
@@ -282,7 +276,7 @@ function RealTimeCheck({ payers, prefill, onConsumed, canWrite }) {
               {detail.patient_first} {detail.patient_last} <span className="text-slate-400 font-normal text-base">· {detail.payer}</span>
             </h3>
             <p className="text-sm text-slate-500 mb-4">
-              Checked {detail.created_at?.slice(0, 16).replace('T', ' ')} · {detail.demo ? 'Demo (synthetic)' : 'Live vendor'}
+              Checked {detail.created_at?.slice(0, 16).replace('T', ' ')} · {detail.vendor === 'availity' ? 'Availity' : 'Live vendor'}
             </p>
             <div className={`rounded-xl px-4 py-3 mb-4 font-bold ${detail.coverage_active ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
               {detail.coverage_active ? '✓ COVERAGE ACTIVE' : '✕ COVERAGE INACTIVE'}

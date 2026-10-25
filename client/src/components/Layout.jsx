@@ -33,7 +33,7 @@ export default function Layout({ page, setPage, children }) {
       </header>
       <main className="max-w-7xl mx-auto px-4 py-6">{children}</main>
       <footer className="max-w-7xl mx-auto px-4 pb-8 text-xs text-slate-400">
-        Demo data — 600 synthetic claims. Built with React, Node.js, SQLite.
+        ClaimPaid — Get your claims paid.
       </footer>
     </div>
   );

@@ -78,22 +78,14 @@ router.get('/connections', (req, res) => {
   });
 });
 
-// POST /api/ehr/connect { provider: 'demo' } — any org member.
-// athenahealth connects via the OAuth authorize flow below, not here.
+// POST /api/ehr/connect — athenahealth connects via the OAuth authorize flow
+// below, not here. The demo EHR provider was removed at market launch (#52).
 router.post('/connect', (req, res) => {
   const provider = (req.body?.provider || '').trim();
   if (provider === 'athenahealth') {
     return res.status(400).json({ error: 'athenahealth connects via OAuth — use the Connect button to start the authorization flow.' });
   }
-  if (provider !== 'demo') {
-    return res.status(400).json({ error: `Unknown EHR provider: ${provider || '(none)'}. Available: ${PROVIDERS.join(', ')}` });
-  }
-  db.prepare(`
-    INSERT INTO ehr_connections (org_id, provider, status, auth_mode, updated_at)
-    VALUES (?, 'demo', 'connected', 'demo', datetime('now'))
-    ON CONFLICT(org_id, provider) DO UPDATE SET status='connected', last_error=NULL, updated_at=datetime('now')
-  `).run(req.orgId);
-  res.json({ ok: true, provider: 'demo' });
+  return res.status(400).json({ error: `Unknown EHR provider: ${provider || '(none)'}. Available: ${PROVIDERS.join(', ')}` });
 });
 
 // GET /api/ehr/athena/authorize — owner-only; starts 3-legged OAuth.
@@ -264,7 +256,7 @@ async function runSyncForOrg(orgId, userId) {
 // POST /api/ehr/sync — owner/biller; pulls new encounters (+ auto-pull).
 router.post('/sync', canWrite, async (req, res) => {
   const any = db.prepare(`SELECT COUNT(*) AS n FROM ehr_connections WHERE org_id = ? AND status IN ('connected', 'error')`).get(req.orgId);
-  if (!any.n) return res.status(400).json({ error: 'No connected EHR — connect the demo EHR or athenahealth first.' });
+  if (!any.n) return res.status(400).json({ error: 'No connected EHR — connect athenahealth first.' });
   res.json(await runSyncForOrg(req.orgId, req.user.id));
 });
 
