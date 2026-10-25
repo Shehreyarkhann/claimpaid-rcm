@@ -256,6 +256,61 @@ router.post('/export-837', canWrite, (req, res) => {
   res.send(edi);
 });
 
+// 837 claim-file import (deploy #51): drag in an 837P exported from any
+// EHR/PM system and the claims land in the worklist — no re-keying.
+// Duplicates (same claim number already in this org) are skipped and
+// reported; payers named in the file that don't exist yet are created
+// and reported, never silently.
+router.post('/upload/837', canWrite, checkClaimQuota, upload.single('file'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded (field name: file)' });
+  const { parse837 } = require('../edi/parse837');
+  const { claims: parsed, errors } = parse837(req.file.buffer.toString('utf-8'));
+  if (!parsed.length) {
+    return res.status(400).json({ error: errors[0] || 'No claims found in that file', errors });
+  }
+  const findClaim = db.prepare('SELECT id FROM claims WHERE org_id = ? AND claim_number = ?');
+  const insPayer = db.prepare('INSERT INTO payers (org_id, name, type) VALUES (?, ?, ?)');
+  const insert = db.prepare(`
+    INSERT INTO claims (org_id, claim_number, patient_name, payer_id, service_date, billed_amount, paid_amount, status, denial_reason, days_in_ar, cpt_codes, icd_codes, rendering_npi, rendering_provider, patient_dob, member_id)
+    VALUES (?, ?, ?, ?, ?, ?, 0, 'pending', NULL, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const daysInAr = (dos) => Math.max(0, Math.floor((Date.now() - new Date(dos + 'T00:00:00').getTime()) / 86400000) || 0);
+  let inserted = 0;
+  const skipped = [];
+  const payersCreated = [];
+  for (const c of parsed) {
+    if (findClaim.get(req.orgId, c.claim_number)) {
+      skipped.push({ claim_number: c.claim_number, reason: 'Already in the system — skipped' });
+      continue;
+    }
+    if (!c.payer_name) {
+      skipped.push({ claim_number: c.claim_number, reason: 'No payer named in the file — skipped' });
+      continue;
+    }
+    let payerId = resolvePayerId(req.orgId, c.payer_name);
+    if (!payerId) {
+      const norm = db.prepare('SELECT id, name FROM payers WHERE org_id = ?').all(req.orgId)
+        .find((p) => p.name.replace(/\s+/g, ' ').trim().toLowerCase() === c.payer_name.replace(/\s+/g, ' ').trim().toLowerCase());
+      if (norm) payerId = norm.id;
+    }
+    if (!payerId) {
+      payerId = Number(insPayer.run(req.orgId, c.payer_name, 'Commercial').lastInsertRowid);
+      payersCreated.push(c.payer_name);
+    }
+    try {
+      insert.run(req.orgId, c.claim_number, c.patient_name, payerId, c.service_date,
+        c.billed_amount, daysInAr(c.service_date),
+        c.cpt_codes.join(', ') || null, c.icd_codes.join(', ') || null,
+        c.rendering_npi || null, c.rendering_provider || null,
+        c.patient_dob || null, c.member_id || null);
+      inserted++;
+    } catch (e) {
+      skipped.push({ claim_number: c.claim_number, reason: e.message });
+    }
+  }
+  res.json({ inserted, skipped, payers_created: payersCreated, errors, total: parsed.length });
+});
+
 router.post('/upload/csv', canWrite, checkClaimQuota, upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded (field name: file)' });
 

@@ -353,6 +353,26 @@ export default function Claims({ onCheckEligibility }) {
     e.target.value = '';
   };
 
+  const [import837Result, setImport837Result] = useState(null);
+  const file837Ref = useRef(null);
+  const handleUpload837 = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setImport837Result(null);
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await authFetch('/api/claims/upload/837', { method: 'POST', body: fd });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Import failed');
+      setImport837Result(result);
+      toast.success(`${result.inserted} claims imported from 837`);
+      fetchClaims();
+      api.payers().then(setPayers).catch(() => {});
+    } catch (err) { setImport837Result({ error: err.message }); }
+    e.target.value = '';
+  };
+
   return (
     <div>
       {modal && <ClaimModal claim={modal === 'add' ? null : modal} payers={payers}
@@ -365,6 +385,7 @@ export default function Claims({ onCheckEligibility }) {
         actions={canWrite ? [
           <button key="add" className="btn btn-primary" onClick={() => setModal('add')}>+ Add claim</button>,
           <button key="up" className="btn btn-outline" onClick={() => fileRef.current.click()}>⬆ Upload CSV</button>,
+          <button key="i837" className="btn btn-outline" onClick={() => file837Ref.current.click()}>⬆ Import 837</button>,
         ] : []}
       />
       {canWrite && (
@@ -372,7 +393,25 @@ export default function Claims({ onCheckEligibility }) {
           <a href="/api/claims/template/csv" className="text-xs text-slate-500 hover:text-slate-700 underline underline-offset-2">
             Download CSV template
           </a>
+          <span className="text-xs text-slate-400 ml-3">Import 837: drop in the claim file your EHR exports — claims land in the worklist, no re-keying.</span>
           <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleUpload} />
+          <input ref={file837Ref} type="file" accept=".837,.txt,.edi,.dat,.x12" className="hidden" onChange={handleUpload837} />
+        </div>
+      )}
+
+      {import837Result && (
+        <div className={`rounded-2xl border px-5 py-4 text-sm mb-5 ${import837Result.error ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-emerald-50 border-emerald-200 text-emerald-800'}`}>
+          {import837Result.error ? <>837 import failed: {import837Result.error}</> : (
+            <><strong>{import837Result.inserted} of {import837Result.total}</strong> claims imported from the 837 file.
+              {import837Result.payers_created?.length > 0 && <div className="mt-1">New payers created from the file: {import837Result.payers_created.join(', ')} — set their filing deadlines under Filing Rules.</div>}
+              {import837Result.skipped?.length > 0 && (
+                <details className="mt-2"><summary className="cursor-pointer font-medium">{import837Result.skipped.length} claims skipped</summary>
+                  <ul className="mt-1 space-y-1 text-xs">
+                    {import837Result.skipped.slice(0, 10).map((s, i) => <li key={i}>{s.claim_number}: {s.reason}</li>)}
+                  </ul></details>)}
+              {import837Result.errors?.length > 0 && <div className="mt-1 text-xs">{import837Result.errors.slice(0, 5).join(' · ')}</div>}
+            </>)}
+          <button onClick={() => setImport837Result(null)} className="ml-3 underline">dismiss</button>
         </div>
       )}
 
