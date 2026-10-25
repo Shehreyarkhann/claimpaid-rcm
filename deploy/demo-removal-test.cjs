@@ -150,7 +150,7 @@ async function partB() {
 }
 
 function partC() {
-  console.log('Part C — AskBase demo cleanup moves the public handbook');
+  console.log('Part C — AskBase demo cleanup (prod shape) moves the public handbook');
   const ADB = path.join(TMP, 'askbase.db');
   const script = `
     process.env.ASKBASE_DB_PATH = ${JSON.stringify(ADB)};
@@ -158,24 +158,30 @@ function partC() {
     initSchema();
     const mode = process.argv[1];
     if (mode === 'seed') {
-      const home = Number(db.prepare("INSERT INTO orgs (name, rcm_org_id) VALUES ('HQ AI', 12)").run().lastInsertRowid);
+      const home = Number(db.prepare("INSERT INTO orgs (name, rcm_org_id) VALUES ('ClaimPaid HQ', 12)").run().lastInsertRowid);
       db.prepare("INSERT INTO users (org_id, name, email, password_hash, role) VALUES (?, 'Founder', 'shehreyarkhann@outlook.com', 'x', 'owner')").run(home);
       const demo = Number(db.prepare("INSERT INTO orgs (name) VALUES ('Demo Company')").run().lastInsertRowid);
       db.prepare("INSERT INTO users (org_id, name, email, password_hash, role) VALUES (?, 'Demo Owner', 'demo@askbase.com', 'x', 'owner')").run(demo);
       const nw = Number(db.prepare("INSERT INTO knowledge_bases (org_id, name, public_enabled, public_slug) VALUES (?, 'Northwind Support Handbook', 1, 'demo-northwind')").run(demo).lastInsertRowid);
-      const hb = Number(db.prepare("INSERT INTO knowledge_bases (org_id, name, public_enabled, public_slug) VALUES (?, 'Payer Policy Handbook', 1, 'payer-policy-handbook')").run(demo).lastInsertRowid);
-      db.prepare("INSERT INTO documents (kb_id, org_id, filename, source_type, status) VALUES (?, ?, 'h.md', 'upload', 'ready')").run(hb, demo);
-      db.prepare("INSERT INTO chunks (doc_id, kb_id, org_id, chunk_index, text, embedding) VALUES (1, ?, ?, 0, 'Aetna 120 days', '[]')").run(hb, demo);
-      db.prepare("DELETE FROM data_migrations WHERE name = 'demo-cleanup-52'").run();
-      console.log(JSON.stringify({ home, demo, hb }));
+      // The #52 killer: the demo KB has a conversation + message (convo_id).
+      const convo = Number(db.prepare("INSERT INTO conversations (kb_id, org_id, title) VALUES (?, ?, 'chat')").run(nw, demo).lastInsertRowid);
+      db.prepare("INSERT INTO messages (convo_id, role, content) VALUES (?, 'user', 'hello')").run(convo);
+      // Prod shape: the handbook sits in the RCM-demo-linked AI org.
+      const rcmDemo = Number(db.prepare("INSERT INTO orgs (name, rcm_org_id) VALUES ('Demo Billing Co.', 1)").run().lastInsertRowid);
+      const hb = Number(db.prepare("INSERT INTO knowledge_bases (org_id, name, public_enabled, public_slug) VALUES (?, 'Payer Policy Handbook', 1, 'payer-policy-handbook')").run(rcmDemo).lastInsertRowid);
+      const doc = Number(db.prepare("INSERT INTO documents (kb_id, org_id, filename, source_type, status) VALUES (?, ?, 'h.md', 'upload', 'ready')").run(hb, rcmDemo).lastInsertRowid);
+      db.prepare("INSERT INTO chunks (doc_id, kb_id, org_id, chunk_index, text, embedding) VALUES (?, ?, ?, 0, 'Aetna 120 days', '[]')").run(doc, hb, rcmDemo);
+      db.prepare("DELETE FROM data_migrations WHERE name IN ('demo-cleanup-52', 'demo-cleanup-53')").run();
+      console.log(JSON.stringify({ home, demo, rcmDemo, hb }));
     } else {
       const out = {
-        demoOrg: !!db.prepare("SELECT id FROM orgs WHERE name = 'Demo Company'").get(),
+        orgs: db.prepare('SELECT id, name FROM orgs ORDER BY id').all(),
         demoUser: !!db.prepare("SELECT id FROM users WHERE email = 'demo@askbase.com'").get(),
         northwind: !!db.prepare("SELECT id FROM knowledge_bases WHERE public_slug = 'demo-northwind'").get(),
+        messages: db.prepare('SELECT COUNT(*) AS n FROM messages').get().n,
         handbook: db.prepare("SELECT org_id FROM knowledge_bases WHERE public_slug = 'payer-policy-handbook'").get(),
-        home: db.prepare("SELECT id FROM orgs WHERE rcm_org_id = 12").get(),
         chunks: db.prepare('SELECT org_id FROM chunks').all(),
+        marker: !!db.prepare("SELECT name FROM data_migrations WHERE name = 'demo-cleanup-53'").get(),
       };
       console.log(JSON.stringify(out));
     }
@@ -183,12 +189,13 @@ function partC() {
   const cwd = path.join(__dirname, '..', '..', 'askbase', 'server');
   const seeded = JSON.parse(execFileSync('node', ['-e', script, 'seed'], { cwd, encoding: 'utf8' }).trim().split('\n').pop());
   const after = JSON.parse(execFileSync('node', ['-e', script, 'check'], { cwd, encoding: 'utf8' }).trim().split('\n').pop());
-  check('AI demo org + demo user removed', after.demoOrg === false && after.demoUser === false, JSON.stringify(after));
-  check('Northwind demo KB deleted', after.northwind === false);
+  check('AI junk orgs removed (Demo Company + RCM-demo org)', after.orgs.length === 1 && after.orgs[0].id === seeded.home, JSON.stringify(after.orgs));
+  check('AI demo user removed', after.demoUser === false);
+  check('Northwind demo KB + its conversation/messages deleted', after.northwind === false && after.messages === 0, JSON.stringify(after));
   check('public handbook MOVED to the founder AI org (not deleted)',
-    !!after.handbook && after.home && after.handbook.org_id === after.home.id && after.home.id === seeded.home,
-    JSON.stringify(after));
+    !!after.handbook && after.handbook.org_id === seeded.home, JSON.stringify(after));
   check('handbook chunks moved with it', after.chunks.length === 1 && after.chunks[0].org_id === seeded.home, JSON.stringify(after.chunks));
+  check('cleanup marker recorded', after.marker === true);
 }
 
 (async () => {
