@@ -243,6 +243,10 @@ export const api = {
   },
   billingPortal: () =>
     authFetch('/api/billing/portal', { method: 'POST' }).then(handle),
+  billingCancel: (mode) =>
+    authFetch('/api/billing/cancel', { method: 'POST', body: JSON.stringify({ mode }) }).then(handle),
+  billingReactivate: () =>
+    authFetch('/api/billing/reactivate', { method: 'POST' }).then(handle),
   // ---- Legal / BAA ----
   legalDocuments: () =>
     fetch('/api/legal/documents').then((r) => {

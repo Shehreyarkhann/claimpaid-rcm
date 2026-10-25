@@ -8,12 +8,20 @@ const JWT_EXPIRES = '7d';
 // Plan + resolved limits are embedded in the token so downstream services
 // (ClaimPaid AI, served at /ai/) can enforce quotas without a DB round-trip.
 // Limits refresh on re-login (tokens live 7 days) — acceptable and honest.
+// The super-admin account (deploy #54): the address in SUPERADMIN_EMAIL gets
+// every product with no plan limits — free and unrestricted, by design.
+function isSuperAdminEmail(email) {
+  const se = (process.env.SUPERADMIN_EMAIL || '').trim().toLowerCase();
+  return !!se && !!email && email.toLowerCase() === se;
+}
+
 function signToken(user) {
   let plan = null;
   try {
     const org = db.prepare('SELECT plan FROM orgs WHERE id = ?').get(user.org_id);
     plan = org?.plan || null;
   } catch { /* plan lookup failure => grandfathered unlimited, never strand a login */ }
+  if (isSuperAdminEmail(user.email)) plan = 'enterprise'; // unlimited limits embed in the token
   return jwt.sign(
     { sub: user.id, org: user.org_id, role: user.role, email: user.email, name: user.name, plan, limits: limitsForPlan(plan) },
     JWT_SECRET,
@@ -68,9 +76,14 @@ function authRequired(req, res, next) {
 
     req.user = { id: member.id, email: member.email, name: member.name, role: member.role, org_id: member.org_id };
     req.orgId = member.org_id;
+    req.isSuperAdmin = isSuperAdminEmail(member.email);
     // Attach subscription products so routes can gate by plan (ai plan => no RCM, etc.)
     // Uses the effective status: an expired trial unlocks nothing.
-    try {
+    // The super-admin bypasses all plan gating (deploy #54).
+    if (req.isSuperAdmin) {
+      req.plan = 'enterprise';
+      req.products = { rcm: true, ai: true };
+    } else try {
       const org = db.prepare('SELECT plan, plan_status, trial_ends_at FROM orgs WHERE id = ?').get(member.org_id);
       const { productsForOrg } = require('./routes/billing');
       req.plan = org?.plan || null;
@@ -126,4 +139,4 @@ function superAdminRequired(req, res, next) {
   return res.status(403).json({ error: 'Super-admin access required' });
 }
 
-module.exports = { signToken, authRequired, roleRequired, requireProduct, superAdminRequired, JWT_SECRET };
+module.exports = { signToken, authRequired, roleRequired, requireProduct, superAdminRequired, JWT_SECRET, isSuperAdminEmail };

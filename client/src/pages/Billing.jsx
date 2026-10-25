@@ -155,6 +155,33 @@ export default function Billing({ onBaaRequired }) {
     }
   };
 
+  // Self-serve cancellation (deploy #54)
+  const [showCancel, setShowCancel] = useState(false);
+  const [cancelMode, setCancelMode] = useState('period_end');
+  const doCancel = async () => {
+    setBusy('cancel');
+    try {
+      const r = await api.billingCancel(cancelMode);
+      toast.success(r.message || 'Subscription canceled.');
+      setShowCancel(false);
+      await load();
+    } catch (e) {
+      toast.error(e.message);
+    }
+    setBusy(null);
+  };
+  const doReactivate = async () => {
+    setBusy('reactivate');
+    try {
+      const r = await api.billingReactivate();
+      toast.success(r.message || 'Subscription reactivated.');
+      await load();
+    } catch (e) {
+      toast.error(e.message);
+    }
+    setBusy(null);
+  };
+
   if (loading) {
     return (
       <div className="p-6 max-w-4xl mx-auto">
@@ -265,6 +292,11 @@ export default function Billing({ onBaaRequired }) {
                 {busy === 'portal' ? 'Opening…' : isPastDue ? 'Update payment method' : 'Manage billing'}
               </button>
             )}
+            {((isActive || isPastDue) || (isTrialing && hasCustomer)) && !status?.cancel_at_period_end && planKey !== 'enterprise' && (
+              <button className="btn btn-ghost !text-red-600" onClick={() => { setCancelMode('period_end'); setShowCancel(true); }}>
+                Cancel subscription
+              </button>
+            )}
           </div>
         </div>
         {isTrialing && status?.trial_days_left > 0 && (
@@ -280,12 +312,61 @@ export default function Billing({ onBaaRequired }) {
             </div>
           </div>
         )}
+        {status?.cancel_at_period_end && (
+          <div className="mt-4 flex items-center justify-between flex-wrap gap-3 text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+            <span>
+              Your plan cancels on <strong>{fmtDate(status.current_period_end)}</strong> — you keep full access until then, and you won't be charged again.
+            </span>
+            <button className="btn btn-primary !py-1.5" disabled={busy === 'reactivate'} onClick={doReactivate}>
+              {busy === 'reactivate' ? 'Working…' : 'Keep my plan'}
+            </button>
+          </div>
+        )}
+        {isTrialing && !hasCustomer && st !== 'canceled' && (
+          <div className="mt-4 text-xs text-slate-400">
+            Prefer to stop now? <button className="underline hover:text-slate-600" onClick={() => { setCancelMode('immediate'); setShowCancel(true); }}>End your trial</button> — your workspace will close today.
+          </div>
+        )}
         {!status?.stripe_configured && (
           <div className="mt-4 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
             Online checkout isn't enabled on this server yet — contact us to activate your plan.
           </div>
         )}
       </div>
+
+      {/* ── Cancel confirm modal ── */}
+      {showCancel && (
+        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4" onClick={() => busy !== 'cancel' && setShowCancel(false)}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold tracking-tight mb-2">Cancel {meta.label}?</h3>
+            {hasCustomer ? (
+              <>
+                <p className="text-sm text-slate-600 mb-4">
+                  No hard feelings — and no cancellation fees, ever. Your data stays available in read-only export for 30 days after access ends.
+                </p>
+                <label className="flex items-start gap-2.5 text-sm mb-2 cursor-pointer">
+                  <input type="radio" className="mt-0.5" checked={cancelMode === 'period_end'} onChange={() => setCancelMode('period_end')} />
+                  <span><strong>Cancel at period end</strong> — keep full access until {status?.current_period_end ? fmtDate(status.current_period_end) : 'the period ends'}, no further charges.</span>
+                </label>
+                <label className="flex items-start gap-2.5 text-sm mb-5 cursor-pointer">
+                  <input type="radio" className="mt-0.5" checked={cancelMode === 'immediate'} onChange={() => setCancelMode('immediate')} />
+                  <span><strong>Cancel immediately</strong> — access ends right now.</span>
+                </label>
+              </>
+            ) : (
+              <p className="text-sm text-slate-600 mb-5">
+                This ends your free trial today and closes the workspace. You can sign up again anytime — your trial won't restart.
+              </p>
+            )}
+            <div className="flex justify-end gap-2">
+              <button className="btn btn-ghost" disabled={busy === 'cancel'} onClick={() => setShowCancel(false)}>Keep my plan</button>
+              <button className="btn !bg-red-600 !text-white hover:!bg-red-700" disabled={busy === 'cancel'} onClick={doCancel}>
+                {busy === 'cancel' ? 'Canceling…' : 'Yes, cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Usage this month ── */}
       {usage && (

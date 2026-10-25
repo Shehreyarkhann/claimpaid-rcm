@@ -61,9 +61,12 @@ function getEffectivePlanStatus(org) {
   return raw;
 }
 
-// Products for an org, honoring trial expiry: an expired trial unlocks nothing.
+// Products for an org, honoring trial expiry: an expired trial unlocks
+// nothing — and neither does a canceled subscription (deploy #54: before
+// this, a canceled org kept its paid plan's products forever).
 function productsForOrg(org) {
-  if (getEffectivePlanStatus(org) === 'expired') return { rcm: false, ai: false };
+  const eff = getEffectivePlanStatus(org);
+  if (eff === 'expired' || eff === 'canceled') return { rcm: false, ai: false };
   return productsForPlan(org?.plan);
 }
 
@@ -122,6 +125,7 @@ function billingStatusFor(org) {
     trial_days_left: msLeft > 0 ? Math.ceil(msLeft / 86400000) : 0,
     is_trialing: effStatus === 'trialing',
     current_period_end: org.current_period_end || null,
+    cancel_at_period_end: !!org.stripe_cancel_at_period_end,
     has_customer: !!org.stripe_customer_id,
     stripe_configured: !!process.env.STRIPE_SECRET_KEY,
     products: productsForOrg(org),
@@ -137,7 +141,17 @@ function billingStatusFor(org) {
 router.get('/status', authRequired, (req, res) => {
   const org = getOrg(req.orgId);
   if (!org) return res.status(404).json({ error: 'Organization not found' });
-  res.json(billingStatusFor(org));
+  const out = billingStatusFor(org);
+  // Super-admin (deploy #54): free and unrestricted — always enterprise/active.
+  if (req.isSuperAdmin) {
+    out.plan = 'enterprise';
+    out.plan_status = 'active';
+    out.is_trialing = false;
+    out.trial_days_left = 0;
+    out.products = { rcm: true, ai: true };
+    out.unlimited = true;
+  }
+  res.json(out);
 });
 
 // ---- GET /api/billing/usage — plan usage vs limits (powers usage bars + 80% banner) ----
@@ -218,6 +232,62 @@ router.post('/portal', authRequired, roleRequired('owner'), async (req, res) => 
   } catch (e) {
     console.error('Stripe portal error:', e.message);
     res.status(502).json({ error: 'Could not open the billing portal. Please try again.' });
+  }
+});
+
+// ---- POST /api/billing/cancel — self-serve cancellation (owner only) ----
+// Deploy #54: any customer can cancel at any time, in-app. Default mode is
+// 'period_end' (Stripe cancel_at_period_end — access continues until the
+// paid period ends, then the subscription.deleted webhook closes the org).
+// 'immediate' cancels in Stripe right now. An org with no Stripe
+// subscription (app-side trial, no card) simply ends its trial now.
+router.post('/cancel', authRequired, roleRequired('owner'), async (req, res) => {
+  const org = getOrg(req.orgId);
+  if (!org) return res.status(404).json({ error: 'Organization not found' });
+  if (getEffectivePlanStatus(org) === 'canceled') {
+    return res.status(400).json({ error: 'This subscription is already canceled.' });
+  }
+  const mode = req.body?.mode === 'immediate' ? 'immediate' : 'period_end';
+
+  if (!org.stripe_subscription_id) {
+    db.prepare("UPDATE orgs SET plan_status = 'canceled', stripe_cancel_at_period_end = 0 WHERE id = ?").run(org.id);
+    return res.json({ ok: true, mode: 'immediate', access_until: null, message: 'Your trial has been ended. Thanks for trying ClaimPaid.' });
+  }
+  if (!billingConfigured(res)) return;
+  const stripe = getStripe();
+  try {
+    if (mode === 'immediate') {
+      await stripe.subscriptions.cancel(org.stripe_subscription_id);
+      db.prepare("UPDATE orgs SET plan_status = 'canceled', stripe_subscription_id = NULL, stripe_cancel_at_period_end = 0 WHERE id = ?").run(org.id);
+      return res.json({ ok: true, mode, access_until: null, message: 'Your subscription is canceled, effective immediately.' });
+    }
+    const sub = await stripe.subscriptions.update(org.stripe_subscription_id, { cancel_at_period_end: true });
+    const until = sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : (org.current_period_end || null);
+    db.prepare('UPDATE orgs SET stripe_cancel_at_period_end = 1, current_period_end = COALESCE(?, current_period_end) WHERE id = ?')
+      .run(until, org.id);
+    return res.json({ ok: true, mode, access_until: until, message: `Your subscription will cancel on ${until ? until.slice(0, 10) : 'the period end'} — you keep full access until then.` });
+  } catch (e) {
+    console.error('Stripe cancel error:', e.message);
+    return res.status(502).json({ error: 'Stripe could not cancel the subscription. Please try again or contact support.' });
+  }
+});
+
+// ---- POST /api/billing/reactivate — undo a scheduled cancel (owner only) ----
+router.post('/reactivate', authRequired, roleRequired('owner'), async (req, res) => {
+  const org = getOrg(req.orgId);
+  if (!org) return res.status(404).json({ error: 'Organization not found' });
+  if (!org.stripe_subscription_id || !org.stripe_cancel_at_period_end) {
+    return res.status(400).json({ error: 'No scheduled cancellation to undo.' });
+  }
+  if (!billingConfigured(res)) return;
+  const stripe = getStripe();
+  try {
+    await stripe.subscriptions.update(org.stripe_subscription_id, { cancel_at_period_end: false });
+    db.prepare('UPDATE orgs SET stripe_cancel_at_period_end = 0 WHERE id = ?').run(org.id);
+    return res.json({ ok: true, message: 'Your subscription will continue as normal.' });
+  } catch (e) {
+    console.error('Stripe reactivate error:', e.message);
+    return res.status(502).json({ error: 'Stripe could not reactivate the subscription. Please try again or contact support.' });
   }
 });
 

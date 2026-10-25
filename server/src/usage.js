@@ -108,6 +108,7 @@ function quotaExceeded(res, kind, plan, limit, used) {
 
 // Blocks claim creation (and CSV bulk import) at 100% of the monthly claim quota.
 function checkClaimQuota(req, res, next) {
+  if (req.isSuperAdmin) return next(); // super-admin: no quotas (deploy #54)
   try {
     const plan = orgPlan(req.orgId);
     const { claimsPerMonth } = limitsForPlan(plan);
