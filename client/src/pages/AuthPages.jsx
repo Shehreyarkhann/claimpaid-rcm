@@ -380,6 +380,7 @@ export function Login({ goSignup, goForgot }) {
           </div>
           <button className="btn btn-primary w-full !py-3" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
           <GoogleButton onCredential={handleGoogle} text="continue_with" />
+          {busy && <p className="text-xs text-slate-500 text-center">Signing you in with Google — one moment…</p>}
           <p className="text-sm text-slate-500 text-center">
             New to ClaimPaid? <button type="button" onClick={goSignup} className="text-emerald-600 font-semibold hover:underline">Create an account</button>
           </p>
@@ -433,6 +434,7 @@ export function Signup({ goLogin }) {
           </div>
           <button className="btn btn-primary w-full !py-3" disabled={busy}>{busy ? 'Creating…' : 'Create workspace'}</button>
           <GoogleButton onCredential={handleGoogle} text="signup_with" />
+          {busy && <p className="text-xs text-slate-500 text-center">Signing you in with Google — one moment…</p>}
           <p className="text-sm text-slate-500 text-center">
             Already have an account? <button type="button" onClick={goLogin} className="text-emerald-600 font-semibold hover:underline">Sign in</button>
           </p>

@@ -24,12 +24,28 @@ async function getGoogleCerts() {
   if (testCerts) return testCerts;
   const now = Date.now();
   if (certCache.keys && now - certCache.fetchedAt < CERT_CACHE_MS) return certCache.keys;
-  const res = await fetch(CERTS_URL);
+  // Hard timeout (deploy #55): on the production droplet this fetch has
+  // taken 25s+ — long enough for the browser to abandon the sign-in and
+  // bounce back to the login screen. Fail fast with a retryable error
+  // instead of hanging the login.
+  const res = await fetch(CERTS_URL, { signal: AbortSignal.timeout(10000) });
   if (!res.ok) throw new Error('Could not fetch Google signing certs');
   const jwks = await res.json();
   if (!jwks.keys || !jwks.keys.length) throw new Error('No Google signing certs available');
   certCache = { keys: jwks.keys, fetchedAt: now };
   return jwks.keys;
+}
+
+// Keep the cert cache warm (deploy #55): fetch at boot and refresh every
+// 50 minutes so a real Google sign-in NEVER pays the cold download —
+// the 25s cold fetch after every restart is what made Google sign-in
+// look broken (the phone gave up and reloaded to the sign-in screen).
+function warmGoogleCerts() {
+  getGoogleCerts().catch(() => { /* a later sign-in retries on demand */ });
+}
+if (process.env.GOOGLE_CLIENT_ID && process.env.NODE_ENV !== 'test') {
+  warmGoogleCerts();
+  setInterval(warmGoogleCerts, 50 * 60 * 1000).unref();
 }
 
 function fail(status, message) {
