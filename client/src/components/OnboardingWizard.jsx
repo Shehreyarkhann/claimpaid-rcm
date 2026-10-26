@@ -40,7 +40,7 @@ function Shell({ step, children, wide }) {
           {/* Brand */}
           <div className="flex items-center justify-center gap-2.5 mb-8">
             <img src="/app/claimpaid-icon.webp" alt="ClaimPaid" className="w-9 h-9 rounded-xl" />
-            <span className="text-white font-extrabold text-lg tracking-tight">ClaimPaid</span>
+            <span className="wordmark text-white font-extrabold text-lg tracking-tight">ClaimPaid</span>
           </div>
           {/* Progress */}
           <div className="mb-8">

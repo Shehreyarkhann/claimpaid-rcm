@@ -22,7 +22,7 @@ export default function FloatingChat() {
             <div className="flex items-center gap-2">
               <span className="text-xl">🤖</span>
               <div>
-                <div className="font-bold text-sm leading-tight">ClaimPaid AI</div>
+                <div className="wordmark font-bold text-sm leading-tight">ClaimPaid AI</div>
                 <div className="text-[11px] opacity-80">Ask about payer policies</div>
               </div>
             </div>

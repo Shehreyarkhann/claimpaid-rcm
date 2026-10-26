@@ -10,7 +10,7 @@ function BrandPanel() {
       <div className="relative flex items-center gap-3">
         <img src="/app/claimpaid-icon.webp" alt="ClaimPaid" className="w-10 h-10 rounded-xl shadow-[0_4px_16px_rgba(16,185,129,0.4)]" />
         <div>
-          <div className="font-bold text-lg leading-tight">ClaimPaid RCM</div>
+          <div className="wordmark font-bold text-lg leading-tight">ClaimPaid RCM</div>
           <div className="text-xs text-stone-400">Revenue Cycle Analytics</div>
         </div>
       </div>

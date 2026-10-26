@@ -64,7 +64,7 @@ export default function WorkspaceSwitcher({ collapsed }) {
         title="Switch workspace"
       >
         <div className="min-w-0 flex-1">
-          <div className="font-bold leading-tight tracking-tight truncate">ClaimPaid RCM</div>
+          <div className="wordmark font-bold leading-tight tracking-tight truncate">ClaimPaid RCM</div>
           <div className="text-[11px] text-stone-400 truncate max-w-[150px] flex items-center gap-1">
             {user?.orgName}
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 opacity-70">

@@ -10,7 +10,7 @@ export default function Layout({ page, setPage, children }) {
           <div className="flex items-center gap-3">
             <img src="/app/claimpaid-icon.webp" alt="ClaimPaid" className="w-9 h-9 rounded-lg" />
             <div>
-              <div className="font-bold text-lg leading-tight">ClaimPaid RCM</div>
+              <div className="wordmark font-bold text-lg leading-tight">ClaimPaid RCM</div>
               <div className="text-xs text-stone-400">Revenue Cycle Analytics</div>
             </div>
           </div>
