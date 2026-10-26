@@ -128,7 +128,7 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Pulse RCM running on http://localhost:${PORT}`);
+  console.log(`ClaimPaid running on http://localhost:${PORT}`);
   if (!process.env.JWT_SECRET) {
     console.log('WARNING: JWT_SECRET not set — using dev default. Set it in production.');
   }
