@@ -45,12 +45,44 @@ function authRequired(req, res, next) {
     // Confirm the user still exists AND still belongs to the token's workspace.
     // The workspace comes from the token (set at login/switch), not the home org —
     // this is what makes workspace switching work.
-    const member = db.prepare(
+    let member = db.prepare(
       `SELECT u.id, u.email, u.name, u.mfa_enabled, u.is_superadmin, u.token_version, m.org_id, m.role
        FROM user_orgs m JOIN users u ON u.id = m.user_id
        WHERE m.user_id = ? AND m.org_id = ?`
     ).get(payload.sub, payload.org);
-    if (!member) return res.status(401).json({ error: 'User no longer exists' });
+    if (!member) {
+      // The token's workspace no longer includes this user — deleted
+      // workspace, removed membership, or a stale home-org pointer (the
+      // 2026-10-26 dead-login loop). Heal to any remaining membership; if
+      // none exists, this is the org-less state: authenticate narrowly so
+      // the client can route to workspace creation instead of bouncing the
+      // user through a login that can never succeed.
+      const u = db.prepare('SELECT id, email, name, role, mfa_enabled, is_superadmin, token_version, org_id FROM users WHERE id = ?').get(payload.sub);
+      if (!u || (payload.tv ?? 0) !== (u.token_version ?? 0)) {
+        return res.status(401).json({ error: 'User no longer exists' });
+      }
+      const first = db.prepare('SELECT org_id, role FROM user_orgs WHERE user_id = ? ORDER BY org_id LIMIT 1').get(u.id);
+      if (first) {
+        db.prepare('UPDATE users SET org_id = ? WHERE id = ?').run(first.org_id, u.id);
+        member = { ...u, org_id: first.org_id, role: first.role };
+      } else {
+        const p = (req.baseUrl || '') + (req.path || '');
+        const RECOVERY_PATHS = new Set(['/api/auth/me', '/api/auth/orgs', '/api/auth/switch', '/api/onboarding/status']);
+        const isRecovery = RECOVERY_PATHS.has(p)
+          || (req.method === 'DELETE' && p.startsWith('/api/auth/orgs/'))
+          || p.startsWith('/api/super');
+        req.user = { id: u.id, email: u.email, name: u.name, role: u.role, org_id: u.org_id };
+        req.orgId = u.org_id;
+        req.noOrg = true;
+        req.isSuperAdmin = isSuperAdminEmail(u.email);
+        req.plan = req.isSuperAdmin ? 'enterprise' : null;
+        req.products = req.isSuperAdmin ? { rcm: true, ai: true } : { rcm: false, ai: false };
+        if (!isRecovery) {
+          return res.status(403).json({ error: 'This account has no workspace yet. Create a workspace to continue.', noOrg: true });
+        }
+        return next();
+      }
+    }
     // Log-out-everywhere / password change bumps token_version (deploy #57):
     // any token minted before the bump dies here. Pre-#57 tokens carry no
     // tv and read as 0, matching the column default — the deploy itself

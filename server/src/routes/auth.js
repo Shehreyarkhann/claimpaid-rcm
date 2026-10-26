@@ -50,6 +50,21 @@ function buildLoginResponse(user) {
     user.is_superadmin = 1;
   }
 
+  // Heal a stale home-org pointer: if the user's org_id is not one of their
+  // memberships (their workspace was deleted), re-point to the first
+  // remaining workspace so the issued token actually works. Org-less users
+  // keep the stale pointer; the auth middleware routes them to workspace
+  // creation instead of a dead session.
+  const home = db.prepare('SELECT org_id, role FROM user_orgs WHERE user_id = ? AND org_id = ?').get(user.id, user.org_id);
+  if (!home) {
+    const first = db.prepare('SELECT org_id, role FROM user_orgs WHERE user_id = ? ORDER BY org_id LIMIT 1').get(user.id);
+    if (first) {
+      db.prepare('UPDATE users SET org_id = ? WHERE id = ?').run(first.org_id, user.id);
+      user.org_id = first.org_id;
+      user.role = first.role;
+    }
+  }
+
   const safe = { id: user.id, org_id: user.org_id, email: user.email, name: user.name, role: user.role, is_superadmin: user.is_superadmin ? 1 : 0,
     phone: user.phone || '', title: user.title || '', email_verified: user.email_verified ? 1 : 0,
     has_avatar: !!user.avatar_blob, auth_provider: user.password_hash === 'google-sso' ? 'google' : 'password', created_at: user.created_at };
@@ -474,9 +489,10 @@ router.delete('/team/:id', authRequired, roleRequired('owner'), (req, res) => {
   // Unassign their appeals in this workspace
   db.prepare('UPDATE appeals SET assigned_to = NULL WHERE assigned_to = ? AND org_id = ?').run(member.user_id, req.orgId);
   db.prepare('DELETE FROM user_orgs WHERE user_id = ? AND org_id = ?').run(member.user_id, req.orgId);
-  // If they belong to no workspaces left, remove the login entirely
+  // If they belong to no workspaces left, remove the login entirely —
+  // FK-safely (a bare DELETE fails on any user with activity rows).
   const remaining = db.prepare('SELECT COUNT(*) c FROM user_orgs WHERE user_id = ?').get(member.user_id).c;
-  if (remaining === 0) db.prepare('DELETE FROM users WHERE id = ?').run(member.user_id);
+  if (remaining === 0) require('../orgDelete').purgeUser(member.user_id);
   res.json({ deleted: true });
 });
 

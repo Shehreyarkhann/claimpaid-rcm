@@ -32,6 +32,7 @@ import { api } from './api';
 import ErrorBoundary from './components/ErrorBoundary';
 import LimitModal from './components/LimitModal';
 import OnboardingWizard from './components/OnboardingWizard';
+import CreateWorkspaceGate from './components/CreateWorkspaceGate';
 import { OrgSettingsProvider } from './orgSettings';
 
 // Trial-expired owners land here: Billing handles reactivation,
@@ -123,6 +124,12 @@ function AuthGate({ children }) {
   // guides through the email-code flow — never a dead end.
   if (orgMfa) {
     return <OrgMfaRequiredScreen initialToken={orgMfa.mfaToken} orgName={orgMfa.orgName} />;
+  }
+
+  // Org-less account (workspace deleted / database reset): create a
+  // workspace first — never a dead shell or a login loop.
+  if (onboarding?.noOrg) {
+    return <CreateWorkspaceGate user={user} />;
   }
 
   // New owners go through the onboarding funnel before anything else

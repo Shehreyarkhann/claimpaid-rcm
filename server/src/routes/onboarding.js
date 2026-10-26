@@ -16,6 +16,9 @@ function getOrg(orgId) {
 
 // ---- GET /api/onboarding/status — does this owner still need the funnel? ----
 router.get('/status', authRequired, (req, res) => {
+  // Org-less account (workspace deleted / fresh database): the funnel starts
+  // with workspace creation, handled by the client's create-workspace gate.
+  if (req.noOrg) return res.json({ needed: true, noOrg: true, orgName: '', plan: null });
   const org = getOrg(req.orgId);
   if (!org) return res.json({ needed: false, orgName: '', plan: null });
   res.json({

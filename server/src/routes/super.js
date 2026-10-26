@@ -9,7 +9,7 @@ const bcrypt = require('bcryptjs');
 const { db } = require('../db');
 const { authRequired, superAdminRequired } = require('../auth');
 const { auditLog } = require('../audit');
-const { deleteOrg } = require('../orgDelete');
+const { deleteOrg, purgeUser } = require('../orgDelete');
 
 const router = express.Router();
 router.use(authRequired, superAdminRequired);
@@ -445,37 +445,11 @@ router.delete('/users/:id', (req, res) => {
   }
   const memberships = db.prepare('SELECT org_id FROM user_orgs WHERE user_id = ?').all(id);
   const firstOrgId = memberships.length ? memberships[0].org_id : null;
-  // FK-safe user purge (deploy #56): ~20 tables reference users(id)
-  // (claims.created_by, audit_log, auth_events, ...), so a bare DELETE
-  // 500s on any user who ever did anything — and the old code had already
-  // removed the memberships before it failed. Discover every referencing
-  // column from the live schema: nullable references are nulled (content
-  // survives), NOT NULL references are the user's own rows and are
-  // deleted. FK suspended + transaction, orgDelete pattern.
-  db.exec('PRAGMA foreign_keys = OFF');
-  try {
-    db.exec('BEGIN');
-    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all().map((r) => r.name);
-    for (const t of tables) {
-      if (t === 'users') continue;
-      const fks = db.prepare(`PRAGMA foreign_key_list(${t})`).all().filter((f) => f.table === 'users');
-      for (const fk of fks) {
-        const colInfo = db.prepare(`PRAGMA table_info(${t})`).all().find((c) => c.name === fk.from);
-        if (colInfo && colInfo.notnull === 0) {
-          db.prepare(`UPDATE ${t} SET ${fk.from} = NULL WHERE ${fk.from} = ?`).run(id);
-        } else {
-          db.prepare(`DELETE FROM ${t} WHERE ${fk.from} = ?`).run(id);
-        }
-      }
-    }
-    db.prepare('DELETE FROM users WHERE id = ?').run(id);
-    db.exec('COMMIT');
-  } catch (e) {
-    try { db.exec('ROLLBACK'); } catch {}
-    throw e;
-  } finally {
-    try { db.exec('PRAGMA foreign_keys = ON'); } catch {}
-  }
+  // FK-safe user purge: the shared schema-discovered implementation in
+  // orgDelete.js (nullable user references nulled, NOT NULL rows deleted,
+  // FK suspended + transaction). One implementation — the inline copy that
+  // used to live here is what let orgDelete's orphan cleanup rot.
+  purgeUser(id);
   superAudit(req, firstOrgId, 'super.user_delete', 'user', id,
     `${u.name || ''} <${u.email}> (${memberships.length} membership${memberships.length === 1 ? '' : 's'} removed)`);
   res.json({ deleted: true });
