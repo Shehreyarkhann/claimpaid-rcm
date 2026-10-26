@@ -225,7 +225,7 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
         <div className="fixed inset-0 bg-stone-900/60 z-40 lg:hidden" onClick={() => setMobileOpen(false)} aria-hidden="true" />
       )}
       {/* Sidebar — off-canvas drawer below lg, fixed rail/bar on desktop */}
-      <aside className={`${rail ? 'w-[76px]' : 'w-[248px]'} shrink-0 bg-[#17251F] text-white flex flex-col fixed inset-y-0 left-0 z-50 transition-all duration-200 ${mobileOpen ? 'transtone-x-0' : '-transtone-x-full'} lg:transtone-x-0`}>
+      <aside className={`${rail ? 'w-[76px]' : 'w-[248px]'} shrink-0 bg-[#17251F] text-white flex flex-col fixed inset-y-0 left-0 z-50 transition-all duration-200 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
         <div className={`${rail ? 'px-4' : 'px-5'} pt-6 pb-2`}>
           <div className={`flex items-center ${rail ? 'justify-center' : 'gap-3'}`}>
             {settings?.logo_url ? (
@@ -333,7 +333,7 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
               {t.icon}
               <span>{t.label === 'My Work' ? 'Work' : t.label}</span>
               {t.badge > 0 && (
-                <span className="absolute top-1 right-1/2 transtone-x-4 bg-rose-500 text-white text-[9px] font-bold px-1 py-px rounded-full min-w-[16px] text-center">{t.badge}</span>
+                <span className="absolute top-1 right-1/2 translate-x-4 bg-rose-500 text-white text-[9px] font-bold px-1 py-px rounded-full min-w-[16px] text-center">{t.badge}</span>
               )}
             </button>
           ))}

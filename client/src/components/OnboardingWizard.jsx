@@ -290,7 +290,7 @@ export default function OnboardingWizard({ orgName = '', initialPlan = null, onC
                   } ${p.popular ? 'md:-my-2 md:py-8' : ''}`}
                 >
                   {p.popular && (
-                    <div className="absolute -top-3 left-1/2 -transtone-x-1/2 text-[10px] font-extrabold tracking-widest bg-emerald-400 text-[#17251F] px-3 py-1 rounded-full">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-extrabold tracking-widest bg-emerald-400 text-[#17251F] px-3 py-1 rounded-full">
                       MOST POPULAR
                     </div>
                   )}
