@@ -247,6 +247,8 @@ export const api = {
     authFetch('/api/billing/cancel', { method: 'POST', body: JSON.stringify({ mode }) }).then(handle),
   billingReactivate: () =>
     authFetch('/api/billing/reactivate', { method: 'POST' }).then(handle),
+  billingChangePlan: (plan) =>
+    authFetch('/api/billing/change-plan', { method: 'POST', body: JSON.stringify({ plan }) }).then(handle),
   updateMe: (fields) =>
     authFetch('/api/auth/me', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fields) }).then(handle),
   uploadAvatar: (dataUrl) =>

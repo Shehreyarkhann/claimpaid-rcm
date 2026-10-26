@@ -182,6 +182,30 @@ export default function Billing({ onBaaRequired }) {
     setBusy(null);
   };
 
+  // Plan switching (deploy #60): subscribers swap in place via Stripe
+  // proration; app-side trials flip instantly. Expired/canceled orgs go
+  // through checkout instead (handled by the card buttons).
+  const [switchTarget, setSwitchTarget] = useState(null);
+  const doChangePlan = async () => {
+    const plan = switchTarget;
+    if (!plan) return;
+    setBusy(plan);
+    try {
+      const r = await api.billingChangePlan(plan);
+      if (r && r.mode === 'checkout') {
+        setSwitchTarget(null);
+        await checkout(plan);
+        return;
+      }
+      toast.success(r.message || 'Plan switched.');
+      setSwitchTarget(null);
+      await load();
+    } catch (e) {
+      toast.error(e.message);
+    }
+    setBusy(null);
+  };
+
   if (loading) {
     return (
       <div className="p-6 max-w-4xl mx-auto">
@@ -221,7 +245,7 @@ export default function Billing({ onBaaRequired }) {
         <div className="mt-5">
           {isCurrent ? (
             <span className="badge badge-green">Current plan</span>
-          ) : (
+          ) : isExpired || st === 'canceled' ? (
             <button
               className={`btn w-full ${key === 'ai' ? 'btn-outline' : 'btn-primary'}`}
               disabled={busy === key || !available}
@@ -229,6 +253,15 @@ export default function Billing({ onBaaRequired }) {
               title={!available ? 'Not priced yet' : undefined}
             >
               {busy === key ? 'Redirecting…' : isExpired ? `Reactivate ${name}` : `Choose ${name}`}
+            </button>
+          ) : (
+            <button
+              className={`btn w-full ${key === 'ai' ? 'btn-outline' : 'btn-primary'}`}
+              disabled={busy === key || !available}
+              onClick={() => setSwitchTarget(key)}
+              title={!available ? 'Not priced yet' : undefined}
+            >
+              {busy === key ? 'Switching…' : `Switch to ${name}`}
             </button>
           )}
         </div>
@@ -368,6 +401,36 @@ export default function Billing({ onBaaRequired }) {
         </div>
       )}
 
+      {/* ── Switch-plan confirm modal ── */}
+      {switchTarget && (
+        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4" onClick={() => busy !== switchTarget && setSwitchTarget(null)}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold tracking-tight mb-2">Switch to {PLAN_META[switchTarget]?.label}?</h3>
+            <p className="text-sm text-slate-600 mb-2">
+              {PLAN_META[switchTarget]?.desc}. The switch takes effect immediately — your team, claims and data don't change.
+            </p>
+            {isTrialing && !status?.has_subscription ? (
+              <p className="text-sm text-slate-600 mb-5">
+                You're still in your free trial with no card on file, so there's no charge — your trial end date
+                {status?.trial_ends_at ? <> (<strong>{fmtDate(status.trial_ends_at)}</strong>)</> : ''} stays the same.
+              </p>
+            ) : (
+              <p className="text-sm text-slate-600 mb-5">
+                Stripe prorates the change: upgrading charges the difference pro-rata on your next invoice;
+                downgrading credits it.
+                {status?.cancel_at_period_end && <> Switching also cancels your scheduled cancellation — your subscription continues on the new plan.</>}
+              </p>
+            )}
+            <div className="flex justify-end gap-2">
+              <button className="btn btn-ghost" disabled={busy === switchTarget} onClick={() => setSwitchTarget(null)}>Keep current plan</button>
+              <button className="btn btn-primary" disabled={busy === switchTarget} onClick={doChangePlan}>
+                {busy === switchTarget ? 'Switching…' : `Switch to ${PLAN_META[switchTarget]?.label}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Usage this month ── */}
       {usage && (
         <div className="card p-6">
@@ -404,14 +467,17 @@ export default function Billing({ onBaaRequired }) {
       )}
 
       {/* ── Plan picker ── */}
-      {!isActive && (
+      {(
         <>
           <div ref={plansRef} className="flex items-center justify-between">
             <h3 className="font-bold text-slate-900">
-              {isExpired ? 'Or switch plans' : isTrialing ? 'Compare plans' : 'Plans'}
+              {isExpired ? 'Or switch plans' : isActive || isPastDue ? 'Switch plans' : isTrialing ? 'Compare plans' : 'Plans'}
             </h3>
             {isTrialing && (
               <span className="text-xs text-slate-500">Switching keeps your remaining trial days</span>
+            )}
+            {(isActive || isPastDue) && (
+              <span className="text-xs text-slate-500">Switching is instant — Stripe prorates the difference</span>
             )}
           </div>
           <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">

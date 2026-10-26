@@ -74,6 +74,7 @@ function AuthGate({ children }) {
   // org-switch) because the workspace requires two-factor the member hasn't
   // completed. { mfaToken?, orgName? }
   const [orgMfa, setOrgMfa] = useState(null);
+  const [aiLockView, setAiLockView] = useState('lock');
 
   useEffect(() => {
     const onOrgMfa = (e) => setOrgMfa(e.detail || {});
@@ -151,17 +152,44 @@ function AuthGate({ children }) {
     return <ExpiredScreen />;
   }
 
-  // AI-only subscribers don't get the RCM dashboard — point them at the AI app
+  // AI-only subscribers don't get the RCM dashboard — point them at the AI
+  // app AND give them the door to add RCM: plan switching lives right here,
+  // not behind a new signup (deploy #60).
   if (billing && billing.products?.rcm === false) {
+    if (aiLockView === 'billing' || aiLockView === 'compliance') {
+      return (
+        <div className="min-h-screen bg-[#f1f5f9]">
+          <div className="bg-violet-500/15 border-b border-violet-500/30 px-6 py-3 text-center text-sm text-violet-900">
+            You're on ClaimPaid AI — switch to a plan with the RCM platform below. No new signup, your data carries over.
+          </div>
+          {aiLockView === 'billing' ? (
+            <Billing onBaaRequired={() => setAiLockView('compliance')} />
+          ) : (
+            <div className="p-6 max-w-4xl mx-auto">
+              <button onClick={() => setAiLockView('billing')} className="text-sm text-slate-500 hover:text-slate-800 mb-4">
+                ← Back to billing
+              </button>
+              <Compliance />
+            </div>
+          )}
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0b1220] px-6">
         <div className="max-w-md w-full text-center">
           <div className="w-14 h-14 mx-auto rounded-2xl bg-violet-500/15 border border-violet-500/30 flex items-center justify-center text-2xl mb-5">🤖</div>
           <h1 className="text-2xl font-bold text-white mb-2">You're on ClaimPaid AI</h1>
           <p className="text-slate-400 text-sm mb-6">
-            Your subscription covers the AI assistant only. The RCM dashboard (claims, denials, appeals) isn't included in your plan.
+            Your subscription covers the AI assistant only. The RCM dashboard (claims, denials, appeals) isn't included in your plan — but you can add it right now.
           </p>
-          <a href="/ai/app/" className="btn btn-primary w-full !py-3">Open ClaimPaid AI →</a>
+          <div className="space-y-3">
+            <a href="/ai/app/" className="btn btn-primary w-full !py-3">Open ClaimPaid AI →</a>
+            <button onClick={() => setAiLockView('billing')} className="btn w-full !py-3 !bg-emerald-500 !text-[#0b1220] font-bold hover:!bg-emerald-400">
+              Add the RCM platform — switch plans
+            </button>
+          </div>
+          <p className="text-slate-500 text-xs mt-4">Workspace owners switch instantly — Stripe prorates the difference.</p>
         </div>
       </div>
     );

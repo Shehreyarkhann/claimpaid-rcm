@@ -11,7 +11,16 @@ function getStripe() {
   if (_stripe) return _stripe;
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) return null;
-  _stripe = require('stripe')(key);
+  // STRIPE_API_BASE exists so tests can point the SDK at a fake Stripe
+  // (this SDK version takes host/port/protocol, not an apiBase string).
+  let cfg;
+  if (process.env.STRIPE_API_BASE) {
+    try {
+      const u = new URL(process.env.STRIPE_API_BASE);
+      cfg = { protocol: u.protocol.replace(':', ''), host: u.hostname, port: u.port || undefined };
+    } catch {}
+  }
+  _stripe = require('stripe')(key, cfg);
   return _stripe;
 }
 
@@ -127,6 +136,7 @@ function billingStatusFor(org) {
     current_period_end: org.current_period_end || null,
     cancel_at_period_end: !!org.stripe_cancel_at_period_end,
     has_customer: !!org.stripe_customer_id,
+    has_subscription: !!org.stripe_subscription_id,
     stripe_configured: !!process.env.STRIPE_SECRET_KEY,
     products: productsForOrg(org),
     plans: {
@@ -289,6 +299,82 @@ router.post('/reactivate', authRequired, roleRequired('owner'), async (req, res)
     console.error('Stripe reactivate error:', e.message);
     return res.status(502).json({ error: 'Stripe could not reactivate the subscription. Please try again or contact support.' });
   }
+});
+
+// ---- POST /api/billing/change-plan — switch plans (owner only) ----
+// Deploy #60: before this, subscribe + cancel existed but there was NO way
+// to move between plans — an AI-only buyer who wanted RCM (or a Starter
+// team that wanted AI) hit a lockout wall, and the plan picker was hidden
+// from active subscribers entirely. Three modes:
+//   swapped  — a live Stripe subscription gets its price swapped in place
+//              (proration_behavior create_prorations; a scheduled
+//              cancellation is cleared — choosing a new plan means staying).
+//              The subscription.updated webhook reconciles plan/status.
+//   trial    — app-side trial with no card yet: the plan flips instantly,
+//              trial clock untouched.
+//   checkout — canceled/expired with no subscription: the client sends the
+//              user through the normal checkout for the new plan.
+router.post('/change-plan', authRequired, roleRequired('owner'), async (req, res) => {
+  const { plan } = req.body || {};
+  const planCfg = PLANS[plan];
+  if (!planCfg) return res.status(400).json({ error: 'Unknown plan. Choose starter, pro, or ai.' });
+  const org = getOrg(req.orgId);
+  if (!org) return res.status(404).json({ error: 'Organization not found' });
+  if (org.plan === 'enterprise') {
+    return res.status(400).json({ error: 'Enterprise plans are managed by ClaimPaid — contact support@claimpaid.io to make changes.' });
+  }
+  if (org.plan === plan) {
+    return res.status(400).json({ error: `You are already on ${planCfg.name}.` });
+  }
+  const eff = getEffectivePlanStatus(org);
+
+  if (org.stripe_subscription_id) {
+    if (!billingConfigured(res)) return;
+    if (!planCfg.priceId) {
+      return res.status(503).json({ error: `${planCfg.name} is not priced yet. Run scripts/setup-stripe.js first.` });
+    }
+    const stripe = getStripe();
+    try {
+      const sub = await stripe.subscriptions.retrieve(org.stripe_subscription_id);
+      const item = sub.items?.data?.[0];
+      if (!item) return res.status(502).json({ error: 'Your subscription has no plan item to switch. Contact support@claimpaid.io.' });
+      const updated = await stripe.subscriptions.update(org.stripe_subscription_id, {
+        items: [{ id: item.id, price: planCfg.priceId }],
+        proration_behavior: 'create_prorations',
+        cancel_at_period_end: false,
+        metadata: { ...(sub.metadata || {}), org_id: String(org.id), plan },
+      });
+      db.prepare(`UPDATE orgs SET plan = ?, plan_status = ?,
+                  stripe_cancel_at_period_end = 0,
+                  current_period_end = COALESCE(?, current_period_end) WHERE id = ?`)
+        .run(plan, updated.status || org.plan_status,
+             updated.current_period_end ? new Date(updated.current_period_end * 1000).toISOString() : null,
+             org.id);
+      const trialing = updated.status === 'trialing';
+      return res.json({
+        ok: true, mode: 'swapped', plan,
+        message: trialing
+          ? `You're now on ${planCfg.name} — your free trial still ends ${org.trial_ends_at ? org.trial_ends_at.slice(0, 10) : 'on schedule'}, and billing adjusts from then.`
+          : `You're now on ${planCfg.name}. Stripe prorated the switch — the difference lands on your next invoice.`,
+      });
+    } catch (e) {
+      console.error('Stripe change-plan error:', e.message);
+      return res.status(502).json({ error: 'Stripe could not switch your plan. Please try again or contact support.' });
+    }
+  }
+
+  if (eff === 'trialing') {
+    db.prepare('UPDATE orgs SET plan = ? WHERE id = ?').run(plan, org.id);
+    return res.json({
+      ok: true, mode: 'trial', plan,
+      message: `You're now trialing ${planCfg.name} — same trial end date, no charge.`,
+    });
+  }
+
+  return res.json({
+    ok: false, mode: 'checkout', plan,
+    message: `To move to ${planCfg.name}, complete checkout for the new plan.`,
+  });
 });
 
 // ---- GET /api/billing/invoices — last 12 invoices (owner only) ----
