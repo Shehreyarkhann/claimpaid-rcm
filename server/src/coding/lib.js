@@ -93,4 +93,66 @@ function sanitizeSuggestions(suggestions) {
     .slice(0, 25);
 }
 
-module.exports = { loadLibrary, normCode, isInLibrary, libraryDescription, callCodeAssist, sanitizeSuggestions, AI_SERVICE_URL };
+// ---- Evidence grounding + tri-state assessment (deploy #62) ----
+// The AI returns an "evidence" quote per suggestion, but a quote is only
+// evidence if those words are actually in the note. Verified deterministically
+// here: normalize both texts (lowercase, non-alphanumeric -> space, collapse)
+// and locate the quote, mapping the match back to character offsets in the
+// ORIGINAL note so the UI can point at the exact span.
+//   status 'valid'  : in library AND evidence verified AND confidence >= 0.75
+//   status 'review' : anything else that survived sanitizing
+// Job assessment: 'abstain' (zero suggestions — the assistant declined to
+// guess), 'ready' (>= 1 valid), 'review' (suggestions exist, none grounded).
+const MIN_EVIDENCE_CHARS = 8;
+const VALID_CONFIDENCE = 0.75;
+
+function normalizeWithMap(text) {
+  const src = String(text || '');
+  let norm = '';
+  const map = []; // map[normalizedIndex] = originalIndex
+  let lastWasSpace = true; // also trims leading whitespace
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i].toLowerCase();
+    if (/[a-z0-9]/.test(ch)) {
+      norm += ch; map.push(i); lastWasSpace = false;
+    } else if (!lastWasSpace) {
+      norm += ' '; map.push(i); lastWasSpace = true;
+    }
+  }
+  let end = norm.length;
+  while (end > 0 && norm[end - 1] === ' ') end--;
+  return { norm: norm.slice(0, end), map: map.slice(0, end) };
+}
+
+function assessSuggestions(noteText, suggestions) {
+  const { norm: noteNorm, map } = normalizeWithMap(noteText);
+  return (suggestions || []).map((s) => {
+    const evNorm = normalizeWithMap(s.evidence).norm;
+    let evidence_verified = false;
+    let evidence_span = null;
+    if (evNorm.length >= MIN_EVIDENCE_CHARS) {
+      const at = noteNorm.indexOf(evNorm);
+      if (at !== -1) {
+        evidence_verified = true;
+        evidence_span = { start: map[at], end: map[at + evNorm.length - 1] + 1 };
+      }
+    }
+    const status =
+      isInLibrary(s.code, s.type) && evidence_verified && Number(s.confidence) >= VALID_CONFIDENCE
+        ? 'valid'
+        : 'review';
+    return { ...s, evidence_verified, evidence_span, status };
+  });
+}
+
+function assessJob(noteText, suggestions) {
+  const assessed = assessSuggestions(noteText, suggestions);
+  const valid = assessed.filter((s) => s.status === 'valid').length;
+  return {
+    suggestions: assessed,
+    assessment: assessed.length === 0 ? 'abstain' : valid > 0 ? 'ready' : 'review',
+    summary: { total: assessed.length, valid, review: assessed.length - valid },
+  };
+}
+
+module.exports = { loadLibrary, normCode, isInLibrary, libraryDescription, callCodeAssist, sanitizeSuggestions, assessSuggestions, assessJob, AI_SERVICE_URL };

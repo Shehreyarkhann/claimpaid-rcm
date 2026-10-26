@@ -14,7 +14,7 @@ const express = require('express');
 const { db } = require('../db');
 const { authRequired, roleRequired, requireProduct } = require('../auth');
 const { logActivity } = require('../activity');
-const { isInLibrary, libraryDescription, callCodeAssist, sanitizeSuggestions } = require('../coding/lib');
+const { isInLibrary, libraryDescription, callCodeAssist, sanitizeSuggestions, assessJob } = require('../coding/lib');
 
 const router = express.Router();
 const rcm = requireProduct('rcm');
@@ -100,9 +100,21 @@ router.get('/jobs/:id', authRequired, rcm, (req, res) => {
   const job = db.prepare('SELECT * FROM coding_jobs WHERE id = ? AND org_id = ?').get(req.params.id, req.orgId);
   if (!job) return res.status(404).json({ error: 'Coding job not found' });
   let suggestions = [];
+  let assessment = null;
+  let summary = null;
   try {
     const parsed = job.result_json ? JSON.parse(job.result_json) : null;
-    suggestions = withLibraryFlags(parsed?.suggestions);
+    const flagged = withLibraryFlags(parsed?.suggestions);
+    if (job.status === 'complete') {
+      // Grounding gate (deploy #62): verify each evidence quote against the
+      // stored note and stamp the tri-state status before the client sees it.
+      const out = assessJob(job.note_text, flagged);
+      suggestions = out.suggestions;
+      assessment = out.assessment;
+      summary = out.summary;
+    } else {
+      suggestions = flagged;
+    }
   } catch { /* corrupted result: leave empty */ }
   const decisions = db.prepare('SELECT code, type, decision, final_code FROM coding_decisions WHERE job_id = ?').all(job.id);
   res.json({
@@ -114,6 +126,8 @@ router.get('/jobs/:id', authRequired, rcm, (req, res) => {
     model: (() => { try { return JSON.parse(job.result_json || '{}').model || null; } catch { return null; } })(),
     created_at: job.created_at,
     suggestions,
+    assessment,
+    summary,
     decisions,
   });
 });

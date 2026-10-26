@@ -155,11 +155,24 @@ export default function CodingAssistant({ initialNote = '', claimId = null, enco
       {(phase === 'done' || phase === 'analyzing') && job && phase === 'done' && (
         <div>
           {job.suggestions.length === 0 ? (
-            <div className="py-8 text-center text-slate-500">
-              No codes from the library matched this note. A human coder should code it manually.
+            <div className="rounded-xl border border-slate-300 bg-slate-50 px-5 py-6 text-center">
+              <div className="font-semibold text-slate-800">The assistant abstained on this note.</div>
+              <p className="mx-auto mt-1 max-w-md text-sm text-slate-600">
+                No code in the library is supported by the note's own words, so it suggested nothing rather
+                than guess. Code this note manually, or add documentation to the note and re-run.
+              </p>
             </div>
           ) : (
             <div className="space-y-3">
+              {job.summary && (
+                <div className="text-sm text-slate-500">
+                  {job.summary.total} suggestion{job.summary.total === 1 ? '' : 's'} —{' '}
+                  <span className="font-medium text-emerald-700">{job.summary.valid} grounded</span>
+                  {job.summary.review > 0 && (
+                    <> · <span className="font-medium text-amber-700">{job.summary.review} need{job.summary.review === 1 ? 's' : ''} review</span></>
+                  )}
+                </div>
+              )}
               {job.suggestions.map((s) => {
                 const k = key(s);
                 const d = sel[k] || { decision: null, finalCode: '' };
@@ -171,17 +184,29 @@ export default function CodingAssistant({ initialNote = '', claimId = null, enco
                       {s.in_library
                         ? <span className="badge badge-green">verified in library</span>
                         : <span className="badge badge-amber">unverified — not in library</span>}
+                      {s.status === 'valid'
+                        ? <span className="badge badge-green">grounded</span>
+                        : s.status === 'review'
+                          ? <span className="badge badge-amber">needs review</span>
+                          : null}
                       <span className="ml-auto text-xs text-slate-500">confidence</span>
                       <div className="h-2 w-20 overflow-hidden rounded-full bg-slate-200">
-                        <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.round((s.confidence || 0) * 100)}%` }} />
+                        <div className={`h-full rounded-full ${s.status === 'review' ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${Math.round((s.confidence || 0) * 100)}%` }} />
                       </div>
                       <span className="text-xs font-medium text-slate-600">{Math.round((s.confidence || 0) * 100)}%</span>
                     </div>
                     <div className="mt-1 text-sm text-slate-700">
                       {s.in_library ? s.library_description : <span className="italic text-slate-500">No library description — human confirmation required.</span>}
                     </div>
-                    {s.evidence && (
-                      <div className="mt-2 border-l-2 border-slate-300 pl-3 text-xs italic text-slate-600">“{s.evidence}”</div>
+                    {s.evidence ? (
+                      <div className={`mt-2 border-l-2 pl-3 text-xs italic text-slate-600 ${s.evidence_verified ? 'border-emerald-400' : 'border-rose-300'}`}>
+                        “{s.evidence}”
+                        <div className={`mt-0.5 font-medium not-italic ${s.evidence_verified ? 'text-emerald-700' : 'text-rose-600'}`}>
+                          {s.evidence_verified ? '✓ Quote verified in the note' : '⚠ Quote not found in the note — verify manually'}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-2 text-xs font-medium text-rose-600">⚠ No evidence quote provided — verify manually</div>
                     )}
                     {s.rationale && <div className="mt-1 text-xs text-slate-500">{s.rationale}</div>}
                     {!s.in_library && (d.decision === 'accepted' || d.decision === 'modified') && (
