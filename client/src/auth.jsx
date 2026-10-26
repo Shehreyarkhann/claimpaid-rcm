@@ -88,13 +88,27 @@ export function AuthProvider({ children }) {
     return data.user;
   };
 
+  const refreshMe = async () => {
+    const token = localStorage.getItem('pulse_token');
+    if (!token) return null;
+    const r = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
+    if (!r.ok) return null;
+    const me = await r.json();
+    setUser(me);
+    return me;
+  };
+
+  // After password change / log-out-everywhere the server mints a fresh
+  // token (the old one is dead) — adopt it for this session.
+  const adoptToken = (token) => { if (token) localStorage.setItem('pulse_token', token); };
+
   const logout = () => {
     localStorage.removeItem('pulse_token');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, googleLogin, logout, verifyMfa, resendMfa }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, googleLogin, logout, verifyMfa, resendMfa, refreshMe, adoptToken }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../auth';
+import UserMenu from './UserMenu';
 import { useOrgSettings } from '../orgSettings';
 import { api } from '../api';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
@@ -274,24 +275,8 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
             </svg>
             {!rail && <span className="text-xs font-medium">Collapse</span>}
           </button>
-          <div className={`rounded-xl bg-white/5 p-3 flex items-center ${rail ? 'justify-center' : 'gap-3'}`}>
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-400 to-sky-500 flex items-center justify-center text-xs font-bold text-white shrink-0">
-              {initials}
-            </div>
-            {!rail && (
-              <>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">{user?.name}</div>
-                  <div className="text-[11px] text-slate-400 capitalize">{user?.role}</div>
-                </div>
-                <button onClick={logout} title="Sign out"
-                  className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
-                  </svg>
-                </button>
-              </>
-            )}
+          <div className="rounded-xl bg-white/5 p-3">
+            <UserMenu placement="up" rail={rail} />
           </div>
         </div>
       </aside>
@@ -308,9 +293,7 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
             <div className="text-sm font-semibold leading-tight truncate">{currentLabel}</div>
             <div className="text-[11px] text-slate-400 leading-tight truncate">{user?.org_name || 'ClaimPaid'}</div>
           </div>
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-sky-500 flex items-center justify-center text-[11px] font-bold text-white shrink-0">
-            {initials}
-          </div>
+          <UserMenu placement="down" compact />
         </div>
         {usageWarn && (
           <button onClick={() => setPage('billing')}

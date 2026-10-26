@@ -50,7 +50,9 @@ function buildLoginResponse(user) {
     user.is_superadmin = 1;
   }
 
-  const safe = { id: user.id, org_id: user.org_id, email: user.email, name: user.name, role: user.role, is_superadmin: user.is_superadmin ? 1 : 0 };
+  const safe = { id: user.id, org_id: user.org_id, email: user.email, name: user.name, role: user.role, is_superadmin: user.is_superadmin ? 1 : 0,
+    phone: user.phone || '', title: user.title || '', email_verified: user.email_verified ? 1 : 0,
+    has_avatar: !!user.avatar_blob, auth_provider: user.password_hash === 'google-sso' ? 'google' : 'password', created_at: user.created_at };
   const org = db.prepare('SELECT name FROM orgs WHERE id = ?').get(user.org_id);
   return { token: signToken(safe), user: { ...safe, orgName: org ? org.name : '' } };
 }
@@ -224,10 +226,117 @@ router.post('/google', googleIpLimit, async (req, res) => {
 });
 
 // --- Current user ---
+function mePayload(userId, orgId) {
+  const u = db.prepare(
+    `SELECT id, org_id, email, name, role, phone, title, email_verified, created_at,
+            is_superadmin, password_hash, (avatar_blob IS NOT NULL) AS has_avatar
+     FROM users WHERE id = ?`).get(userId);
+  if (!u) return null;
+  const org = db.prepare('SELECT name FROM orgs WHERE id = ?').get(orgId || u.org_id);
+  return {
+    id: u.id, org_id: orgId || u.org_id, email: u.email, name: u.name, role: u.role,
+    phone: u.phone || '', title: u.title || '',
+    email_verified: u.email_verified ? 1 : 0, created_at: u.created_at,
+    orgName: org ? org.name : '',
+    is_superadmin: u.is_superadmin === 1 ? 1 : 0,
+    has_avatar: !!u.has_avatar,
+    auth_provider: u.password_hash === 'google-sso' ? 'google' : 'password',
+  };
+}
+
 router.get('/me', authRequired, (req, res) => {
-  const org = db.prepare('SELECT name FROM orgs WHERE id = ?').get(req.orgId);
-  const flag = db.prepare('SELECT is_superadmin FROM users WHERE id = ?').get(req.user.id);
-  res.json({ ...req.user, orgName: org ? org.name : '', is_superadmin: flag && flag.is_superadmin === 1 ? 1 : 0 });
+  const out = mePayload(req.user.id, req.orgId);
+  if (!out) return res.status(404).json({ error: 'User not found' });
+  res.json(out);
+});
+
+// --- Update profile (name / title / phone) ---
+router.patch('/me', authRequired, (req, res) => {
+  const { name, title, phone } = req.body || {};
+  const updates = [], params = [];
+  if (name !== undefined) {
+    const n = String(name).trim();
+    if (n.length < 1 || n.length > 80) return res.status(400).json({ error: 'Name must be 1–80 characters.' });
+    updates.push('name = ?'); params.push(n);
+  }
+  if (title !== undefined) {
+    const t = String(title).trim().slice(0, 80);
+    updates.push('title = ?'); params.push(t || null);
+  }
+  if (phone !== undefined) {
+    const ph = String(phone).trim().slice(0, 32);
+    updates.push('phone = ?'); params.push(ph || null);
+  }
+  if (!updates.length) return res.status(400).json({ error: 'Nothing to update.' });
+  params.push(req.user.id);
+  db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+  res.json(mePayload(req.user.id, req.orgId));
+});
+
+// --- Profile photo (client sends a downscaled data URL; stored in the DB
+// so it survives deploys and rides the encrypted backups) ---
+router.post('/me/avatar', authRequired, (req, res) => {
+  const { dataUrl } = req.body || {};
+  const m = typeof dataUrl === 'string' && dataUrl.match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/);
+  if (!m) return res.status(400).json({ error: 'Please upload a PNG, JPG or WebP image.' });
+  const buf = Buffer.from(m[2], 'base64');
+  if (buf.length < 100 || buf.length > 300 * 1024) {
+    return res.status(400).json({ error: 'Image must be between 1 KB and 300 KB after resizing.' });
+  }
+  db.prepare('UPDATE users SET avatar_mime = ?, avatar_blob = ? WHERE id = ?').run(m[1], buf, req.user.id);
+  res.json({ ok: true, has_avatar: true });
+});
+
+router.delete('/me/avatar', authRequired, (req, res) => {
+  db.prepare('UPDATE users SET avatar_mime = NULL, avatar_blob = NULL WHERE id = ?').run(req.user.id);
+  res.json({ ok: true, has_avatar: false });
+});
+
+// --- Serve a user's avatar: self, same-workspace members, super-admin ---
+router.get('/avatar/:userId', authRequired, (req, res) => {
+  const target = Number(req.params.userId);
+  if (target !== req.user.id && !req.isSuperAdmin) {
+    const shared = db.prepare(
+      `SELECT 1 FROM user_orgs a JOIN user_orgs b ON a.org_id = b.org_id
+       WHERE a.user_id = ? AND b.user_id = ? LIMIT 1`).get(req.user.id, target);
+    if (!shared) return res.status(404).json({ error: 'No avatar' });
+  }
+  const row = db.prepare('SELECT avatar_mime, avatar_blob FROM users WHERE id = ?').get(target);
+  if (!row || !row.avatar_blob) return res.status(404).json({ error: 'No avatar' });
+  res.setHeader('Content-Type', row.avatar_mime || 'image/jpeg');
+  res.setHeader('Cache-Control', 'private, max-age=300');
+  // node:sqlite returns BLOBs as Uint8Array — Express would JSON-encode
+  // that instead of sending bytes; wrap it as a Buffer first.
+  res.send(Buffer.from(row.avatar_blob));
+});
+
+// --- Change password (kills every other session; this one is re-issued) ---
+router.post('/change-password', authRequired, async (req, res) => {
+  const { currentPassword, newPassword } = req.body || {};
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  if (user.password_hash === 'google-sso') {
+    return res.status(400).json({ error: 'This account signs in with Google — there is no password to change.' });
+  }
+  if (!currentPassword || !bcrypt.compareSync(currentPassword, user.password_hash)) {
+    return res.status(400).json({ error: 'Your current password is incorrect.' });
+  }
+  const policyError = passwordError(newPassword || '');
+  if (policyError) return res.status(400).json({ error: policyError });
+  db.prepare('UPDATE users SET password_hash = ?, token_version = token_version + 1 WHERE id = ?')
+    .run(bcrypt.hashSync(newPassword, 10), user.id);
+  resetLoginCounters(user.id);
+  logAuthEvent({ userId: user.id, email: user.email, ip: clientIp(req), event: 'password_changed' });
+  const fresh = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+  res.json({ ok: true, token: signToken({ ...fresh, org_id: req.orgId }) });
+});
+
+// --- Log out everywhere (kills every other session; this one is re-issued) ---
+router.post('/logout-all', authRequired, (req, res) => {
+  db.prepare('UPDATE users SET token_version = token_version + 1 WHERE id = ?').run(req.user.id);
+  logAuthEvent({ userId: req.user.id, email: req.user.email, ip: clientIp(req), event: 'logout_all' });
+  const fresh = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  res.json({ ok: true, token: signToken({ ...fresh, org_id: req.orgId }) });
 });
 
 // --- Password reset: request ---
@@ -292,7 +401,7 @@ router.post('/password/reset', (req, res) => {
 // Team = members of the current workspace (roles are per-workspace via user_orgs)
 router.get('/team', authRequired, (req, res) => {
   const users = db.prepare(
-    `SELECT u.id, u.email, u.name, m.role, u.created_at
+    `SELECT u.id, u.email, u.name, m.role, u.created_at, (u.avatar_blob IS NOT NULL) AS has_avatar
      FROM user_orgs m JOIN users u ON u.id = m.user_id
      WHERE m.org_id = ? ORDER BY u.created_at`
   ).all(req.orgId);

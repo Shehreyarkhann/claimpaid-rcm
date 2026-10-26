@@ -37,7 +37,8 @@ const PORT = process.env.PORT || 4000;
 app.use(cors());
 // Stripe webhook needs the RAW body for signature verification — mount before express.json()
 app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), handleWebhook);
-app.use(express.json());
+// 512kb: the avatar upload (deploy #57) sends a downscaled data URL in JSON.
+app.use(express.json({ limit: '512kb' }));
 
 initSchema();
 

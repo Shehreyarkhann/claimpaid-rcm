@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Avatar from '../components/Avatar';
 import { useAuth, authFetch } from '../auth';
 import { api } from '../api';
 import { Modal, EmptyState, PageHeader, Skeleton } from '../components/ui';
@@ -184,9 +185,7 @@ export default function Team() {
                 <tr key={m.id}>
                   <td>
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-400 to-sky-500 flex items-center justify-center text-xs font-bold text-white">
-                        {m.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()}
-                      </div>
+                      <Avatar userId={m.id} name={m.name} hasAvatar={m.has_avatar} className="w-9 h-9 text-xs" />
                       <span className="font-medium">{m.name}{m.id === user.id && <span className="text-xs text-slate-400 ml-2">(you)</span>}</span>
                     </div>
                   </td>

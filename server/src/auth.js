@@ -17,13 +17,19 @@ function isSuperAdminEmail(email) {
 
 function signToken(user) {
   let plan = null;
+  let tv = user.token_version ?? 0;
   try {
     const org = db.prepare('SELECT plan FROM orgs WHERE id = ?').get(user.org_id);
     plan = org?.plan || null;
+    // Always mint with the CURRENT token_version (deploy #57) — callers
+    // pass partial user objects (e.g. workspace switch) that may not
+    // carry it, and a stale tv would kill the fresh token instantly.
+    const row = db.prepare('SELECT token_version FROM users WHERE id = ?').get(user.id);
+    if (row && row.token_version != null) tv = row.token_version;
   } catch { /* plan lookup failure => grandfathered unlimited, never strand a login */ }
   if (isSuperAdminEmail(user.email)) plan = 'enterprise'; // unlimited limits embed in the token
   return jwt.sign(
-    { sub: user.id, org: user.org_id, role: user.role, email: user.email, name: user.name, plan, limits: limitsForPlan(plan) },
+    { sub: user.id, org: user.org_id, role: user.role, email: user.email, name: user.name, plan, limits: limitsForPlan(plan), tv },
     JWT_SECRET,
     { expiresIn: JWT_EXPIRES }
   );
@@ -40,11 +46,18 @@ function authRequired(req, res, next) {
     // The workspace comes from the token (set at login/switch), not the home org —
     // this is what makes workspace switching work.
     const member = db.prepare(
-      `SELECT u.id, u.email, u.name, u.mfa_enabled, u.is_superadmin, m.org_id, m.role
+      `SELECT u.id, u.email, u.name, u.mfa_enabled, u.is_superadmin, u.token_version, m.org_id, m.role
        FROM user_orgs m JOIN users u ON u.id = m.user_id
        WHERE m.user_id = ? AND m.org_id = ?`
     ).get(payload.sub, payload.org);
     if (!member) return res.status(401).json({ error: 'User no longer exists' });
+    // Log-out-everywhere / password change bumps token_version (deploy #57):
+    // any token minted before the bump dies here. Pre-#57 tokens carry no
+    // tv and read as 0, matching the column default — the deploy itself
+    // logs nobody out.
+    if ((payload.tv ?? 0) !== (member.token_version ?? 0)) {
+      return res.status(401).json({ error: 'This session has ended. Please sign in again.' });
+    }
 
     // Org-wide MFA enforcement (workstream C): when the token's org requires
     // MFA and the member is not enrolled, block API access until they complete

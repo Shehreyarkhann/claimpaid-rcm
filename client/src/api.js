@@ -247,6 +247,16 @@ export const api = {
     authFetch('/api/billing/cancel', { method: 'POST', body: JSON.stringify({ mode }) }).then(handle),
   billingReactivate: () =>
     authFetch('/api/billing/reactivate', { method: 'POST' }).then(handle),
+  updateMe: (fields) =>
+    authFetch('/api/auth/me', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fields) }).then(handle),
+  uploadAvatar: (dataUrl) =>
+    authFetch('/api/auth/me/avatar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl }) }).then(handle),
+  deleteAvatar: () =>
+    authFetch('/api/auth/me/avatar', { method: 'DELETE' }).then(handle),
+  changePassword: (currentPassword, newPassword) =>
+    authFetch('/api/auth/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ currentPassword, newPassword }) }).then(handle),
+  logoutAll: () =>
+    authFetch('/api/auth/logout-all', { method: 'POST' }).then(handle),
   // ---- Legal / BAA ----
   legalDocuments: () =>
     fetch('/api/legal/documents').then((r) => {

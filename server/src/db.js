@@ -370,6 +370,13 @@ function initSchema() {
 
   // Super-admin support
   if (!columnExists('users', 'is_superadmin')) db.exec('ALTER TABLE users ADD COLUMN is_superadmin INTEGER NOT NULL DEFAULT 0');
+  // Account menu (deploy #57): profile photo, extra profile fields, and
+  // token versioning for log-out-everywhere.
+  if (!columnExists('users', 'avatar_mime')) db.exec('ALTER TABLE users ADD COLUMN avatar_mime TEXT');
+  if (!columnExists('users', 'avatar_blob')) db.exec('ALTER TABLE users ADD COLUMN avatar_blob BLOB');
+  if (!columnExists('users', 'phone')) db.exec('ALTER TABLE users ADD COLUMN phone TEXT');
+  if (!columnExists('users', 'title')) db.exec('ALTER TABLE users ADD COLUMN title TEXT');
+  if (!columnExists('users', 'token_version')) db.exec('ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0');
   if (!columnExists('demo_requests', 'notes')) db.exec('ALTER TABLE demo_requests ADD COLUMN notes TEXT DEFAULT \'\'');  db.exec(`
     CREATE TABLE IF NOT EXISTS support_tickets (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
