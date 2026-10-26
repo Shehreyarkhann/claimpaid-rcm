@@ -222,10 +222,10 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
     <div className="min-h-screen flex">
       {/* Mobile backdrop */}
       {mobileOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 z-40 lg:hidden" onClick={() => setMobileOpen(false)} aria-hidden="true" />
+        <div className="fixed inset-0 bg-stone-900/60 z-40 lg:hidden" onClick={() => setMobileOpen(false)} aria-hidden="true" />
       )}
       {/* Sidebar — off-canvas drawer below lg, fixed rail/bar on desktop */}
-      <aside className={`${rail ? 'w-[76px]' : 'w-[248px]'} shrink-0 bg-[#0b1220] text-white flex flex-col fixed inset-y-0 left-0 z-50 transition-all duration-200 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+      <aside className={`${rail ? 'w-[76px]' : 'w-[248px]'} shrink-0 bg-[#17251F] text-white flex flex-col fixed inset-y-0 left-0 z-50 transition-all duration-200 ${mobileOpen ? 'transtone-x-0' : '-transtone-x-full'} lg:transtone-x-0`}>
         <div className={`${rail ? 'px-4' : 'px-5'} pt-6 pb-2`}>
           <div className={`flex items-center ${rail ? 'justify-center' : 'gap-3'}`}>
             {settings?.logo_url ? (
@@ -236,7 +236,7 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
             {!rail && <WorkspaceSwitcher collapsed={rail} />}
             {!rail && (
               <button onClick={() => setMobileOpen(false)} title="Close menu"
-                className="lg:hidden ml-auto text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition">
+                className="lg:hidden ml-auto text-stone-400 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
               </button>
             )}
@@ -244,7 +244,7 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto overflow-x-hidden">
-          {!rail && <div className="px-3.5 pb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">Workspace</div>}
+          {!rail && <div className="px-3.5 pb-2 text-[10px] font-semibold uppercase tracking-widest text-stone-500">Workspace</div>}
           {tabs.map(navItem)}
           {rail ? (
             <>
@@ -255,9 +255,9 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
             <>
               <button onClick={() => setSettingsOpen((o) => !o)} aria-expanded={settingsOpen}
                 className="w-full flex items-center px-3.5 pt-4 pb-2 group">
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 group-hover:text-slate-300 transition flex-1 text-left">Settings</span>
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-stone-500 group-hover:text-stone-300 transition flex-1 text-left">Settings</span>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                  className={`text-slate-500 group-hover:text-slate-300 transition-transform duration-200 ${settingsOpen ? 'rotate-180' : ''}`}>
+                  className={`text-stone-500 group-hover:text-stone-300 transition-transform duration-200 ${settingsOpen ? 'rotate-180' : ''}`}>
                   <path d="M6 9l6 6 6-6"/>
                 </svg>
               </button>
@@ -268,7 +268,7 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
 
         <div className="p-3 space-y-2">
           <button onClick={toggle} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            className="w-full hidden lg:flex items-center justify-center gap-2 rounded-xl bg-white/5 hover:bg-white/10 transition p-2.5 text-slate-400 hover:text-white">
+            className="w-full hidden lg:flex items-center justify-center gap-2 rounded-xl bg-white/5 hover:bg-white/10 transition p-2.5 text-stone-400 hover:text-white">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
               className={`transition-transform duration-200 ${collapsed ? 'rotate-180' : ''}`}>
               <path d="M15 18l-6-6 6-6"/>
@@ -284,22 +284,22 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
       {/* Main */}
       <div className={`flex-1 ml-0 ${rail ? 'lg:ml-[76px]' : 'lg:ml-[248px]'} min-h-screen flex flex-col transition-all duration-200 min-w-0`}>
         {/* Mobile top bar */}
-        <div className="lg:hidden sticky top-0 z-30 bg-[#0b1220] text-white px-4 py-3 flex items-center gap-3 shadow-md">
+        <div className="lg:hidden sticky top-0 z-30 bg-[#17251F] text-white px-4 py-3 flex items-center gap-3 shadow-md">
           <button onClick={() => setMobileOpen(true)} title="Open menu" className="p-1.5 -ml-1.5 rounded-lg hover:bg-white/10 transition">
             {MENU_ICON}
           </button>
           <img src={settings?.logo_url || '/app/claimpaid-icon.webp'} alt="ClaimPaid" className="w-8 h-8 rounded-lg object-contain bg-white/10" />
           <div className="flex-1 min-w-0">
             <div className="text-sm font-semibold leading-tight truncate">{currentLabel}</div>
-            <div className="text-[11px] text-slate-400 leading-tight truncate">{user?.org_name || 'ClaimPaid'}</div>
+            <div className="text-[11px] text-stone-400 leading-tight truncate">{user?.org_name || 'ClaimPaid'}</div>
           </div>
           <UserMenu placement="down" compact />
         </div>
         {usageWarn && (
           <button onClick={() => setPage('billing')}
-            className="mx-4 lg:mx-8 mt-4 lg:mt-5 rounded-xl bg-violet-50 border border-violet-300 px-5 py-3 flex items-center gap-3 text-left hover:bg-violet-100 transition max-w-[1400px] w-[calc(100%-2rem)] lg:w-[calc(100%-4rem)] self-center">
-            <span className="text-violet-600 text-lg">📊</span>
-            <span className="text-sm text-violet-900">
+            className="mx-4 lg:mx-8 mt-4 lg:mt-5 rounded-xl bg-amber-50 border border-amber-300 px-5 py-3 flex items-center gap-3 text-left hover:bg-amber-100 transition max-w-[1400px] w-[calc(100%-2rem)] lg:w-[calc(100%-4rem)] self-center">
+            <span className="text-amber-700 text-lg">📊</span>
+            <span className="text-sm text-amber-900">
               <strong>Plan usage:</strong> {usageWarn}
               <span className="underline font-medium ml-1">Go to Billing →</span>
             </span>
@@ -318,27 +318,27 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
         <main className="flex-1 px-4 pt-5 pb-24 sm:px-6 lg:px-8 lg:py-7 max-w-[1400px] w-full mx-auto">
           {children}
         </main>
-        <footer className="px-4 sm:px-6 lg:px-8 pb-24 lg:pb-6 text-xs text-slate-400 max-w-[1400px] w-full mx-auto flex flex-col sm:flex-row gap-2 justify-between sm:items-center">
+        <footer className="px-4 sm:px-6 lg:px-8 pb-24 lg:pb-6 text-xs text-stone-400 max-w-[1400px] w-full mx-auto flex flex-col sm:flex-row gap-2 justify-between sm:items-center">
           <span>ClaimPaid RCM · Your data is isolated to your organization</span>
-          <span>Part of <a href="https://claimpaid.io" target="_blank" rel="noreferrer" className="text-emerald-600 font-semibold hover:underline">ClaimPaid</a> · <a href="/legal/terms" className="text-slate-500 hover:text-slate-700 hover:underline">Terms</a> · <a href="/legal/privacy" className="text-slate-500 hover:text-slate-700 hover:underline">Privacy</a> · <a href="/support" className="text-slate-500 hover:text-slate-700 hover:underline">Support</a> · <a href="/ai/app/" className="text-violet-600 font-semibold hover:underline">ClaimPaid AI</a></span>
+          <span>Part of <a href="https://claimpaid.io" target="_blank" rel="noreferrer" className="text-emerald-600 font-semibold hover:underline">ClaimPaid</a> · <a href="/legal/terms" className="text-stone-500 hover:text-stone-700 hover:underline">Terms</a> · <a href="/legal/privacy" className="text-stone-500 hover:text-stone-700 hover:underline">Privacy</a> · <a href="/support" className="text-stone-500 hover:text-stone-700 hover:underline">Support</a> · <a href="/ai/app/" className="text-amber-700 font-semibold hover:underline">ClaimPaid AI</a></span>
         </footer>
       </div>
 
       {/* Mobile bottom navigation */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-[#0b1220]/95 backdrop-blur border-t border-white/10 pb-[env(safe-area-inset-bottom)]">
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-[#17251F]/95 backdrop-blur border-t border-white/10 pb-[env(safe-area-inset-bottom)]">
         <div className="grid grid-cols-5">
           {bottomTabs.map((t) => (
             <button key={t.id} onClick={() => go(t.id)}
-              className={`relative flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition ${page === t.id ? 'text-emerald-400' : 'text-slate-400'}`}>
+              className={`relative flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition ${page === t.id ? 'text-emerald-400' : 'text-stone-400'}`}>
               {t.icon}
               <span>{t.label === 'My Work' ? 'Work' : t.label}</span>
               {t.badge > 0 && (
-                <span className="absolute top-1 right-1/2 translate-x-4 bg-rose-500 text-white text-[9px] font-bold px-1 py-px rounded-full min-w-[16px] text-center">{t.badge}</span>
+                <span className="absolute top-1 right-1/2 transtone-x-4 bg-rose-500 text-white text-[9px] font-bold px-1 py-px rounded-full min-w-[16px] text-center">{t.badge}</span>
               )}
             </button>
           ))}
           <button onClick={() => setMobileOpen(true)}
-            className="flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium text-slate-400 transition">
+            className="flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium text-stone-400 transition">
             {MENU_ICON}
             <span>Menu</span>
           </button>

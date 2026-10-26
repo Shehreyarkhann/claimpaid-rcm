@@ -25,21 +25,21 @@ export default function CreateWorkspaceGate({ user }) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0b1220] px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#17251F] px-4">
       <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8">
-        <div className="w-12 h-12 rounded-2xl bg-emerald-500 flex items-center justify-center font-extrabold text-[#0b1220] text-xl mb-5">C</div>
-        <h1 className="text-2xl font-extrabold text-slate-900">Create your workspace</h1>
-        <p className="text-slate-500 text-sm mt-2 leading-relaxed">
+        <div className="w-12 h-12 rounded-2xl bg-emerald-500 flex items-center justify-center font-extrabold text-[#17251F] text-xl mb-5">C</div>
+        <h1 className="text-2xl font-extrabold text-stone-900">Create your workspace</h1>
+        <p className="text-stone-500 text-sm mt-2 leading-relaxed">
           {user?.name ? `Hi ${user.name.split(' ')[0]} — ` : ''}your account doesn't have a workspace right now.
           Name your practice or billing company to continue. You'll pick a plan in the next step.
         </p>
-        <label className="block text-xs font-bold tracking-wide text-slate-500 mt-6 mb-2">WORKSPACE NAME</label>
+        <label className="block text-xs font-bold tracking-wide text-stone-500 mt-6 mb-2">WORKSPACE NAME</label>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') create(); }}
           placeholder="e.g. Harborview Medical Group"
-          className="w-full border border-slate-300 rounded-xl px-4 py-3 text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+          className="w-full border border-stone-300 rounded-xl px-4 py-3 text-stone-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
           autoFocus
         />
         {error && <p className="text-red-600 text-sm mt-3">{error}</p>}
@@ -52,7 +52,7 @@ export default function CreateWorkspaceGate({ user }) {
         </button>
         <button
           onClick={() => { localStorage.removeItem('pulse_token'); window.location.reload(); }}
-          className="w-full mt-3 text-slate-400 hover:text-slate-600 text-sm py-1"
+          className="w-full mt-3 text-stone-400 hover:text-stone-600 text-sm py-1"
         >
           Sign out
         </button>

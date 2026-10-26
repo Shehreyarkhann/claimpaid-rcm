@@ -41,7 +41,7 @@ export default function Avatar({ userId, name, hasAvatar, className = 'w-9 h-9 t
   const initials = (name || '?').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
   if (url) return <img src={url} alt={name || 'Profile photo'} className={`${className} rounded-full object-cover shrink-0`} />;
   return (
-    <div className={`${className} rounded-full bg-gradient-to-br from-emerald-400 to-sky-500 flex items-center justify-center font-bold text-white shrink-0 ${textClass}`}>
+    <div className={`${className} rounded-full bg-gradient-to-br from-emerald-400 to-amber-500 flex items-center justify-center font-bold text-white shrink-0 ${textClass}`}>
       {initials}
     </div>
   );

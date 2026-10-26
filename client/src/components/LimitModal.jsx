@@ -30,14 +30,14 @@ export default function LimitModal({ info, onClose, onUpgrade }) {
         <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center text-2xl mb-4">
           ⚠
         </div>
-        <h2 className="text-xl font-bold text-slate-900 mb-2">
+        <h2 className="text-xl font-bold text-stone-900 mb-2">
           You've hit your {planLabel} limit
         </h2>
-        <p className="text-sm text-slate-500 mb-1">
-          You've used <strong className="text-slate-800">{Number(info.used || 0).toLocaleString('en-US')}</strong> of{' '}
-          <strong className="text-slate-800">{fmtLimit(info.limit)}</strong> {noun} this month.
+        <p className="text-sm text-stone-500 mb-1">
+          You've used <strong className="text-stone-800">{Number(info.used || 0).toLocaleString('en-US')}</strong> of{' '}
+          <strong className="text-stone-800">{fmtLimit(info.limit)}</strong> {noun} this month.
         </p>
-        <p className="text-sm text-slate-500 mb-6">
+        <p className="text-sm text-stone-500 mb-6">
           Upgrade your plan to keep working without interruption.
         </p>
         <div className="flex gap-3 justify-center">

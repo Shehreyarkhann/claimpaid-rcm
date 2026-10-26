@@ -55,8 +55,8 @@ function MatchModal({ line, onClose, onDone }) {
   return (
     <Modal onClose={onClose} wide>
       <div className="p-6">
-        <h3 className="text-lg font-bold text-slate-900 mb-1">Match ERA line to a claim</h3>
-        <p className="text-sm text-slate-500 mb-4">
+        <h3 className="text-lg font-bold text-stone-900 mb-1">Match ERA line to a claim</h3>
+        <p className="text-sm text-stone-500 mb-4">
           ERA reference <strong>{line.clp_ref}</strong>
           {line.patient_name && <> · patient {line.patient_name}</>} · billed {fmtMoney(line.billed)} · paid {fmtMoney(line.paid)}
           {line.suggested_claim_id && <> · suggested: <strong>{line.suggested_claim_number}</strong></>}
@@ -67,15 +67,15 @@ function MatchModal({ line, onClose, onDone }) {
           <button className="btn btn-outline" onClick={() => search(q)}>Search</button>
         </div>
         {!rows && <Skeleton className="h-24" />}
-        {rows && rows.length === 0 && <p className="text-sm text-slate-500">No claims match that search.</p>}
+        {rows && rows.length === 0 && <p className="text-sm text-stone-500">No claims match that search.</p>}
         <div className="space-y-2 max-h-80 overflow-auto">
           {(rows || []).map((c) => (
-            <div key={c.id} className="flex items-center gap-3 border border-slate-200 rounded-xl px-4 py-3">
+            <div key={c.id} className="flex items-center gap-3 border border-stone-200 rounded-xl px-4 py-3">
               <div className="flex-1 min-w-0">
-                <div className="font-semibold text-slate-900">{c.claim_number}
+                <div className="font-semibold text-stone-900">{c.claim_number}
                   {line.suggested_claim_id === c.id && <span className="badge badge-blue ml-2">Suggested</span>}
                 </div>
-                <div className="text-xs text-slate-500">{c.patient_name} · DOS {fmtDate(c.service_date)} · billed {fmtMoney(c.billed_amount)} · paid {fmtMoney(c.paid_amount)} · {c.status}</div>
+                <div className="text-xs text-stone-500">{c.patient_name} · DOS {fmtDate(c.service_date)} · billed {fmtMoney(c.billed_amount)} · paid {fmtMoney(c.paid_amount)} · {c.status}</div>
               </div>
               <button className="btn btn-outline btn-sm" disabled={busy} onClick={() => choose(c.id, false)}>Match</button>
               <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => choose(c.id, true)}>Match &amp; post</button>
@@ -99,18 +99,18 @@ function LineRow({ line, canWrite, onChanged, onMatch }) {
   const adjSummary = (line.adjustments || []).slice(0, 3)
     .map((a) => `${a.group}-${a.code} ${fmtMoney(a.amount)}`).join(' · ');
   return (
-    <tr className="border-t border-slate-100 align-top">
+    <tr className="border-t border-stone-100 align-top">
       <td className="py-2 pr-3">
-        <div className="font-medium text-slate-900">{line.clp_ref}</div>
-        <div className="text-xs text-slate-500">{line.patient_name || '—'}{line.payer_icn && <> · ICN {line.payer_icn}</>}</div>
-        {adjSummary && <div className="text-xs text-slate-400 mt-0.5">{adjSummary}</div>}
+        <div className="font-medium text-stone-900">{line.clp_ref}</div>
+        <div className="text-xs text-stone-500">{line.patient_name || '—'}{line.payer_icn && <> · ICN {line.payer_icn}</>}</div>
+        {adjSummary && <div className="text-xs text-stone-400 mt-0.5">{adjSummary}</div>}
         {line.denial_reason && <div className="text-xs text-rose-600 mt-0.5">{line.denial_reason}</div>}
       </td>
       <td className="py-2 pr-3 text-sm">
         {line.matched_claim_number
-          ? <span className="font-medium text-slate-800">{line.matched_claim_number}</span>
-          : <span className="text-slate-400">—</span>}
-        {line.match_method && <div className="text-xs text-slate-400">via {line.match_method.replace('_', ' ')}</div>}
+          ? <span className="font-medium text-stone-800">{line.matched_claim_number}</span>
+          : <span className="text-stone-400">—</span>}
+        {line.match_method && <div className="text-xs text-stone-400">via {line.match_method.replace('_', ' ')}</div>}
       </td>
       <td className="py-2 pr-3 text-right text-sm">{fmtMoney(line.billed)}</td>
       <td className="py-2 pr-3 text-right text-sm">{fmtMoney(line.paid)}</td>
@@ -119,7 +119,7 @@ function LineRow({ line, canWrite, onChanged, onMatch }) {
       <td className="py-2 pr-3 text-right text-sm">
         {Math.abs(line.variance) > 0.02
           ? <span className="text-amber-700 font-medium">{fmtMoney(line.variance)}</span>
-          : <span className="text-slate-400">—</span>}
+          : <span className="text-stone-400">—</span>}
       </td>
       <td className="py-2 pr-3">
         <div className="flex flex-wrap gap-1">
@@ -171,21 +171,21 @@ function RemittanceCard({ era, canWrite, onChanged, onMatch }) {
 
   return (
     <div className="card mb-4 overflow-hidden">
-      <button className="w-full text-left px-5 py-4 flex flex-wrap items-center gap-3 hover:bg-slate-50" onClick={toggle}>
+      <button className="w-full text-left px-5 py-4 flex flex-wrap items-center gap-3 hover:bg-stone-50" onClick={toggle}>
         <div className="flex-1 min-w-48">
-          <div className="font-semibold text-slate-900">{era.payer_name || 'Unknown payer'}</div>
-          <div className="text-xs text-slate-500">
+          <div className="font-semibold text-stone-900">{era.payer_name || 'Unknown payer'}</div>
+          <div className="text-xs text-stone-500">
             {era.source_filename} · uploaded {fmtDate(era.created_at)}
             {era.check_number && <> · Check/EFT {era.check_number}</>}
             {era.pay_date && <> · paid {fmtDate(era.pay_date)}</>}
           </div>
         </div>
-        <div className="text-sm text-slate-600">
+        <div className="text-sm text-stone-600">
           {era.line_count} lines · <strong>{fmtMoney(era.total_paid)}</strong> paid · {era.posted_count} posted
           {era.pending_count > 0 && <> · <span className="text-amber-700 font-medium">{era.pending_count} exceptions</span></>}
         </div>
         <span className={`badge ${cls}`}>{label}</span>
-        <span className="text-slate-400">{open ? '▾' : '▸'}</span>
+        <span className="text-stone-400">{open ? '▾' : '▸'}</span>
       </button>
       {open && (
         <div className="px-5 pb-5 overflow-x-auto">
@@ -193,7 +193,7 @@ function RemittanceCard({ era, canWrite, onChanged, onMatch }) {
           {detail && (
             <table className="w-full text-sm min-w-[900px]">
               <thead>
-                <tr className="text-left text-xs uppercase tracking-wide text-slate-400">
+                <tr className="text-left text-xs uppercase tracking-wide text-stone-400">
                   <th className="py-2 pr-3">ERA reference</th><th className="py-2 pr-3">Claim</th>
                   <th className="py-2 pr-3 text-right">Billed</th><th className="py-2 pr-3 text-right">Paid</th>
                   <th className="py-2 pr-3 text-right">Adjustments</th><th className="py-2 pr-3 text-right">Patient resp.</th>
@@ -208,7 +208,7 @@ function RemittanceCard({ era, canWrite, onChanged, onMatch }) {
             </table>
           )}
           {era.plb_total !== 0 && detail && (
-            <p className="text-xs text-slate-500 mt-3">
+            <p className="text-xs text-stone-500 mt-3">
               Provider-level adjustments (PLB) on this remittance: {fmtMoney(era.plb_total)} — these are payer-level
               offsets (e.g. withholds, interest, prior overpayment recovery) and are tracked for reconciliation, not posted to claims.
             </p>
@@ -285,8 +285,8 @@ export default function Era() {
 
       {result && (
         <div className="card p-5 mb-5 !border-emerald-200 bg-emerald-50/50">
-          <div className="font-semibold text-slate-900 mb-1">835 processed — {result.file}</div>
-          <div className="text-sm text-slate-600">
+          <div className="font-semibold text-stone-900 mb-1">835 processed — {result.file}</div>
+          <div className="text-sm text-stone-600">
             {result.payer && <>Payer: <strong>{result.payer}</strong> · </>}
             {result.checkNumber && <>Check/EFT: <strong>{result.checkNumber}</strong> · </>}
             {result.payDate && <>Date: <strong>{result.payDate}</strong></>}
@@ -296,14 +296,14 @@ export default function Era() {
               ['Paid in full', result.paid, 'text-emerald-700'],
               ['Denied', result.denied, 'text-rose-700'],
               ['Exceptions to review', result.exceptions, 'text-amber-700']].map(([l, v, c]) => (
-              <div key={l} className="bg-white rounded-xl border border-slate-200 p-3 text-center">
+              <div key={l} className="bg-white rounded-xl border border-stone-200 p-3 text-center">
                 <div className={`text-2xl font-bold ${c}`}>{v}</div>
-                <div className="text-xs text-slate-500">{l}</div>
+                <div className="text-xs text-stone-500">{l}</div>
               </div>
             ))}
           </div>
           {result.exceptions > 0 && (
-            <p className="text-sm text-slate-600 mt-3">
+            <p className="text-sm text-stone-600 mt-3">
               Exceptions are below in the remittance — unmatched claims, balance variances, reversals and
               already-paid claims are never auto-posted. Resolve each with Post, Match or Ignore.
             </p>
@@ -321,8 +321,8 @@ export default function Era() {
             ['Open claim balance', fmtMoney(recon.openClaimBalance)],
           ].map(([l, v]) => (
             <div key={l} className="card p-4">
-              <div className="text-xl font-bold text-slate-900">{v}</div>
-              <div className="text-xs text-slate-500 mt-0.5">{l}</div>
+              <div className="text-xl font-bold text-stone-900">{v}</div>
+              <div className="text-xs text-stone-500 mt-0.5">{l}</div>
             </div>
           ))}
         </div>
@@ -330,10 +330,10 @@ export default function Era() {
 
       {recon && recon.byPayer.length > 0 && (
         <div className="card p-5 mb-6 overflow-x-auto">
-          <h3 className="font-semibold text-slate-900 mb-3">Reconciliation by payer</h3>
+          <h3 className="font-semibold text-stone-900 mb-3">Reconciliation by payer</h3>
           <table className="w-full text-sm min-w-[640px]">
             <thead>
-              <tr className="text-left text-xs uppercase tracking-wide text-slate-400">
+              <tr className="text-left text-xs uppercase tracking-wide text-stone-400">
                 <th className="py-2 pr-3">Payer</th><th className="py-2 pr-3 text-right">ERAs</th>
                 <th className="py-2 pr-3 text-right">Billed</th><th className="py-2 pr-3 text-right">Paid</th>
                 <th className="py-2 pr-3 text-right">Adjustments</th><th className="py-2 pr-3 text-right">Patient resp.</th>
@@ -342,8 +342,8 @@ export default function Era() {
             </thead>
             <tbody>
               {recon.byPayer.map((p) => (
-                <tr key={p.payer} className="border-t border-slate-100">
-                  <td className="py-2 pr-3 font-medium text-slate-800">{p.payer}</td>
+                <tr key={p.payer} className="border-t border-stone-100">
+                  <td className="py-2 pr-3 font-medium text-stone-800">{p.payer}</td>
                   <td className="py-2 pr-3 text-right">{p.remittances}</td>
                   <td className="py-2 pr-3 text-right">{fmtMoney(p.billed)}</td>
                   <td className="py-2 pr-3 text-right">{fmtMoney(p.paid)}</td>

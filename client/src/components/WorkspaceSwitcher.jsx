@@ -65,7 +65,7 @@ export default function WorkspaceSwitcher({ collapsed }) {
       >
         <div className="min-w-0 flex-1">
           <div className="font-bold leading-tight tracking-tight truncate">ClaimPaid RCM</div>
-          <div className="text-[11px] text-slate-400 truncate max-w-[150px] flex items-center gap-1">
+          <div className="text-[11px] text-stone-400 truncate max-w-[150px] flex items-center gap-1">
             {user?.orgName}
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 opacity-70">
               <path d="M6 9l6 6 6-6" />
@@ -75,8 +75,8 @@ export default function WorkspaceSwitcher({ collapsed }) {
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-full mt-2 min-w-[220px] rounded-xl bg-[#111a2e] border border-white/10 shadow-2xl py-1.5 z-50">
-          <div className="px-3.5 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-500">Workspaces</div>
+        <div className="absolute left-0 right-0 top-full mt-2 min-w-[220px] rounded-xl bg-[#1D2E26] border border-white/10 shadow-2xl py-1.5 z-50">
+          <div className="px-3.5 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-stone-500">Workspaces</div>
           {(orgs || []).map((o) => (
             <button
               key={o.id}
@@ -84,10 +84,10 @@ export default function WorkspaceSwitcher({ collapsed }) {
               disabled={busy}
               className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-white/5 transition text-left disabled:opacity-50"
             >
-              <span className={`w-2 h-2 rounded-full shrink-0 ${o.id === user?.org_id ? 'bg-emerald-400' : 'bg-slate-600'}`} />
+              <span className={`w-2 h-2 rounded-full shrink-0 ${o.id === user?.org_id ? 'bg-emerald-400' : 'bg-stone-600'}`} />
               <span className="flex-1 min-w-0">
                 <span className="block text-sm font-medium text-white truncate">{o.name}</span>
-                <span className="block text-[11px] text-slate-400 capitalize">{o.role}</span>
+                <span className="block text-[11px] text-stone-400 capitalize">{o.role}</span>
               </span>
               {o.id === user?.org_id && (
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -117,7 +117,7 @@ export default function WorkspaceSwitcher({ collapsed }) {
           ) : (
             <button
               onClick={() => setCreating(true)}
-              className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-white/5 transition text-left text-sm text-slate-300"
+              className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-white/5 transition text-left text-sm text-stone-300"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M12 5v14M5 12h14" />

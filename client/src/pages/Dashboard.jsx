@@ -6,7 +6,7 @@ import {
 import { api, fmtMoney, fmtMoneyCompact, fmtDate } from '../api';
 import { Skeleton, PageHeader } from '../components/ui';
 
-const COLORS = ['#10b981', '#0ea5e9', '#8b5cf6', '#f59e0b', '#f43f5e', '#64748b', '#14b8a6', '#6366f1'];
+const COLORS = ['#10b981', '#B45309', '#D97706', '#f59e0b', '#f43f5e', '#78716C', '#35805B', '#57534E'];
 
 function Kpi({ label, value, sub, accent, icon, title }) {
   return (
@@ -14,9 +14,9 @@ function Kpi({ label, value, sub, accent, icon, title }) {
       <div className={`absolute left-0 top-0 bottom-0 w-1 ${accent}`} />
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</div>
-          <div className="mt-1.5 text-[22px] font-bold text-slate-900 tracking-tight tabular-nums leading-tight break-words" title={title || (typeof value === 'string' ? value : undefined)}>{value}</div>
-          {sub && <div className="mt-1 text-xs text-slate-500">{sub}</div>}
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">{label}</div>
+          <div className="mt-1.5 text-[22px] font-bold text-stone-900 tracking-tight tabular-nums leading-tight break-words" title={title || (typeof value === 'string' ? value : undefined)}>{value}</div>
+          {sub && <div className="mt-1 text-xs text-stone-500">{sub}</div>}
         </div>
         <div className="text-xl opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all shrink-0">{icon}</div>
       </div>
@@ -27,8 +27,8 @@ function Kpi({ label, value, sub, accent, icon, title }) {
 function ChartCard({ title, subtitle, children, className = '' }) {
   return (
     <div className={`card p-6 ${className}`}>
-      <h3 className="font-semibold text-slate-900 tracking-tight">{title}</h3>
-      {subtitle && <p className="text-xs text-slate-500 mt-0.5 mb-4">{subtitle}</p>}
+      <h3 className="font-semibold text-stone-900 tracking-tight">{title}</h3>
+      {subtitle && <p className="text-xs text-stone-500 mt-0.5 mb-4">{subtitle}</p>}
       {!subtitle && <div className="mb-4" />}
       {children}
     </div>
@@ -36,7 +36,7 @@ function ChartCard({ title, subtitle, children, className = '' }) {
 }
 
 const chartTooltip = {
-  contentStyle: { borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 8px 24px rgba(15,23,42,0.12)', fontSize: 12 },
+  contentStyle: { borderRadius: 12, border: '1px solid #E7E5E4', boxShadow: '0 8px 24px rgba(15,23,42,0.12)', fontSize: 12 },
 };
 
 export default function Dashboard({ goDenials }) {
@@ -93,8 +93,8 @@ export default function Dashboard({ goDenials }) {
           <div className="flex items-center gap-3 mb-3">
             <span className="text-xl">🚨</span>
             <div>
-              <div className="font-bold text-slate-900">Timely filing at risk</div>
-              <div className="text-xs text-slate-500">Missed deadlines = unrecoverable revenue</div>
+              <div className="font-bold text-stone-900">Timely filing at risk</div>
+              <div className="text-xs text-stone-500">Missed deadlines = unrecoverable revenue</div>
             </div>
           </div>
           <div className="grid grid-cols-3 gap-4">
@@ -108,45 +108,45 @@ export default function Dashboard({ goDenials }) {
               <div className="text-xs font-semibold text-amber-600 uppercase tracking-wide mt-0.5">≤ 14 days</div>
               <div className="text-xs text-amber-500 mt-1">{fmtMoney(filingRisk.criticalAmount)} at stake</div>
             </div>
-            <div className="rounded-xl bg-slate-50 border border-slate-200 p-4">
-              <div className="text-2xl font-bold text-slate-700">{filingRisk.warning}</div>
-              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mt-0.5">15–30 days</div>
-              <div className="text-xs text-slate-400 mt-1">approaching deadline</div>
+            <div className="rounded-xl bg-stone-50 border border-stone-200 p-4">
+              <div className="text-2xl font-bold text-stone-700">{filingRisk.warning}</div>
+              <div className="text-xs font-semibold text-stone-500 uppercase tracking-wide mt-0.5">15–30 days</div>
+              <div className="text-xs text-stone-400 mt-1">approaching deadline</div>
             </div>
           </div>
         </div>
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
-        <Kpi label="Total Billed" value={fmtMoneyCompact(kpis.totalBilled)} title={fmtMoney(kpis.totalBilled)} sub={`${kpis.totalClaims} claims`} accent="bg-sky-400" icon="💰" />
+        <Kpi label="Total Billed" value={fmtMoneyCompact(kpis.totalBilled)} title={fmtMoney(kpis.totalBilled)} sub={`${kpis.totalClaims} claims`} accent="bg-amber-500" icon="💰" />
         <Kpi label="Collected" value={fmtMoneyCompact(kpis.totalCollected)} title={fmtMoney(kpis.totalCollected)} accent="bg-emerald-400" icon="✅" />
-        <Kpi label="Outstanding A/R" value={fmtMoneyCompact(kpis.totalAR)} title={fmtMoney(kpis.totalAR)} accent="bg-amber-400" icon="⏳" />
-        <Kpi label="Avg Days in A/R" value={kpis.avgDaysInAR} sub="days" accent="bg-violet-400" icon="📅" />
+        <Kpi label="Outstanding A/R" value={fmtMoneyCompact(kpis.totalAR)} title={fmtMoney(kpis.totalAR)} accent="bg-orange-400" icon="⏳" />
+        <Kpi label="Avg Days in A/R" value={kpis.avgDaysInAR} sub="days" accent="bg-stone-400" icon="📅" />
         <Kpi label="Clean Claim Rate" value={`${kpis.cleanClaimRate}%`} accent="bg-emerald-400" icon="✨" />
         <Kpi label="Denial Rate" value={`${kpis.denialRate}%`} accent="bg-rose-400" icon="⚠️" />
       </div>
 
       {appealStats && (
         <div className="card p-5 mb-6 flex flex-wrap items-center gap-x-8 gap-y-3">
-          <div className="text-sm font-semibold text-slate-700">Appeal pipeline</div>
+          <div className="text-sm font-semibold text-stone-700">Appeal pipeline</div>
           {[['open', 'Open', 'badge-slate'], ['in_progress', 'In Progress', 'badge-blue'], ['submitted', 'Submitted', 'badge-amber'], ['won', 'Won', 'badge-green'], ['lost', 'Lost', 'badge-rose']].map(([k, label, badge]) => (
             <div key={k} className="flex items-center gap-2 text-sm">
               <span className={`badge ${badge}`}>{label}</span>
-              <span className="font-bold text-slate-900">{appealStats.byStatus[k]?.count || 0}</span>
+              <span className="font-bold text-stone-900">{appealStats.byStatus[k]?.count || 0}</span>
             </div>
           ))}
-          <div className="ml-auto text-sm text-slate-500">Win rate: <strong className="text-emerald-600">{appealStats.winRate}%</strong></div>
+          <div className="ml-auto text-sm text-stone-500">Win rate: <strong className="text-emerald-600">{appealStats.winRate}%</strong></div>
         </div>
       )}
 
       {quality && (
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-slate-900 tracking-tight">Claim quality</h3>
-            <span className="text-xs text-slate-400">Prevention, measured</span>
+            <h3 className="font-semibold text-stone-900 tracking-tight">Claim quality</h3>
+            <span className="text-xs text-stone-400">Prevention, measured</span>
           </div>
           {quality.total_claims === 0 ? (
-            <div className="card p-8 text-center text-sm text-slate-400">
+            <div className="card p-8 text-center text-sm text-stone-400">
               Not enough data yet — add claims and run the scrubber to see quality metrics.
             </div>
           ) : (
@@ -157,9 +157,9 @@ export default function Dashboard({ goDenials }) {
                 <Kpi label="Denial rate" value={quality.denial_rate != null ? `${quality.denial_rate}%` : '—'}
                   sub="of all claims" accent="bg-rose-400" />
                 <Kpi label="Avg readiness" value={quality.avg_readiness != null ? quality.avg_readiness : '—'}
-                  sub="0–100 scrub score" accent="bg-sky-400" />
+                  sub="0–100 scrub score" accent="bg-amber-500" />
                 <Kpi label="Claims scrubbed" value={quality.scrubbed_claims.toLocaleString()}
-                  sub="with a readiness score" accent="bg-violet-400" />
+                  sub="with a readiness score" accent="bg-stone-400" />
               </div>
               {quality.by_payer.length > 0 && (
                 <div className="card overflow-hidden">
@@ -169,13 +169,13 @@ export default function Dashboard({ goDenials }) {
                       {quality.by_payer.map((r) => (
                         <tr key={r.name}>
                           <td className="font-medium">{r.name}</td>
-                          <td className="!text-right text-slate-500">{r.claims}</td>
+                          <td className="!text-right text-stone-500">{r.claims}</td>
                           <td className="!text-right">
                             <span className={`badge ${r.denial_rate >= 20 ? 'badge-rose' : r.denial_rate >= 10 ? 'badge-amber' : 'badge-green'}`}>
                               {r.denial_rate}%
                             </span>
                           </td>
-                          <td className="!text-right text-slate-500">{r.avg_ar_days ?? '—'}</td>
+                          <td className="!text-right text-stone-500">{r.avg_ar_days ?? '—'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -190,12 +190,12 @@ export default function Dashboard({ goDenials }) {
       <div className="grid lg:grid-cols-2 gap-5 mb-5">
         <ChartCard title="Billed vs Collected" subtitle="Monthly revenue performance">          <ResponsiveContainer width="100%" height={280}>
             <BarChart data={trend} barGap={3}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
-              <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-              <YAxis tickFormatter={(v) => `$${Math.round(v / 1000)}k`} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#F5EFE3" vertical={false} />
+              <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#A8A29E' }} axisLine={false} tickLine={false} />
+              <YAxis tickFormatter={(v) => `$${Math.round(v / 1000)}k`} tick={{ fontSize: 11, fill: '#A8A29E' }} axisLine={false} tickLine={false} />
               <Tooltip {...chartTooltip} formatter={(v) => fmtMoney(v)} />
               <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-              <Bar dataKey="billed" name="Billed" fill="#0ea5e9" radius={[5, 5, 0, 0]} />
+              <Bar dataKey="billed" name="Billed" fill="#B45309" radius={[5, 5, 0, 0]} />
               <Bar dataKey="collected" name="Collected" fill="#10b981" radius={[5, 5, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -204,9 +204,9 @@ export default function Dashboard({ goDenials }) {
         <ChartCard title="A/R Aging" subtitle="Outstanding receivables by age">
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={aging} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" horizontal={false} />
-              <XAxis type="number" tickFormatter={(v) => `$${Math.round(v / 1000)}k`} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-              <YAxis type="category" dataKey="bucket" tick={{ fontSize: 12, fill: '#475569' }} width={56} axisLine={false} tickLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#F5EFE3" horizontal={false} />
+              <XAxis type="number" tickFormatter={(v) => `$${Math.round(v / 1000)}k`} tick={{ fontSize: 11, fill: '#A8A29E' }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="bucket" tick={{ fontSize: 12, fill: '#57534E' }} width={56} axisLine={false} tickLine={false} />
               <Tooltip {...chartTooltip} formatter={(v, name, p) => [`${fmtMoney(v)} · ${p.payload.count} claims`, 'Outstanding']} />
               <Bar dataKey="amount" name="Outstanding" fill="#f59e0b" radius={[0, 6, 6, 0]} barSize={22} />
             </BarChart>
@@ -216,9 +216,9 @@ export default function Dashboard({ goDenials }) {
         <ChartCard title="Denials by Reason" subtitle="Where claims are getting stuck">
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={denials} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-              <YAxis type="category" dataKey="reason" tick={{ fontSize: 10.5, fill: '#475569' }} width={168} axisLine={false} tickLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#F5EFE3" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 11, fill: '#A8A29E' }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="reason" tick={{ fontSize: 10.5, fill: '#57534E' }} width={168} axisLine={false} tickLine={false} />
               <Tooltip {...chartTooltip} />
               <Bar dataKey="count" name="Denied claims" fill="#f43f5e" radius={[0, 6, 6, 0]} barSize={20} />
             </BarChart>
@@ -229,7 +229,7 @@ export default function Dashboard({ goDenials }) {
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie data={payerMix} dataKey="billed" nameKey="payer" cx="50%" cy="50%" outerRadius={105} innerRadius={58} paddingAngle={2}
-                label={{ fontSize: 10, fill: '#64748b' }} labelLine={false}>
+                label={{ fontSize: 10, fill: '#78716C' }} labelLine={false}>
                 {payerMix.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} strokeWidth={0} />)}
               </Pie>
               <Tooltip {...chartTooltip} formatter={(v) => fmtMoney(v)} />
@@ -242,13 +242,13 @@ export default function Dashboard({ goDenials }) {
       <ChartCard title="Collection Trend" subtitle="Billed vs collected over time" className="mb-2">
         <ResponsiveContainer width="100%" height={220}>
           <LineChart data={trend}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
-            <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-            <YAxis tickFormatter={(v) => `$${Math.round(v / 1000)}k`} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#F5EFE3" vertical={false} />
+            <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#A8A29E' }} axisLine={false} tickLine={false} />
+            <YAxis tickFormatter={(v) => `$${Math.round(v / 1000)}k`} tick={{ fontSize: 11, fill: '#A8A29E' }} axisLine={false} tickLine={false} />
             <Tooltip {...chartTooltip} formatter={(v) => fmtMoney(v)} />
             <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
             <Line type="monotone" dataKey="collected" name="Collected" stroke="#10b981" strokeWidth={2.5} dot={false} />
-            <Line type="monotone" dataKey="billed" name="Billed" stroke="#0ea5e9" strokeWidth={2} dot={false} strokeDasharray="6 4" />
+            <Line type="monotone" dataKey="billed" name="Billed" stroke="#B45309" strokeWidth={2} dot={false} strokeDasharray="6 4" />
           </LineChart>
         </ResponsiveContainer>
       </ChartCard>

@@ -33,15 +33,15 @@ export default function AuditLog() {
       {summary && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div className="card p-5">
-            <div className="text-3xl font-bold text-slate-900">{summary.byAction.reduce((a, r) => a + r.n, 0).toLocaleString()}</div>
-            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mt-1">Total events</div>
-            <div className="text-[11px] text-slate-400">Last {summary.periodDays} days</div>
+            <div className="text-3xl font-bold text-stone-900">{summary.byAction.reduce((a, r) => a + r.n, 0).toLocaleString()}</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-stone-500 mt-1">Total events</div>
+            <div className="text-[11px] text-stone-400">Last {summary.periodDays} days</div>
           </div>
           {summary.byAction.slice(0, 3).map((a) => (
             <div key={a.action} className="card p-5">
-              <div className="text-3xl font-bold text-slate-900">{a.n.toLocaleString()}</div>
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mt-1">{a.action}s</div>
-              <div className="text-[11px] text-slate-400">of PHI records</div>
+              <div className="text-3xl font-bold text-stone-900">{a.n.toLocaleString()}</div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-stone-500 mt-1">{a.action}s</div>
+              <div className="text-[11px] text-stone-400">of PHI records</div>
             </div>
           ))}
         </div>
@@ -79,18 +79,18 @@ export default function AuditLog() {
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.id}>
-                    <td className="text-[13px] text-slate-500 whitespace-nowrap">
+                    <td className="text-[13px] text-stone-500 whitespace-nowrap">
                       {new Date(r.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                     </td>
                     <td>
                       <div className="font-medium text-[13px]">{r.user_name || '—'}</div>
-                      <div className="text-[11px] text-slate-400">{r.user_email}</div>
+                      <div className="text-[11px] text-stone-400">{r.user_email}</div>
                     </td>
                     <td><span className={`badge ${ACTION_COLORS[r.action] || 'badge-slate'}`}>{r.action}</span></td>
                     <td>
-                      <div className="text-[13px]"><span className="text-slate-400">{r.resource_type}</span> <span className="font-mono font-medium">{r.resource_label || r.resource_id || '—'}</span></div>
+                      <div className="text-[13px]"><span className="text-stone-400">{r.resource_type}</span> <span className="font-mono font-medium">{r.resource_label || r.resource_id || '—'}</span></div>
                     </td>
-                    <td className="text-[12px] text-slate-400 font-mono">{r.ip || '—'}</td>
+                    <td className="text-[12px] text-stone-400 font-mono">{r.ip || '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -98,7 +98,7 @@ export default function AuditLog() {
           </div>
         )}
       </div>
-      <p className="text-xs text-slate-400 mt-4">
+      <p className="text-xs text-stone-400 mt-4">
         Audit events are append-only and retained per your data retention policy. Export this table for compliance reviews.
       </p>
     </div>

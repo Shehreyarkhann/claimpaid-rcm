@@ -66,10 +66,10 @@ export default function TransmitSettings() {
     <div className="card p-6 mb-5">
       <div className="flex items-center gap-2.5 mb-1">
         <div className="text-xl">📤</div>
-        <div className="font-semibold text-slate-900">Claim transmission</div>
+        <div className="font-semibold text-stone-900">Claim transmission</div>
         {form.vendor === 'manual' && <span className="badge badge-slate">MANUAL MODE</span>}
       </div>
-      <p className="text-sm text-slate-500 mb-5 max-w-2xl leading-relaxed">
+      <p className="text-sm text-stone-500 mb-5 max-w-2xl leading-relaxed">
         How generated 837P batches are submitted to your clearinghouse. <strong>Manual</strong> is the
         honest default: you download the file, upload it in your clearinghouse portal, then confirm —
         nothing is ever marked transmitted without your say-so. <strong>SFTP</strong> and <strong>REST</strong> need

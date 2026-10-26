@@ -44,7 +44,7 @@ function ExpiryBadge({ auth }) {
     const cls = d > 10 ? 'badge-amber' : 'badge-slate';
     return <span className={`badge ${cls}`}>{d}d waiting</span>;
   }
-  return <span className="text-slate-300">—</span>;
+  return <span className="text-stone-300">—</span>;
 }
 
 // ---------------- New / Edit modal ----------------
@@ -93,7 +93,7 @@ function AuthModal({ auth, payers, team, onClose, onSaved }) {
     <Modal onClose={onClose} wide>
       <div className="p-7">
         <h3 className="text-xl font-bold tracking-tight mb-1">{auth ? 'Edit authorization' : 'New prior authorization'}</h3>
-        <p className="text-sm text-slate-500 mb-5">{auth ? `Auth #${auth.id}` : 'Start tracking a new auth request'}</p>
+        <p className="text-sm text-stone-500 mb-5">{auth ? `Auth #${auth.id}` : 'Start tracking a new auth request'}</p>
         {error && <div className="mb-4 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}
         <div className="grid sm:grid-cols-2 gap-4">
           <div><label className="label">Patient name *</label>
@@ -223,7 +223,7 @@ function AuthDrawer({ authId, payers, team, onClose, onChanged }) {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onClick={onClose} />
+      <div className="absolute inset-0 bg-stone-900/40 backdrop-blur-[2px]" onClick={onClose} />
       <div className="relative w-full max-w-[520px] bg-white h-full overflow-y-auto shadow-2xl animate-slide-in">
         {!auth ? (
           <div className="p-8 space-y-4"><Skeleton className="h-8 w-2/3" /><Skeleton className="h-40" /><Skeleton className="h-24" /></div>
@@ -231,15 +231,15 @@ function AuthDrawer({ authId, payers, team, onClose, onChanged }) {
           <div className="p-7">
             <div className="flex items-start justify-between mb-1">
               <div>
-                <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Auth #{auth.id}</div>
-                <h3 className="text-xl font-bold tracking-tight text-slate-900">{auth.patient_name}</h3>
+                <div className="text-xs font-semibold text-stone-400 uppercase tracking-wide">Auth #{auth.id}</div>
+                <h3 className="text-xl font-bold tracking-tight text-stone-900">{auth.patient_name}</h3>
               </div>
-              <button onClick={onClose} className="w-9 h-9 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-400 text-xl">×</button>
+              <button onClick={onClose} className="w-9 h-9 rounded-xl hover:bg-stone-100 flex items-center justify-center text-stone-400 text-xl">×</button>
             </div>
             <div className="flex items-center gap-2 mb-6">
               <StatusPill status={auth.effective_status} />
               <ExpiryBadge auth={auth} />
-              {auth.auth_number && <span className="font-mono text-xs text-slate-500 bg-slate-100 rounded-lg px-2.5 py-1">{auth.auth_number}</span>}
+              {auth.auth_number && <span className="font-mono text-xs text-stone-500 bg-stone-100 rounded-lg px-2.5 py-1">{auth.auth_number}</span>}
             </div>
 
             {/* Pipeline stepper */}
@@ -249,11 +249,11 @@ function AuthDrawer({ authId, payers, team, onClose, onChanged }) {
                   <div key={s} className="flex items-center flex-1 last:flex-none">
                     <div className="flex flex-col items-center">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                        i < stepIdx ? 'bg-emerald-500 text-white' : i === stepIdx ? 'bg-slate-900 text-white ring-4 ring-slate-900/10' : 'bg-slate-100 text-slate-400'
+                        i < stepIdx ? 'bg-emerald-500 text-white' : i === stepIdx ? 'bg-stone-900 text-white ring-4 ring-stone-900/10' : 'bg-stone-100 text-stone-400'
                       }`}>{i < stepIdx ? '✓' : i + 1}</div>
-                      <div className={`text-[10px] font-semibold mt-1.5 ${i <= stepIdx ? 'text-slate-700' : 'text-slate-400'}`}>{STATUS_META[s].label}</div>
+                      <div className={`text-[10px] font-semibold mt-1.5 ${i <= stepIdx ? 'text-stone-700' : 'text-stone-400'}`}>{STATUS_META[s].label}</div>
                     </div>
-                    {i < steps.length - 1 && <div className={`flex-1 h-0.5 mx-2 mb-5 rounded ${i < stepIdx ? 'bg-emerald-500' : 'bg-slate-200'}`} />}
+                    {i < steps.length - 1 && <div className={`flex-1 h-0.5 mx-2 mb-5 rounded ${i < stepIdx ? 'bg-emerald-500' : 'bg-stone-200'}`} />}
                   </div>
                 ))}
               </div>
@@ -272,7 +272,7 @@ function AuthDrawer({ authId, payers, team, onClose, onChanged }) {
             {/* Status actions */}
             {canWrite && TRANSITIONS[auth.status]?.length > 0 && (
               <div className="mb-7">
-                <div className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2.5">Move to</div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-stone-400 mb-2.5">Move to</div>
                 <div className="flex flex-wrap gap-2">
                   {TRANSITIONS[auth.status].map((s) => (
                     <button key={s} disabled={busy} onClick={() => {
@@ -312,19 +312,19 @@ function AuthDrawer({ authId, payers, team, onClose, onChanged }) {
                 ['Service date', auth.service_date || '—'],
               ].map(([l, v]) => (
                 <div key={l}>
-                  <div className="text-xs text-slate-400 font-medium mb-0.5">{l}</div>
-                  <div className="text-slate-800 font-medium font-mono text-[13px]">{v}</div>
+                  <div className="text-xs text-stone-400 font-medium mb-0.5">{l}</div>
+                  <div className="text-stone-800 font-medium font-mono text-[13px]">{v}</div>
                 </div>
               ))}
             </div>
 
             {/* Linked claim */}
             <div className="mb-7">
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2.5">Linked claim</div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-stone-400 mb-2.5">Linked claim</div>
               {auth.linked_claim_id ? (
-                <div className="flex items-center justify-between bg-sky-50 border border-sky-200 rounded-xl px-4 py-3">
-                  <span className="font-mono text-sm font-semibold text-sky-800">{auth.linked_claim_number}</span>
-                  {canWrite && <button onClick={unlinkClaim} className="text-xs text-sky-600 hover:underline font-semibold">Unlink</button>}
+                <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                  <span className="font-mono text-sm font-semibold text-amber-800">{auth.linked_claim_number}</span>
+                  {canWrite && <button onClick={unlinkClaim} className="text-xs text-amber-700 hover:underline font-semibold">Unlink</button>}
                 </div>
               ) : linking ? (
                 <div>
@@ -332,12 +332,12 @@ function AuthDrawer({ authId, payers, team, onClose, onChanged }) {
                     placeholder="Search by claim # or patient…" className="input mb-2" autoFocus />
                   {claimResults.map((c) => (
                     <button key={c.id} onClick={() => linkClaim(c.id)}
-                      className="w-full text-left px-4 py-2.5 hover:bg-slate-50 rounded-xl flex justify-between text-sm border-b border-slate-100">
+                      className="w-full text-left px-4 py-2.5 hover:bg-stone-50 rounded-xl flex justify-between text-sm border-b border-stone-100">
                       <span className="font-mono font-semibold">{c.claim_number}</span>
-                      <span className="text-slate-500">{c.patient_name}</span>
+                      <span className="text-stone-500">{c.patient_name}</span>
                     </button>
                   ))}
-                  <button onClick={() => setLinking(false)} className="text-xs text-slate-400 mt-2 hover:underline">Cancel</button>
+                  <button onClick={() => setLinking(false)} className="text-xs text-stone-400 mt-2 hover:underline">Cancel</button>
                 </div>
               ) : (
                 canWrite && <button onClick={() => setLinking(true)} className="btn btn-outline !py-2 !text-[13px] w-full">+ Link a claim</button>
@@ -346,7 +346,7 @@ function AuthDrawer({ authId, payers, team, onClose, onChanged }) {
 
             {/* Notes */}
             <div>
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2.5">Notes</div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-stone-400 mb-2.5">Notes</div>
               {canWrite && (
                 <div className="flex gap-2 mb-4">
                   <input value={note} onChange={(e) => setNote(e.target.value)}
@@ -358,16 +358,16 @@ function AuthDrawer({ authId, payers, team, onClose, onChanged }) {
               <div className="space-y-3">
                 {auth.notes?.map((n) => (
                   <div key={n.id} className="flex gap-3 text-sm">
-                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[11px] font-bold text-slate-500 shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-[11px] font-bold text-stone-500 shrink-0">
                       {(n.user_name || '?').split(' ').map((w) => w[0]).join('').slice(0, 2)}
                     </div>
-                    <div className="flex-1 bg-slate-50 rounded-xl px-4 py-2.5">
-                      <div className="text-slate-700">{n.note}</div>
-                      <div className="text-[11px] text-slate-400 mt-1">{n.user_name} · {new Date(n.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</div>
+                    <div className="flex-1 bg-stone-50 rounded-xl px-4 py-2.5">
+                      <div className="text-stone-700">{n.note}</div>
+                      <div className="text-[11px] text-stone-400 mt-1">{n.user_name} · {new Date(n.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</div>
                     </div>
                   </div>
                 ))}
-                {(!auth.notes || auth.notes.length === 0) && <div className="text-sm text-slate-400">No notes yet.</div>}
+                {(!auth.notes || auth.notes.length === 0) && <div className="text-sm text-stone-400">No notes yet.</div>}
               </div>
             </div>
           </div>
@@ -451,15 +451,15 @@ export default function Authorizations() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
-          ['Needs action', needsAction, 'text-slate-900', 'Submitted + info-needed'],
-          ['Expiring ≤ 14 days', stats?.expiringSoon ?? '—', (stats?.expiringSoon || 0) > 0 ? 'text-amber-600' : 'text-slate-900', 'Approved auths running out'],
+          ['Needs action', needsAction, 'text-stone-900', 'Submitted + info-needed'],
+          ['Expiring ≤ 14 days', stats?.expiringSoon ?? '—', (stats?.expiringSoon || 0) > 0 ? 'text-amber-600' : 'text-stone-900', 'Approved auths running out'],
           ['Approval rate', stats ? `${stats.approvalRate}%` : '—', 'text-emerald-600', 'Of decided requests'],
-          ['Avg turnaround', stats?.turnaround?.length ? `${(stats.turnaround.reduce((a, t) => a + t.avg_days * t.decided, 0) / stats.turnaround.reduce((a, t) => a + t.decided, 0)).toFixed(1)}d` : '—', 'text-slate-900', 'Request → decision'],
+          ['Avg turnaround', stats?.turnaround?.length ? `${(stats.turnaround.reduce((a, t) => a + t.avg_days * t.decided, 0) / stats.turnaround.reduce((a, t) => a + t.decided, 0)).toFixed(1)}d` : '—', 'text-stone-900', 'Request → decision'],
         ].map(([l, v, c, s]) => (
           <div key={l} className="card p-5">
             <div className={`text-3xl font-bold tracking-tight ${c}`}>{v}</div>
-            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mt-1">{l}</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">{s}</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-stone-500 mt-1">{l}</div>
+            <div className="text-[11px] text-stone-400 mt-0.5">{s}</div>
           </div>
         ))}
       </div>
@@ -468,9 +468,9 @@ export default function Authorizations() {
       <div className="flex flex-wrap gap-2 mb-4">
         {TABS.map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2 ${tab === t.id ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300'}`}>
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2 ${tab === t.id ? 'bg-stone-900 text-white' : 'bg-white border border-stone-200 text-stone-600 hover:border-stone-300'}`}>
             {t.label}
-            <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-md ${tab === t.id ? 'bg-white/20' : 'bg-slate-100 text-slate-500'}`}>{tabCount(t.id)}</span>
+            <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-md ${tab === t.id ? 'bg-white/20' : 'bg-stone-100 text-stone-500'}`}>{tabCount(t.id)}</span>
           </button>
         ))}
       </div>
@@ -517,22 +517,22 @@ export default function Authorizations() {
                 {data.auths.map((a) => (
                   <tr key={a.id} onClick={() => setDrawerId(a.id)} className="cursor-pointer">
                     <td>
-                      <div className="font-semibold text-slate-900">{a.patient_name}</div>
-                      <div className="text-[11px] text-slate-400">Auth #{a.id}{a.auth_number ? ` · ${a.auth_number}` : ''}</div>
+                      <div className="font-semibold text-stone-900">{a.patient_name}</div>
+                      <div className="text-[11px] text-stone-400">Auth #{a.id}{a.auth_number ? ` · ${a.auth_number}` : ''}</div>
                     </td>
-                    <td className="text-slate-600">{a.payer_name || '—'}</td>
+                    <td className="text-stone-600">{a.payer_name || '—'}</td>
                     <td>
-                      <div className="font-mono text-[13px] text-slate-700">{a.cpt_codes || '—'}</div>
-                      <div className="text-[11px] text-slate-400 truncate max-w-[180px]">{a.provider || ''}</div>
+                      <div className="font-mono text-[13px] text-stone-700">{a.cpt_codes || '—'}</div>
+                      <div className="text-[11px] text-stone-400 truncate max-w-[180px]">{a.provider || ''}</div>
                     </td>
                     <td><StatusPill status={a.effective_status} /></td>
                     <td><ExpiryBadge auth={a} /></td>
-                    <td className="text-slate-600 text-[13px]">{a.assignee_name || <span className="text-slate-300">Unassigned</span>}</td>
-                    <td className="text-slate-600 text-[13px]">{a.needed_by_date || '—'}</td>
+                    <td className="text-stone-600 text-[13px]">{a.assignee_name || <span className="text-stone-300">Unassigned</span>}</td>
+                    <td className="text-stone-600 text-[13px]">{a.needed_by_date || '—'}</td>
                     {canWrite && (
                       <td className="!text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex gap-3 justify-end">
-                          <button onClick={() => setModal(a)} className="text-sky-600 hover:text-sky-800 text-xs font-semibold">Edit</button>
+                          <button onClick={() => setModal(a)} className="text-amber-700 hover:text-amber-800 text-xs font-semibold">Edit</button>
                           <button onClick={() => remove(a.id, a.patient_name)} className="text-rose-600 hover:text-rose-800 text-xs font-semibold">Delete</button>
                         </div>
                       </td>

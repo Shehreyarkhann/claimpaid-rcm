@@ -55,7 +55,7 @@ function EligibilityModal({ record, payers, onClose, onSaved }) {
     <Modal onClose={onClose} wide>
       <div className="p-7">
         <h3 className="text-xl font-bold tracking-tight mb-1">{record ? 'Update verification' : 'Log eligibility check'}</h3>
-        <p className="text-sm text-slate-500 mb-5">Record the outcome of a payer portal or phone verification</p>
+        <p className="text-sm text-stone-500 mb-5">Record the outcome of a payer portal or phone verification</p>
         {error && <div className="mb-4 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}
         <div className="grid sm:grid-cols-2 gap-4">
           <div><label className="label">Patient name *</label>
@@ -115,9 +115,9 @@ function splitName(full) {
 
 function BenefitRow({ label, value }) {
   return (
-    <div className="flex justify-between py-1.5 border-b border-slate-100 last:border-0">
-      <span className="text-sm text-slate-500">{label}</span>
-      <span className="text-sm font-semibold text-slate-900">{value ?? '—'}</span>
+    <div className="flex justify-between py-1.5 border-b border-stone-100 last:border-0">
+      <span className="text-sm text-stone-500">{label}</span>
+      <span className="text-sm font-semibold text-stone-900">{value ?? '—'}</span>
     </div>
   );
 }
@@ -179,11 +179,11 @@ function RealTimeCheck({ payers, prefill, onConsumed, canWrite }) {
     <div className="card p-6 mb-6">
       <div className="flex items-center gap-2.5 mb-1">
         <div className="text-xl">⚡</div>
-        <div className="font-semibold text-slate-900">Real-time eligibility check</div>
+        <div className="font-semibold text-stone-900">Real-time eligibility check</div>
         {mode?.vendor && <span className="badge badge-green">LIVE VENDOR — {mode.vendor === 'availity' ? 'Availity' : 'Custom REST'}</span>}
         {mode && !mode.vendor && <span className="badge badge-amber">NO VENDOR CONFIGURED</span>}
       </div>
-      <p className="text-sm text-slate-500 mb-5 max-w-2xl leading-relaxed">
+      <p className="text-sm text-stone-500 mb-5 max-w-2xl leading-relaxed">
         Run a 270/271-style check against the payer before the visit.
         {mode && !mode.vendor && ' No eligibility vendor is configured yet — connect Availity or a REST endpoint in Organization settings to run real-time checks.'}
       </p>
@@ -209,7 +209,7 @@ function RealTimeCheck({ payers, prefill, onConsumed, canWrite }) {
       <button className="btn btn-primary !px-8 !py-2.5" onClick={check} disabled={busy || !canWrite}>
         {busy ? 'Checking…' : '⚡ Check eligibility'}
       </button>
-      {!canWrite && <p className="text-xs text-slate-400 mt-2">Only owners and billers can run checks.</p>}
+      {!canWrite && <p className="text-xs text-stone-400 mt-2">Only owners and billers can run checks.</p>}
 
       {result && (
         <div className="mt-6 rounded-2xl border overflow-hidden">
@@ -241,26 +241,26 @@ function RealTimeCheck({ payers, prefill, onConsumed, canWrite }) {
       )}
 
       <div className="mt-6">
-        <div className="text-sm font-bold text-slate-900 mb-2">Recent checks</div>
+        <div className="text-sm font-bold text-stone-900 mb-2">Recent checks</div>
         {!history ? (
           <div className="space-y-2"><Skeleton className="h-10" /><Skeleton className="h-10" /></div>
         ) : history.length === 0 ? (
-          <p className="text-sm text-slate-400">No real-time checks yet — run your first one above.</p>
+          <p className="text-sm text-stone-400">No real-time checks yet — run your first one above.</p>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-slate-100">
+          <div className="overflow-x-auto rounded-xl border border-stone-100">
             <table className="w-full tbl min-w-[640px]">
               <thead><tr><th>Patient</th><th>Payer</th><th>DOS</th><th>Coverage</th><th>Source</th><th>Checked</th></tr></thead>
               <tbody>
                 {history.map((h) => (
-                  <tr key={h.id} onClick={() => openDetail(h.id)} className="cursor-pointer hover:bg-slate-50">
-                    <td className="font-medium text-slate-900">{h.patient_first} {h.patient_last}</td>
-                    <td className="text-slate-600">{h.payer}</td>
-                    <td className="text-slate-600 text-[13px]">{h.date_of_service}</td>
+                  <tr key={h.id} onClick={() => openDetail(h.id)} className="cursor-pointer hover:bg-stone-50">
+                    <td className="font-medium text-stone-900">{h.patient_first} {h.patient_last}</td>
+                    <td className="text-stone-600">{h.payer}</td>
+                    <td className="text-stone-600 text-[13px]">{h.date_of_service}</td>
                     <td>{h.coverage_active
                       ? <span className="badge badge-green">Active</span>
                       : <span className="badge badge-rose">Inactive</span>}</td>
                     <td><span className="badge badge-sky">{h.vendor === 'availity' ? 'Availity' : 'Live'}</span></td>
-                    <td className="text-slate-500 text-[13px]">{h.created_at?.slice(0, 16).replace('T', ' ')}</td>
+                    <td className="text-stone-500 text-[13px]">{h.created_at?.slice(0, 16).replace('T', ' ')}</td>
                   </tr>
                 ))}
               </tbody>
@@ -273,9 +273,9 @@ function RealTimeCheck({ payers, prefill, onConsumed, canWrite }) {
         <Modal onClose={() => setDetail(null)} wide>
           <div className="p-7">
             <h3 className="text-xl font-bold tracking-tight mb-1">
-              {detail.patient_first} {detail.patient_last} <span className="text-slate-400 font-normal text-base">· {detail.payer}</span>
+              {detail.patient_first} {detail.patient_last} <span className="text-stone-400 font-normal text-base">· {detail.payer}</span>
             </h3>
-            <p className="text-sm text-slate-500 mb-4">
+            <p className="text-sm text-stone-500 mb-4">
               Checked {detail.created_at?.slice(0, 16).replace('T', ' ')} · {detail.vendor === 'availity' ? 'Availity' : 'Live vendor'}
             </p>
             <div className={`rounded-xl px-4 py-3 mb-4 font-bold ${detail.coverage_active ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
@@ -298,8 +298,8 @@ function RealTimeCheck({ payers, prefill, onConsumed, canWrite }) {
               </div>
             </div>
             <details className="text-xs">
-              <summary className="cursor-pointer font-semibold text-slate-600 mb-2">Raw 271-style payload (vendor response)</summary>
-              <pre className="bg-slate-900 text-slate-200 rounded-xl p-4 overflow-x-auto max-h-64">
+              <summary className="cursor-pointer font-semibold text-stone-600 mb-2">Raw 271-style payload (vendor response)</summary>
+              <pre className="bg-stone-900 text-stone-200 rounded-xl p-4 overflow-x-auto max-h-64">
                 {JSON.stringify(JSON.parse(detail.raw_response || '{}'), null, 2)}
               </pre>
             </details>
@@ -356,19 +356,19 @@ export default function Eligibility({ initialPrefill, onConsumed }) {
 
       <RealTimeCheck payers={payers} prefill={initialPrefill} onConsumed={onConsumed} canWrite={canWrite} />
 
-      <div className="text-sm font-bold text-slate-900 mb-2 mt-8">Manual verification log</div>
+      <div className="text-sm font-bold text-stone-900 mb-2 mt-8">Manual verification log</div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
-          ['Upcoming unverified', stats?.upcomingUnverified ?? '—', (stats?.upcomingUnverified || 0) > 0 ? 'text-amber-600' : 'text-slate-900', 'Service within 7 days'],
+          ['Upcoming unverified', stats?.upcomingUnverified ?? '—', (stats?.upcomingUnverified || 0) > 0 ? 'text-amber-600' : 'text-stone-900', 'Service within 7 days'],
           ['Active', stats?.byStatus?.active || 0, 'text-emerald-600', 'Coverage confirmed'],
-          ['Inactive', stats?.byStatus?.inactive || 0, (stats?.byStatus?.inactive || 0) > 0 ? 'text-rose-600' : 'text-slate-900', 'Needs action before visit'],
-          ['Not verified', stats?.byStatus?.unknown || 0, 'text-slate-900', 'Still to check'],
+          ['Inactive', stats?.byStatus?.inactive || 0, (stats?.byStatus?.inactive || 0) > 0 ? 'text-rose-600' : 'text-stone-900', 'Needs action before visit'],
+          ['Not verified', stats?.byStatus?.unknown || 0, 'text-stone-900', 'Still to check'],
         ].map(([l, v, c, s]) => (
           <div key={l} className="card p-5">
             <div className={`text-3xl font-bold tracking-tight ${c}`}>{v}</div>
-            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mt-1">{l}</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">{s}</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-stone-500 mt-1">{l}</div>
+            <div className="text-[11px] text-stone-400 mt-0.5">{s}</div>
           </div>
         ))}
       </div>
@@ -376,7 +376,7 @@ export default function Eligibility({ initialPrefill, onConsumed }) {
       <div className="flex flex-wrap gap-2 mb-4">
         {TABS.map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition ${tab === t.id ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300'}`}>
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition ${tab === t.id ? 'bg-stone-900 text-white' : 'bg-white border border-stone-200 text-stone-600 hover:border-stone-300'}`}>
             {t.label}
           </button>
         ))}
@@ -411,17 +411,17 @@ export default function Eligibility({ initialPrefill, onConsumed }) {
               <tbody>
                 {data.checks.map((c) => (
                   <tr key={c.id}>
-                    <td className="font-semibold text-slate-900">{c.patient_name}</td>
-                    <td className="text-slate-600">{c.payer_name || '—'}</td>
-                    <td className="text-slate-600 text-[13px]">{c.service_date || '—'}</td>
+                    <td className="font-semibold text-stone-900">{c.patient_name}</td>
+                    <td className="text-stone-600">{c.payer_name || '—'}</td>
+                    <td className="text-stone-600 text-[13px]">{c.service_date || '—'}</td>
                     <td><span className={`badge ${STATUS_META[c.coverage_status].cls}`}>{STATUS_META[c.coverage_status].label}</span></td>
-                    <td className="text-slate-600 text-[13px] capitalize">{c.verified_via || '—'}</td>
-                    <td className="text-slate-600 text-[13px]">{c.copay != null ? `$${Number(c.copay).toFixed(2)}` : '—'}</td>
-                    <td className="text-slate-500 text-[13px]">{c.checked_by_name || '—'}</td>
+                    <td className="text-stone-600 text-[13px] capitalize">{c.verified_via || '—'}</td>
+                    <td className="text-stone-600 text-[13px]">{c.copay != null ? `$${Number(c.copay).toFixed(2)}` : '—'}</td>
+                    <td className="text-stone-500 text-[13px]">{c.checked_by_name || '—'}</td>
                     {canWrite && (
                       <td className="!text-right">
                         <div className="flex gap-3 justify-end">
-                          <button onClick={() => setModal(c)} className="text-sky-600 hover:text-sky-800 text-xs font-semibold">Edit</button>
+                          <button onClick={() => setModal(c)} className="text-amber-700 hover:text-amber-800 text-xs font-semibold">Edit</button>
                           <button onClick={() => remove(c.id, c.patient_name)} className="text-rose-600 hover:text-rose-800 text-xs font-semibold">Delete</button>
                         </div>
                       </td>

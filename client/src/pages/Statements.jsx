@@ -37,7 +37,7 @@ function PayModal({ stmt, onClose, onDone }) {
   return (
     <Modal title={`Record payment — ${stmt.statement_number}`} onClose={onClose}>
       <div className="space-y-3">
-        <p className="text-sm text-slate-400">{stmt.patient_name} · balance {fmtMoney(stmt.balance ?? (stmt.amount_due - stmt.amount_paid))}</p>
+        <p className="text-sm text-stone-400">{stmt.patient_name} · balance {fmtMoney(stmt.balance ?? (stmt.amount_due - stmt.amount_paid))}</p>
         <div>
           <label className="label">Amount</label>
           <input className="input" type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
@@ -52,7 +52,7 @@ function PayModal({ stmt, onClose, onDone }) {
             <option value="other">Other</option>
           </select>
         </div>
-        <p className="text-xs text-slate-500">Payments allocate to the oldest charges on the statement first.</p>
+        <p className="text-xs text-stone-500">Payments allocate to the oldest charges on the statement first.</p>
         <div className="flex gap-2 justify-end pt-1">
           <button className="btn-ghost" onClick={onClose}>Cancel</button>
           <button className="btn-primary" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Record payment'}</button>
@@ -76,7 +76,7 @@ function DetailModal({ id, onClose, refresh }) {
       <div className="space-y-4">
         <div className="flex flex-wrap gap-2 items-center">
           <span className={`badge ${badge}`}>{label}</span>
-          <span className="text-sm text-slate-400">Due {fmtDate(stmt.due_date)} · Total {fmtMoney(stmt.amount_due)} · Paid {fmtMoney(stmt.amount_paid)} · <strong className="text-slate-200">Balance {fmtMoney(stmt.balance)}</strong></span>
+          <span className="text-sm text-stone-400">Due {fmtDate(stmt.due_date)} · Total {fmtMoney(stmt.amount_due)} · Paid {fmtMoney(stmt.amount_paid)} · <strong className="text-stone-200">Balance {fmtMoney(stmt.balance)}</strong></span>
         </div>
         <div className="overflow-x-auto">
           <table className="table w-full">
@@ -96,7 +96,7 @@ function DetailModal({ id, onClose, refresh }) {
           <div>
             <p className="label mb-1">Payments</p>
             {stmt.payments.map((p) => (
-              <p key={p.id} className="text-sm text-slate-300">{fmtDate(p.created_at)} — {fmtMoney(p.amount)} ({p.method === 'stripe' ? 'Stripe (online)' : p.method})</p>
+              <p key={p.id} className="text-sm text-stone-300">{fmtDate(p.created_at)} — {fmtMoney(p.amount)} ({p.method === 'stripe' ? 'Stripe (online)' : p.method})</p>
             ))}
           </div>
         )}
@@ -163,7 +163,7 @@ export default function Statements() {
       <section className="card p-4 sm:p-5">
         <div className="flex items-baseline justify-between mb-3">
           <h3 className="font-semibold">Patient balances</h3>
-          <span className="text-sm text-slate-400">{balances ? `${fmtMoney(totalOutstanding)} outstanding across ${balances.length} patient(s)` : ''}</span>
+          <span className="text-sm text-stone-400">{balances ? `${fmtMoney(totalOutstanding)} outstanding across ${balances.length} patient(s)` : ''}</span>
         </div>
         {balances === null ? <Skeleton rows={3} /> : balances.length === 0 ? (
           <EmptyState title="No patient balances" sub="When an ERA posts patient responsibility to a claim, the patient shows up here ready to bill." />
@@ -234,7 +234,7 @@ export default function Statements() {
             </table>
           </div>
         )}
-        <p className="text-xs text-slate-500 mt-3">
+        <p className="text-xs text-stone-500 mt-3">
           Online payments run through Stripe — patients pay from the link printed on the statement PDF, and the
           statement settles itself when the payment lands. Cash and check payments can be recorded manually.
         </p>

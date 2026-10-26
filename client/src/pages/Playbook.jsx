@@ -131,7 +131,7 @@ export default function Playbook() {
           {stats && stats.length > 0 && (
             <div className="mb-8">
               <div className="flex items-center gap-2.5 mb-3">
-                <h3 className="font-semibold text-slate-900 tracking-tight">Payer performance</h3>
+                <h3 className="font-semibold text-stone-900 tracking-tight">Payer performance</h3>
                 <span className="badge badge-green">From your data</span>
               </div>
               <div className="card overflow-hidden">
@@ -145,27 +145,27 @@ export default function Playbook() {
                       {stats.map((s) => (
                         <tr key={s.id}>
                           <td className="font-medium whitespace-nowrap">{s.name}</td>
-                          <td className="!text-right text-slate-500">{s.total_claims}</td>
+                          <td className="!text-right text-stone-500">{s.total_claims}</td>
                           <td className="!text-right">
                             <span className={`badge ${s.denial_rate >= 20 ? 'badge-rose' : s.denial_rate >= 10 ? 'badge-amber' : 'badge-green'}`}>
                               {s.denial_rate}%
                             </span>
                           </td>
-                          <td className="text-xs text-slate-500 max-w-[260px]">
+                          <td className="text-xs text-stone-500 max-w-[260px]">
                             {s.top_denial_reasons.length === 0 ? (
-                              <span className="text-slate-300">—</span>
+                              <span className="text-stone-300">—</span>
                             ) : (
                               <ul className="space-y-0.5">
                                 {s.top_denial_reasons.map((r) => (
                                   <li key={r.denial_reason} className="truncate" title={`${r.denial_reason} (${r.n})`}>
-                                    {r.denial_reason} <span className="text-slate-400">({r.n})</span>
+                                    {r.denial_reason} <span className="text-stone-400">({r.n})</span>
                                   </li>
                                 ))}
                               </ul>
                             )}
                           </td>
-                          <td className="!text-right text-slate-500">{s.avg_ar_days ?? '—'}</td>
-                          <td className="!text-right text-slate-500">{s.first_pass_rate != null ? `${s.first_pass_rate}%` : '—'}</td>
+                          <td className="!text-right text-stone-500">{s.avg_ar_days ?? '—'}</td>
+                          <td className="!text-right text-stone-500">{s.first_pass_rate != null ? `${s.first_pass_rate}%` : '—'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -176,7 +176,7 @@ export default function Playbook() {
           )}
 
           <div className="flex items-center gap-2.5 mb-3">
-            <h3 className="font-semibold text-slate-900 tracking-tight">Team notes</h3>
+            <h3 className="font-semibold text-stone-900 tracking-tight">Team notes</h3>
             <span className="badge badge-slate">Manual entries</span>
           </div>
           {data.entries.length === 0 ? (
@@ -196,14 +196,14 @@ export default function Playbook() {
                     </div>
                     {canWrite && (
                       <div className="flex gap-2 shrink-0">
-                        <button onClick={() => setModal(e)} className="text-sky-600 hover:text-sky-800 text-xs font-semibold">Edit</button>
+                        <button onClick={() => setModal(e)} className="text-amber-700 hover:text-amber-800 text-xs font-semibold">Edit</button>
                         <button onClick={() => remove(e.id, e.title)} className="text-rose-600 hover:text-rose-800 text-xs font-semibold">Delete</button>
                       </div>
                     )}
                   </div>
-                  <div className="font-semibold text-slate-900 mb-1.5">{e.title}</div>
-                  <div className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">{e.content}</div>
-                  <div className="text-[11px] text-slate-400 mt-3">
+                  <div className="font-semibold text-stone-900 mb-1.5">{e.title}</div>
+                  <div className="text-sm text-stone-600 whitespace-pre-wrap leading-relaxed">{e.content}</div>
+                  <div className="text-[11px] text-stone-400 mt-3">
                     {e.author ? `Added by ${e.author} · ` : ''}{new Date(e.updated_at).toLocaleDateString()}
                   </div>
                 </div>

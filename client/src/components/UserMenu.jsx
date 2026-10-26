@@ -38,7 +38,7 @@ export default function UserMenu({ placement = 'up', rail = false, compact = fal
     } catch (e) { toast.error(e.message); }
   };
 
-  const item = 'w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-slate-300 hover:bg-white/10 hover:text-white rounded-lg transition text-left';
+  const item = 'w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-stone-300 hover:bg-white/10 hover:text-white rounded-lg transition text-left';
 
   return (
     <div className="relative" ref={ref}>
@@ -52,9 +52,9 @@ export default function UserMenu({ placement = 'up', rail = false, compact = fal
           <>
             <span className="flex-1 min-w-0 text-left">
               <span className="block text-sm font-medium truncate text-white">{user.name}</span>
-              <span className="block text-[11px] text-slate-400 capitalize truncate">{user.title || user.role}</span>
+              <span className="block text-[11px] text-stone-400 capitalize truncate">{user.title || user.role}</span>
             </span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className={`text-slate-500 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className={`text-stone-500 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}>
               <path d="M6 9l6 6 6-6" />
             </svg>
           </>
@@ -62,12 +62,12 @@ export default function UserMenu({ placement = 'up', rail = false, compact = fal
       </button>
 
       {open && !rail && (
-        <div className={`absolute ${placement === 'up' ? 'bottom-full mb-2 left-0' : 'top-full mt-2 right-0'} w-64 max-w-[calc(100vw-2rem)] bg-[#111a2e] border border-white/10 rounded-2xl shadow-2xl p-2 z-[60]`}>
+        <div className={`absolute ${placement === 'up' ? 'bottom-full mb-2 left-0' : 'top-full mt-2 right-0'} w-64 max-w-[calc(100vw-2rem)] bg-[#1D2E26] border border-white/10 rounded-2xl shadow-2xl p-2 z-[60]`}>
           <div className="flex items-center gap-3 px-3 py-3 border-b border-white/10 mb-1">
             <Avatar userId={user.id} name={user.name} hasAvatar={user.has_avatar} className="w-10 h-10 text-sm" />
             <div className="min-w-0">
               <div className="text-sm font-semibold text-white truncate">{user.name}</div>
-              <div className="text-xs text-slate-400 truncate">{user.email}</div>
+              <div className="text-xs text-stone-400 truncate">{user.email}</div>
             </div>
           </div>
           <button className={item} onClick={() => openModal('profile')}>

@@ -38,12 +38,12 @@ function InviteModal({ onClose, onAdded }) {
     <Modal onClose={onClose}>
       <div className="p-7">
         <h3 className="text-xl font-bold tracking-tight mb-1">Invite team member</h3>
-        <p className="text-sm text-slate-500 mb-5">New users sign in with this email and password. If they already have a ClaimPaid login, they're added to this workspace with their existing password.</p>
+        <p className="text-sm text-stone-500 mb-5">New users sign in with this email and password. If they already have a ClaimPaid login, they're added to this workspace with their existing password.</p>
         {error && <div className="mb-4 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}
         <div className="space-y-4">
-          <div><label className="label">Full name <span className="text-slate-400 font-normal">(skip if they already have a login)</span></label><input className="input" value={form.name} onChange={set('name')} placeholder="Alex Rivera" /></div>
+          <div><label className="label">Full name <span className="text-stone-400 font-normal">(skip if they already have a login)</span></label><input className="input" value={form.name} onChange={set('name')} placeholder="Alex Rivera" /></div>
           <div><label className="label">Email</label><input type="email" className="input" value={form.email} onChange={set('email')} placeholder="alex@company.com" /></div>
-          <div><label className="label">Temporary password <span className="text-slate-400 font-normal">(new users only)</span></label><input type="text" className="input" value={form.password} onChange={set('password')} placeholder="Min. 8 characters" /></div>
+          <div><label className="label">Temporary password <span className="text-stone-400 font-normal">(new users only)</span></label><input type="text" className="input" value={form.password} onChange={set('password')} placeholder="Min. 8 characters" /></div>
           <div><label className="label">Role</label>
             <select className="input" value={form.role} onChange={set('role')}>
               <option value="biller">Biller — can manage claims and appeals</option>
@@ -109,17 +109,17 @@ export default function Team() {
       {seats && (
         <div className="card p-5 mb-5">
           <div className="flex items-center justify-between mb-2">
-            <div className="text-sm font-semibold text-slate-800">Seat usage</div>
-            <div className="text-sm tabular-nums text-slate-600">
-              <span className="font-bold text-slate-900">{seats.used}</span>
+            <div className="text-sm font-semibold text-stone-800">Seat usage</div>
+            <div className="text-sm tabular-nums text-stone-600">
+              <span className="font-bold text-stone-900">{seats.used}</span>
               {' of '}
-              <span className="font-bold text-slate-900">{seats.limit === null ? '∞' : seats.limit}</span>
+              <span className="font-bold text-stone-900">{seats.limit === null ? '∞' : seats.limit}</span>
               {' seats used'}
-              <span className="text-slate-400 capitalize"> · {seats.plan} plan</span>
+              <span className="text-stone-400 capitalize"> · {seats.plan} plan</span>
             </div>
           </div>
           {seats.limit !== null && (
-            <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+            <div className="h-2 rounded-full bg-stone-100 overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all ${seats.atCap ? 'bg-rose-500' : 'bg-emerald-500'}`}
                 style={{ width: `${Math.min(100, (seats.used / seats.limit) * 100)}%` }}
@@ -130,24 +130,24 @@ export default function Team() {
             <p className="text-xs text-rose-700 mt-2">Seat limit reached — remove a member or upgrade your plan to invite more people.</p>
           )}
           {seats.limit === null && (
-            <p className="text-xs text-slate-400 mt-2">Unlimited seats on the Enterprise plan.</p>
+            <p className="text-xs text-stone-400 mt-2">Unlimited seats on the Enterprise plan.</p>
           )}
         </div>
       )}
 
-      <div className="card p-5 mb-5 bg-gradient-to-r from-violet-50 to-sky-50 !border-violet-100">
-        <div className="text-sm font-semibold text-slate-800 mb-3">Roles & permissions</div>
+      <div className="card p-5 mb-5 bg-gradient-to-r from-amber-50 to-emerald-50 !border-amber-100">
+        <div className="text-sm font-semibold text-stone-800 mb-3">Roles & permissions</div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="text-left text-slate-500">
+              <tr className="text-left text-stone-500">
                 <th className="pb-2 pr-3 font-medium">Capability</th>
                 <th className="pb-2 pr-3 font-medium text-center"><span className="badge badge-violet">Owner</span></th>
                 <th className="pb-2 pr-3 font-medium text-center"><span className="badge badge-blue">Biller</span></th>
                 <th className="pb-2 font-medium text-center"><span className="badge badge-slate">Viewer</span></th>
               </tr>
             </thead>
-            <tbody className="text-slate-600">
+            <tbody className="text-stone-600">
               {[
                 ['View dashboards, claims, reports', true, true, true],
                 ['Create & edit claims, appeals, auths', true, true, false],
@@ -157,13 +157,13 @@ export default function Team() {
                 ['Billing, plan & audit log', true, false, false],
                 ['Rename workspace', true, false, false],
               ].map(([label, o, b, v]) => (
-                <tr key={label} className="border-t border-violet-100/60">
+                <tr key={label} className="border-t border-amber-100/60">
                   <td className="py-2 pr-3">{label}</td>
                   {[o, b, v].map((has, i) => (
                     <td key={i} className="py-2 text-center">
                       {has
                         ? <span className="text-emerald-600 font-bold">✓</span>
-                        : <span className="text-slate-300">—</span>}
+                        : <span className="text-stone-300">—</span>}
                     </td>
                   ))}
                 </tr>
@@ -171,7 +171,7 @@ export default function Team() {
             </tbody>
           </table>
         </div>
-        <p className="text-[11px] text-slate-400 mt-3">Roles are per-workspace — the same person can be an owner in one workspace and a viewer in another.</p>
+        <p className="text-[11px] text-stone-400 mt-3">Roles are per-workspace — the same person can be an owner in one workspace and a viewer in another.</p>
       </div>
 
       {!team ? (
@@ -186,10 +186,10 @@ export default function Team() {
                   <td>
                     <div className="flex items-center gap-3">
                       <Avatar userId={m.id} name={m.name} hasAvatar={m.has_avatar} className="w-9 h-9 text-xs" />
-                      <span className="font-medium">{m.name}{m.id === user.id && <span className="text-xs text-slate-400 ml-2">(you)</span>}</span>
+                      <span className="font-medium">{m.name}{m.id === user.id && <span className="text-xs text-stone-400 ml-2">(you)</span>}</span>
                     </div>
                   </td>
-                  <td className="text-slate-500">{m.email}</td>
+                  <td className="text-stone-500">{m.email}</td>
                   <td>
                     {m.id === user.id ? (
                       <span className={`badge ${ROLE_META[m.role].badge}`}>{ROLE_META[m.role].label}</span>
@@ -199,7 +199,7 @@ export default function Team() {
                       </select>
                     )}
                   </td>
-                  <td className="text-slate-500 text-xs">{new Date(m.created_at).toLocaleDateString()}</td>
+                  <td className="text-stone-500 text-xs">{new Date(m.created_at).toLocaleDateString()}</td>
                   <td className="!text-right">
                     {m.id !== user.id && (
                       <button onClick={() => remove(m.id, m.name)} className="btn btn-danger-ghost !px-3 !py-1.5 text-xs">Remove</button>

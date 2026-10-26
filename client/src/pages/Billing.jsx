@@ -27,9 +27,9 @@ function UsageBar({ label, used, limit, unknown, included, onUpgrade }) {
   return (
     <div className="py-3">
       <div className="flex items-center justify-between mb-1.5">
-        <div className="text-sm font-semibold text-slate-800">{label}</div>
+        <div className="text-sm font-semibold text-stone-800">{label}</div>
         <div className="flex items-center gap-2">
-          <div className="text-xs text-slate-500">
+          <div className="text-xs text-stone-500">
             {unknown ? '—' : included === false ? 'Not included' : limit === null || limit === undefined
               ? `${Number(used).toLocaleString('en-US')} used · Unlimited`
               : `${Number(used).toLocaleString('en-US')} of ${Number(limit).toLocaleString('en-US')} used`}
@@ -42,7 +42,7 @@ function UsageBar({ label, used, limit, unknown, included, onUpgrade }) {
         </div>
       </div>
       {limit !== null && limit !== undefined && included !== false && (
-        <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+        <div className="h-2 rounded-full bg-stone-100 overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-500 ${hot ? 'bg-gradient-to-r from-amber-400 to-rose-500' : 'bg-gradient-to-r from-emerald-400 to-emerald-500'}`}
             style={{ width: `${pct}%` }}
@@ -50,13 +50,13 @@ function UsageBar({ label, used, limit, unknown, included, onUpgrade }) {
         </div>
       )}
       {included === false && (
-        <div className="text-xs text-slate-500">
+        <div className="text-xs text-stone-500">
           Not included in your plan.{' '}
           <button onClick={onUpgrade} className="font-semibold text-emerald-700 hover:underline">Upgrade to unlock →</button>
         </div>
       )}
       {unknown && (
-        <div className="text-xs text-slate-400">Usage unavailable — the AI service isn't reporting yet.</div>
+        <div className="text-xs text-stone-400">Usage unavailable — the AI service isn't reporting yet.</div>
       )}
     </div>
   );
@@ -235,11 +235,11 @@ export default function Billing({ onBaaRequired }) {
       <div key={key} className={`card p-6 flex flex-col ${isCurrent ? 'ring-2 ring-emerald-500' : ''}`}>
         <div className="flex items-center gap-2">
           <div className="font-bold">{name}</div>
-          {key === 'pro' && <span className="text-[10px] font-bold bg-emerald-500 text-[#0b1220] px-2 py-0.5 rounded-full">MOST POPULAR</span>}
+          {key === 'pro' && <span className="text-[10px] font-bold bg-emerald-500 text-[#17251F] px-2 py-0.5 rounded-full">MOST POPULAR</span>}
         </div>
-        <div className="text-xs text-slate-500 mt-0.5">{tagline}</div>
+        <div className="text-xs text-stone-500 mt-0.5">{tagline}</div>
         <div className="text-3xl font-extrabold mt-3 tracking-tight">{price}</div>
-        <ul className="text-[13px] text-slate-600 mt-4 space-y-1.5 flex-1">
+        <ul className="text-[13px] text-stone-600 mt-4 space-y-1.5 flex-1">
           {features.map((f) => <li key={f}>✓ {f}</li>)}
         </ul>
         <div className="mt-5">
@@ -275,10 +275,10 @@ export default function Billing({ onBaaRequired }) {
 
       {/* ── Expired paywall hero ── */}
       {isExpired && (
-        <div className="rounded-3xl bg-[#0b1220] text-white p-8 text-center">
+        <div className="rounded-3xl bg-[#17251F] text-white p-8 text-center">
           <div className="text-4xl mb-3">⏳</div>
           <h2 className="text-2xl font-extrabold tracking-tight mb-2">Your trial has ended</h2>
-          <p className="text-slate-400 max-w-md mx-auto mb-6">
+          <p className="text-stone-400 max-w-md mx-auto mb-6">
             You were trying <span className="text-white font-semibold">{meta.label}</span> ({meta.desc}).
             Reactivate to pick up right where you left off — your data is safe.
           </p>
@@ -289,7 +289,7 @@ export default function Billing({ onBaaRequired }) {
           >
             {busy === planKey ? 'Redirecting…' : `Reactivate ${meta.label} →`}
           </button>
-          <p className="text-slate-500 text-sm mt-4">
+          <p className="text-stone-500 text-sm mt-4">
             Want a different plan? Pick one below — same 30-day terms apply from today.
           </p>
         </div>
@@ -299,16 +299,16 @@ export default function Billing({ onBaaRequired }) {
       <div className="card p-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <div className="text-[11px] uppercase tracking-widest text-slate-500 mb-1">Current plan</div>
+            <div className="text-[11px] uppercase tracking-widest text-stone-500 mb-1">Current plan</div>
             <div className="text-xl font-bold tracking-tight">{meta.label}</div>
-            <div className="text-sm text-slate-500 mt-0.5">{meta.desc}</div>
+            <div className="text-sm text-stone-500 mt-0.5">{meta.desc}</div>
             {isTrialing && status?.trial_ends_at && (
-              <div className="text-xs text-slate-500 mt-2">
+              <div className="text-xs text-stone-500 mt-2">
                 Trial ends {fmtDate(status.trial_ends_at)} — add a payment method to keep {meta.label}.
               </div>
             )}
             {(isActive || isPastDue) && status?.current_period_end && (
-              <div className="text-xs text-slate-500 mt-2">
+              <div className="text-xs text-stone-500 mt-2">
                 Next invoice {fmtDate(status.current_period_end)}
               </div>
             )}
@@ -334,13 +334,13 @@ export default function Billing({ onBaaRequired }) {
         </div>
         {isTrialing && status?.trial_days_left > 0 && (
           <div className="mt-5">
-            <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+            <div className="h-2 rounded-full bg-stone-100 overflow-hidden">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500"
                 style={{ width: `${trialPct}%` }}
               />
             </div>
-            <div className="text-xs text-slate-500 mt-1.5">
+            <div className="text-xs text-stone-500 mt-1.5">
               Day {30 - status.trial_days_left + 1} of your 30-day free trial · No card on file · Cancel anytime by simply not adding one
             </div>
           </div>
@@ -358,8 +358,8 @@ export default function Billing({ onBaaRequired }) {
           </div>
         )}
         {isTrialing && !hasCustomer && st !== 'canceled' && (
-          <div className="mt-4 text-xs text-slate-400">
-            Prefer to stop now? <button className="underline hover:text-slate-600" onClick={() => { setCancelMode('immediate'); setShowCancel(true); }}>End your trial</button> — it won't convert, and you keep access until the trial end date.
+          <div className="mt-4 text-xs text-stone-400">
+            Prefer to stop now? <button className="underline hover:text-stone-600" onClick={() => { setCancelMode('immediate'); setShowCancel(true); }}>End your trial</button> — it won't convert, and you keep access until the trial end date.
           </div>
         )}
         {!status?.stripe_configured && (
@@ -371,18 +371,18 @@ export default function Billing({ onBaaRequired }) {
 
       {/* ── Cancel confirm modal ── */}
       {showCancel && (
-        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4" onClick={() => busy !== 'cancel' && setShowCancel(false)}>
+        <div className="fixed inset-0 bg-stone-900/50 flex items-center justify-center z-50 p-4" onClick={() => busy !== 'cancel' && setShowCancel(false)}>
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold tracking-tight mb-2">Cancel {meta.label}?</h3>
             {isTrialing ? (
-              <p className="text-sm text-slate-600 mb-5">
+              <p className="text-sm text-stone-600 mb-5">
                 Your trial will end on <strong>{fmtDate(status.trial_ends_at)}</strong> and won't convert to a paid plan.
                 You keep <strong>full access until that date</strong> — canceling never shortens a trial — and you can undo
                 this anytime before then with “Keep my plan”.
               </p>
             ) : hasCustomer ? (
               <>
-                <p className="text-sm text-slate-600 mb-4">
+                <p className="text-sm text-stone-600 mb-4">
                   No hard feelings — and no cancellation fees, ever. Your data stays available in read-only export for 30 days after access ends.
                 </p>
                 <label className="flex items-start gap-2.5 text-sm mb-2 cursor-pointer">
@@ -395,7 +395,7 @@ export default function Billing({ onBaaRequired }) {
                 </label>
               </>
             ) : (
-              <p className="text-sm text-slate-600 mb-5">
+              <p className="text-sm text-stone-600 mb-5">
                 This ends your subscription today. You can sign up again anytime.
               </p>
             )}
@@ -411,19 +411,19 @@ export default function Billing({ onBaaRequired }) {
 
       {/* ── Switch-plan confirm modal ── */}
       {switchTarget && (
-        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4" onClick={() => busy !== switchTarget && setSwitchTarget(null)}>
+        <div className="fixed inset-0 bg-stone-900/50 flex items-center justify-center z-50 p-4" onClick={() => busy !== switchTarget && setSwitchTarget(null)}>
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold tracking-tight mb-2">Switch to {PLAN_META[switchTarget]?.label}?</h3>
-            <p className="text-sm text-slate-600 mb-2">
+            <p className="text-sm text-stone-600 mb-2">
               {PLAN_META[switchTarget]?.desc}. The switch takes effect immediately — your team, claims and data don't change.
             </p>
             {isTrialing && !status?.has_subscription ? (
-              <p className="text-sm text-slate-600 mb-5">
+              <p className="text-sm text-stone-600 mb-5">
                 You're still in your free trial with no card on file, so there's no charge — your trial end date
                 {status?.trial_ends_at ? <> (<strong>{fmtDate(status.trial_ends_at)}</strong>)</> : ''} stays the same.
               </p>
             ) : (
-              <p className="text-sm text-slate-600 mb-5">
+              <p className="text-sm text-stone-600 mb-5">
                 Stripe prorates the change: upgrading charges the difference pro-rata on your next invoice;
                 downgrading credits it.
                 {status?.cancel_at_period_end && <> Switching also cancels your scheduled cancellation — your subscription continues on the new plan.</>}
@@ -444,11 +444,11 @@ export default function Billing({ onBaaRequired }) {
         <div className="card p-6">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <div className="text-[11px] uppercase tracking-widest text-slate-500 mb-1">Usage this month</div>
-              <div className="text-sm text-slate-500">Quotas reset on the 1st (UTC). Upgrade anytime to raise your limits.</div>
+              <div className="text-[11px] uppercase tracking-widest text-stone-500 mb-1">Usage this month</div>
+              <div className="text-sm text-stone-500">Quotas reset on the 1st (UTC). Upgrade anytime to raise your limits.</div>
             </div>
           </div>
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-stone-100">
             <UsageBar
               label="Claims created"
               used={usage.claims.used}
@@ -478,28 +478,28 @@ export default function Billing({ onBaaRequired }) {
       {(
         <>
           <div ref={plansRef} className="flex items-center justify-between">
-            <h3 className="font-bold text-slate-900">
+            <h3 className="font-bold text-stone-900">
               {isExpired ? 'Or switch plans' : isActive || isPastDue ? 'Switch plans' : isTrialing ? 'Compare plans' : 'Plans'}
             </h3>
             {isTrialing && (
-              <span className="text-xs text-slate-500">Switching keeps your remaining trial days</span>
+              <span className="text-xs text-stone-500">Switching keeps your remaining trial days</span>
             )}
             {(isActive || isPastDue) && (
-              <span className="text-xs text-slate-500">Switching is instant — Stripe prorates the difference</span>
+              <span className="text-xs text-stone-500">Switching is instant — Stripe prorates the difference</span>
             )}
           </div>
           <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
-            {planCard('starter', 'RCM Starter', 'For small billing teams', <><>$199</><span className="text-sm font-normal text-slate-500">/mo</span></>,
+            {planCard('starter', 'RCM Starter', 'For small billing teams', <><>$199</><span className="text-sm font-normal text-stone-500">/mo</span></>,
               ['Full RCM platform', '1,000 claims/month', 'Timely filing radar + 13-rule scrubber', 'Auto appeal letters (8 categories)', '835 import / 837P export', 'Up to 3 team seats'])}
-            {planCard('pro', 'RCM Pro + AI', 'For teams serious about denial recovery', <><>$499</><span className="text-sm font-normal text-slate-500">/mo</span></>,
+            {planCard('pro', 'RCM Pro + AI', 'For teams serious about denial recovery', <><>$499</><span className="text-sm font-normal text-stone-500">/mo</span></>,
               ['Everything in Starter', '10,000 claims/month', 'ClaimPaid AI — embedded tab + quick-chat', '2,000 AI queries/month', 'Payer Policy Handbook, pre-loaded', 'Autopilot crawling + Teach-it loop', 'Denial pattern analytics', 'Up to 15 team seats'])}
-            {planCard('ai', 'ClaimPaid AI', 'Just the AI assistant', <><>$99</><span className="text-sm font-normal text-slate-500">/mo</span></>,
+            {planCard('ai', 'ClaimPaid AI', 'Just the AI assistant', <><>$99</><span className="text-sm font-normal text-stone-500">/mo</span></>,
               ['Private AI chat over your documents', '1,000 AI queries/month', 'Cited answers, grounded in your KB', 'Unlimited knowledge bases', 'Public share links + embed widget', 'Up to 5 team seats', 'Your data never leaves our servers'])}
             <div className="card p-6 flex flex-col">
               <div className="font-bold">Enterprise</div>
-              <div className="text-xs text-slate-500 mt-0.5">For large billing companies & MSOs</div>
+              <div className="text-xs text-stone-500 mt-0.5">For large billing companies & MSOs</div>
               <div className="text-3xl font-extrabold mt-3 tracking-tight">Custom</div>
-              <ul className="text-[13px] text-slate-600 mt-4 space-y-1.5 flex-1">
+              <ul className="text-[13px] text-stone-600 mt-4 space-y-1.5 flex-1">
                 {['Everything in Pro + AI', 'Multi-org management + SSO', 'Custom KB training on your contracts', 'Dedicated success manager', 'SLA + priority support'].map((f) => <li key={f}>✓ {f}</li>)}
               </ul>
               <div className="mt-5">
@@ -516,19 +516,19 @@ export default function Billing({ onBaaRequired }) {
       {/* ── Invoices ── */}
       {invoices.length > 0 && (
         <div className="card p-6">
-          <h3 className="font-bold text-slate-900 mb-4">Invoices</h3>
-          <div className="divide-y divide-slate-100">
+          <h3 className="font-bold text-stone-900 mb-4">Invoices</h3>
+          <div className="divide-y divide-stone-100">
             {invoices.map((inv) => (
               <div key={inv.number} className="flex items-center justify-between py-3 gap-4">
                 <div>
-                  <div className="text-sm font-semibold text-slate-900">{inv.number}</div>
-                  <div className="text-xs text-slate-500">{fmtDate(inv.date)} · {inv.currency}</div>
+                  <div className="text-sm font-semibold text-stone-900">{inv.number}</div>
+                  <div className="text-xs text-stone-500">{fmtDate(inv.date)} · {inv.currency}</div>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className={`badge ${inv.status === 'paid' ? 'badge-green' : inv.status === 'open' ? 'badge-amber' : 'badge-slate'}`}>
                     {(inv.status || '').toUpperCase()}
                   </span>
-                  <span className="text-sm font-bold text-slate-900 w-20 text-right">{fmtMoney2(inv.amount / 100)}</span>
+                  <span className="text-sm font-bold text-stone-900 w-20 text-right">{fmtMoney2(inv.amount / 100)}</span>
                   {inv.pdf && (
                     <a href={inv.pdf} target="_blank" rel="noreferrer" className="btn btn-ghost !px-3 !py-1.5 !text-xs">
                       PDF
@@ -541,7 +541,7 @@ export default function Billing({ onBaaRequired }) {
         </div>
       )}
 
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-stone-500">
         Payments are processed securely by Stripe. We never see or store your card details.
       </p>
     </div>

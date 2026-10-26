@@ -105,15 +105,15 @@ export default function AccountModal({ initialTab = 'profile', onClose }) {
           <Avatar userId={user.id} name={user.name} hasAvatar={user.has_avatar} className="w-16 h-16 text-xl" />
           <div className="min-w-0">
             <div className="text-lg font-bold tracking-tight truncate">{user.name}</div>
-            <div className="text-sm text-slate-500 truncate">{user.email}</div>
-            <div className="text-xs text-slate-400 capitalize">{user.role} · {user.orgName || 'ClaimPaid'}</div>
+            <div className="text-sm text-stone-500 truncate">{user.email}</div>
+            <div className="text-xs text-stone-400 capitalize">{user.role} · {user.orgName || 'ClaimPaid'}</div>
           </div>
         </div>
 
-        <div className="flex gap-1 bg-slate-100 rounded-xl p-1 mb-6">
+        <div className="flex gap-1 bg-stone-100 rounded-xl p-1 mb-6">
           {[['profile', 'Profile'], ['security', 'Security']].map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)}
-              className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${tab === id ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>
+              className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${tab === id ? 'bg-white shadow text-stone-900' : 'text-stone-500 hover:text-stone-700'}`}>
               {label}
             </button>
           ))}
@@ -128,7 +128,7 @@ export default function AccountModal({ initialTab = 'profile', onClose }) {
               {user.has_avatar && (
                 <button className="btn btn-ghost !text-sm !text-rose-600" disabled={busy === 'photo'} onClick={removePhoto}>Remove</button>
               )}
-              <span className="text-xs text-slate-400">Square works best — we crop and resize automatically.</span>
+              <span className="text-xs text-stone-400">Square works best — we crop and resize automatically.</span>
               <input ref={fileRef} type="file" accept="image/*" className="hidden"
                 onChange={(e) => { uploadPhoto(e.target.files?.[0]); e.target.value = ''; }} />
             </div>
@@ -148,11 +148,11 @@ export default function AccountModal({ initialTab = 'profile', onClose }) {
             </div>
             <div>
               <label className="label">Email</label>
-              <input className="input bg-slate-50" value={user.email} disabled />
-              <p className="text-xs text-slate-400 mt-1">Email is your sign-in ID. To change it, contact support so we can verify the new address.</p>
+              <input className="input bg-stone-50" value={user.email} disabled />
+              <p className="text-xs text-stone-400 mt-1">Email is your sign-in ID. To change it, contact support so we can verify the new address.</p>
             </div>
             <div className="flex items-center justify-between pt-1">
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-stone-400">
                 Member since {user.created_at ? new Date(String(user.created_at).replace(' ', 'T')).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '—'}
               </span>
               <button className="btn btn-primary !text-sm" disabled={busy === 'profile'} onClick={saveProfile}>
@@ -165,7 +165,7 @@ export default function AccountModal({ initialTab = 'profile', onClose }) {
         {tab === 'security' && (
           <div className="space-y-5">
             {isGoogle ? (
-              <div className="text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+              <div className="text-sm text-stone-600 bg-stone-50 border border-stone-200 rounded-xl px-4 py-3">
                 You sign in with Google, so there's no ClaimPaid password to change — manage it in your Google account.
               </div>
             ) : (
@@ -184,15 +184,15 @@ export default function AccountModal({ initialTab = 'profile', onClose }) {
                     <input type="password" className="input" value={pw.confirm} onChange={(e) => setPw({ ...pw, confirm: e.target.value })} autoComplete="new-password" />
                   </div>
                 </div>
-                <p className="text-xs text-slate-400">At least 8 characters with an uppercase letter, a lowercase letter, a digit, and a symbol. Changing it signs out every other device.</p>
+                <p className="text-xs text-stone-400">At least 8 characters with an uppercase letter, a lowercase letter, a digit, and a symbol. Changing it signs out every other device.</p>
                 <button className="btn btn-primary !text-sm" disabled={busy === 'pw' || !pw.current || !pw.next} onClick={changePassword}>
                   {busy === 'pw' ? 'Changing…' : 'Change password'}
                 </button>
               </div>
             )}
-            <div className="border-t border-slate-100 pt-4">
+            <div className="border-t border-stone-100 pt-4">
               <div className="font-medium text-sm mb-1">Sessions</div>
-              <p className="text-xs text-slate-400 mb-3">Signed in somewhere you don't recognize, or on a shared computer? End every other session — this device stays signed in.</p>
+              <p className="text-xs text-stone-400 mb-3">Signed in somewhere you don't recognize, or on a shared computer? End every other session — this device stays signed in.</p>
               {confirmAll ? (
                 <div className="flex gap-2 flex-wrap">
                   <button className="btn !bg-rose-600 hover:!bg-rose-700 !text-white !text-sm" disabled={busy === 'all'} onClick={logoutEverywhere}>

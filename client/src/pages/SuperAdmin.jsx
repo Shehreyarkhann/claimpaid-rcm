@@ -20,15 +20,15 @@ const trunc = (s, n = 14) => (s && s.length > n ? s.slice(0, n) + '…' : (s || 
 
 function StatCard({ label, value, accent }) {
   return (
-    <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5">
-      <div className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1.5">{label}</div>
+    <div className="bg-stone-800/60 border border-stone-700/60 rounded-2xl p-5">
+      <div className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-1.5">{label}</div>
       <div className={`text-3xl font-bold tracking-tight ${accent || 'text-white'}`}>{value}</div>
     </div>
   );
 }
 
 function SectionTitle({ children }) {
-  return <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wide mb-4">{children}</h3>;
+  return <h3 className="text-sm font-semibold text-stone-300 uppercase tracking-wide mb-4">{children}</h3>;
 }
 
 /* ---------------- OVERVIEW ---------------- */
@@ -45,7 +45,7 @@ function OverviewTab() {
     api.super.subscriptions().then((s) => setSubs(s.subscriptions || [])).catch(() => {});
   }, []);
 
-  if (!data) return <div className="space-y-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 !bg-slate-800" />)}</div>;
+  if (!data) return <div className="space-y-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 !bg-stone-800" />)}</div>;
 
   const attention = [];
   subs.filter((s) => s.plan_status === 'past_due').forEach((s) =>
@@ -67,41 +67,41 @@ function OverviewTab() {
         <StatCard label="AI orgs" value={data.ai_orgs} />
         <StatCard label="Total users" value={data.total_users} />
         <StatCard label="MRR" value={money(data.mrr_cents)} accent="text-emerald-400" />
-        <StatCard label="Trialing" value={data.trialing} accent="text-sky-400" />
+        <StatCard label="Trialing" value={data.trialing} accent="text-amber-500" />
         <StatCard label="Past due" value={data.past_due} accent={data.past_due ? 'text-rose-400' : 'text-white'} />
         <StatCard label="Open demos" value={data.open_demos} />
         <StatCard label="Open tickets" value={data.open_tickets} accent={data.open_tickets ? 'text-amber-400' : 'text-white'} />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-6">
+        <div className="bg-stone-800/60 border border-stone-700/60 rounded-2xl p-6">
           <SectionTitle>Needs attention</SectionTitle>
           {attention.length === 0 ? (
-            <p className="text-sm text-slate-500">Nothing needs attention right now.</p>
+            <p className="text-sm text-stone-500">Nothing needs attention right now.</p>
           ) : (
             <div className="space-y-2.5">
               {attention.map((a, i) => (
                 <div key={i} className="flex items-center gap-3 text-sm">
                   <span className={`badge ${a.sev === 'rose' ? 'badge-rose' : a.sev === 'amber' ? 'badge-amber' : 'badge-blue'} shrink-0`}>{a.kind}</span>
-                  <span className="text-slate-300 truncate">{a.detail}</span>
+                  <span className="text-stone-300 truncate">{a.detail}</span>
                 </div>
               ))}
             </div>
           )}
         </div>
-        <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-6">
+        <div className="bg-stone-800/60 border border-stone-700/60 rounded-2xl p-6">
           <SectionTitle>Newest workspaces</SectionTitle>
           <div className="space-y-2.5">
             {data.recent_orgs.map((o) => (
               <div key={o.id} className="flex items-center justify-between text-sm">
-                <span className="text-slate-200 font-medium truncate">{o.name}</span>
+                <span className="text-stone-200 font-medium truncate">{o.name}</span>
                 <span className="flex items-center gap-2 shrink-0 ml-3">
                   <span className={`badge ${PLAN_BADGE[o.plan] || 'badge-slate'}`}>{PLAN_LABEL[o.plan] || o.plan}</span>
                   <span className={`badge ${STATUS_BADGE[o.plan_status] || 'badge-slate'}`}>{o.plan_status}</span>
                 </span>
               </div>
             ))}
-            {data.recent_orgs.length === 0 && <p className="text-sm text-slate-500">No workspaces yet.</p>}
+            {data.recent_orgs.length === 0 && <p className="text-sm text-stone-500">No workspaces yet.</p>}
           </div>
         </div>
       </div>
@@ -190,7 +190,7 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
     } catch (e) { toast.error(e.message); }
   };
 
-  if (!detail) return <Modal onClose={onClose}><div className="p-8"><Skeleton className="h-40 !bg-slate-700" /></div></Modal>;
+  if (!detail) return <Modal onClose={onClose}><div className="p-8"><Skeleton className="h-40 !bg-stone-700" /></div></Modal>;
   const { org, users, claimsByStatus, openAppeals, baa, eligibility, transmission, ehr, coding } = detail;
 
   // Trial status line
@@ -208,32 +208,32 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
   return (
     <>
     <Modal onClose={onClose} wide>
-      <div className="p-5 sm:p-7 bg-slate-900 text-slate-200 rounded-2xl">
+      <div className="p-5 sm:p-7 bg-stone-900 text-stone-200 rounded-2xl">
         <h3 className="text-xl font-bold text-white mb-1">{org.name}</h3>
-        <p className="text-xs text-slate-500 mb-6">Workspace #{org.id} · created {org.created_at?.slice(0, 10)}</p>
+        <p className="text-xs text-stone-500 mb-6">Workspace #{org.id} · created {org.created_at?.slice(0, 10)}</p>
 
         <div className="grid sm:grid-cols-3 gap-4 mb-6">
-          <div className="bg-slate-800 rounded-xl p-4">
-            <div className="text-xs text-slate-500 mb-1">Plan</div>
+          <div className="bg-stone-800 rounded-xl p-4">
+            <div className="text-xs text-stone-500 mb-1">Plan</div>
             <div className="flex gap-2">
-              <select value={plan} onChange={(e) => setPlan(e.target.value)} className="input !bg-slate-700 !border-slate-600 !text-white text-sm">
+              <select value={plan} onChange={(e) => setPlan(e.target.value)} className="input !bg-stone-700 !border-stone-600 !text-white text-sm">
                 {VALID_PLANS.map((p) => <option key={p} value={p}>{PLAN_LABEL[p]}</option>)}
               </select>
             </div>
-            <div className="text-xs text-slate-500 mt-3 mb-1">Status</div>
-            <select value={status} onChange={(e) => setStatus(e.target.value)} className="input !bg-slate-700 !border-slate-600 !text-white text-sm">
+            <div className="text-xs text-stone-500 mt-3 mb-1">Status</div>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className="input !bg-stone-700 !border-stone-600 !text-white text-sm">
               {VALID_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
             <button onClick={savePlan} disabled={saving} className="btn btn-primary !py-1.5 !text-xs mt-3 w-full">
               {saving ? 'Saving…' : 'Save plan'}
             </button>
           </div>
-          <div className="bg-slate-800 rounded-xl p-4">
-            <div className="text-xs text-slate-500 mb-2">Subscription</div>
+          <div className="bg-stone-800 rounded-xl p-4">
+            <div className="text-xs text-stone-500 mb-2">Subscription</div>
             <div className="text-xs space-y-1.5 font-mono">
-              <div><span className="text-slate-500">customer </span><span className="text-slate-300">{trunc(org.stripe_customer_id, 22)}</span></div>
-              <div><span className="text-slate-500">sub </span><span className="text-slate-300">{trunc(org.stripe_subscription_id, 22)}</span></div>
-              <div><span className="text-slate-500">period end </span><span className="text-slate-300">{org.current_period_end?.slice(0, 10) || '—'}</span></div>
+              <div><span className="text-stone-500">customer </span><span className="text-stone-300">{trunc(org.stripe_customer_id, 22)}</span></div>
+              <div><span className="text-stone-500">sub </span><span className="text-stone-300">{trunc(org.stripe_subscription_id, 22)}</span></div>
+              <div><span className="text-stone-500">period end </span><span className="text-stone-300">{org.current_period_end?.slice(0, 10) || '—'}</span></div>
             </div>
             {org.stripe_cancel_at_period_end === 1 && (
               <div className="mt-2"><span className="badge badge-amber">Cancelling at period end</span></div>
@@ -246,7 +246,7 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
                 danger: true,
                 onConfirm: () => runCancelSub(false),
               })}
-                className="btn !bg-slate-700 hover:!bg-slate-600 !text-white !py-1.5 !text-xs flex-1 disabled:!opacity-40">
+                className="btn !bg-stone-700 hover:!bg-stone-600 !text-white !py-1.5 !text-xs flex-1 disabled:!opacity-40">
                 Cancel at period end
               </button>
               <button disabled={busy} onClick={() => setConfirm({
@@ -261,9 +261,9 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
               </button>
             </div>
           </div>
-          <div className="bg-slate-800 rounded-xl p-4">
-            <div className="text-xs text-slate-500 mb-2">Activity</div>
-            <div className="text-xs space-y-1.5 text-slate-300">
+          <div className="bg-stone-800 rounded-xl p-4">
+            <div className="text-xs text-stone-500 mb-2">Activity</div>
+            <div className="text-xs space-y-1.5 text-stone-300">
               <div>Users: <strong className="text-white">{users.length}</strong></div>
               <div>Open appeals: <strong className="text-white">{openAppeals}</strong></div>
               {claimsByStatus.map((c) => <div key={c.status}>{c.status}: <strong className="text-white">{c.n}</strong></div>)}
@@ -272,16 +272,16 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
         </div>
 
         <SectionTitle>Trial controls</SectionTitle>
-        <div className="bg-slate-800 rounded-xl p-4 mb-6">
+        <div className="bg-stone-800 rounded-xl p-4 mb-6">
           <div className="flex items-center gap-2 mb-3">
             <span className={`badge ${trialInfo.live ? 'badge-blue' : 'badge-slate'}`}>{trialInfo.live ? 'TRIAL LIVE' : 'NO LIVE TRIAL'}</span>
-            <span className="text-sm text-slate-300">{trialInfo.line}</span>
+            <span className="text-sm text-stone-300">{trialInfo.line}</span>
           </div>
           <div className="flex flex-wrap gap-2">
-            <span className="text-xs text-slate-500 self-center mr-1">Extend:</span>
+            <span className="text-xs text-stone-500 self-center mr-1">Extend:</span>
             {[7, 14, 30].map((d) => (
               <button key={d} disabled={busy} onClick={() => runTrial('extend', d)}
-                className="btn !bg-slate-700 hover:!bg-slate-600 !text-white !py-1.5 !text-xs disabled:!opacity-40">
+                className="btn !bg-stone-700 hover:!bg-stone-600 !text-white !py-1.5 !text-xs disabled:!opacity-40">
                 +{d} days
               </button>
             ))}
@@ -299,11 +299,11 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
         </div>
 
         <SectionTitle>Onboarding</SectionTitle>
-        <div className="bg-slate-800 rounded-xl p-4 mb-6">
+        <div className="bg-stone-800 rounded-xl p-4 mb-6">
           <div className="flex items-center justify-between gap-3">
-            <div className="text-sm text-slate-300">
+            <div className="text-sm text-stone-300">
               {org.onboarding_completed_at
-                ? <span>Completed <span className="text-slate-500">{org.onboarding_completed_at.slice(0, 10)}</span></span>
+                ? <span>Completed <span className="text-stone-500">{org.onboarding_completed_at.slice(0, 10)}</span></span>
                 : <span className="text-amber-300">Not completed — the owner will see the onboarding funnel on next login</span>}
             </div>
             {org.onboarding_completed_at && (
@@ -314,7 +314,7 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
                 danger: false,
                 onConfirm: runResetOnboarding,
               })}
-                className="btn !bg-slate-700 hover:!bg-slate-600 !text-white !py-1.5 !text-xs disabled:!opacity-40 shrink-0">
+                className="btn !bg-stone-700 hover:!bg-stone-600 !text-white !py-1.5 !text-xs disabled:!opacity-40 shrink-0">
                 Reset onboarding
               </button>
             )}
@@ -322,16 +322,16 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
         </div>
 
         <SectionTitle>BAA (HIPAA)</SectionTitle>
-        <div className="bg-slate-800 rounded-xl p-4 mb-6">
+        <div className="bg-stone-800 rounded-xl p-4 mb-6">
           {baa ? (
             <div className="grid sm:grid-cols-2 gap-x-6 gap-y-2 text-xs">
-              <div><span className="text-slate-500">Status </span><span className="badge badge-green ml-1">Signed {baa.baa_version}</span></div>
-              <div><span className="text-slate-500">Legal name </span><span className="text-slate-200">{baa.org_legal_name}</span></div>
-              <div><span className="text-slate-500">Signer </span><span className="text-slate-200">{baa.signed_by_name}{baa.signed_by_title ? `, ${baa.signed_by_title}` : ''}</span></div>
-              <div><span className="text-slate-500">Email </span><span className="text-slate-200">{baa.signed_by_email}</span></div>
-              <div><span className="text-slate-500">Signed </span><span className="text-slate-200">{baa.signed_at?.slice(0, 19).replace('T', ' ')}</span></div>
-              <div><span className="text-slate-500">IP </span><span className="text-slate-200 font-mono">{baa.ip_address || '—'}</span></div>
-              <div className="sm:col-span-2"><span className="text-slate-500">Text hash </span><span className="text-slate-200 font-mono break-all">{baa.text_hash?.slice(0, 32)}…</span></div>
+              <div><span className="text-stone-500">Status </span><span className="badge badge-green ml-1">Signed {baa.baa_version}</span></div>
+              <div><span className="text-stone-500">Legal name </span><span className="text-stone-200">{baa.org_legal_name}</span></div>
+              <div><span className="text-stone-500">Signer </span><span className="text-stone-200">{baa.signed_by_name}{baa.signed_by_title ? `, ${baa.signed_by_title}` : ''}</span></div>
+              <div><span className="text-stone-500">Email </span><span className="text-stone-200">{baa.signed_by_email}</span></div>
+              <div><span className="text-stone-500">Signed </span><span className="text-stone-200">{baa.signed_at?.slice(0, 19).replace('T', ' ')}</span></div>
+              <div><span className="text-stone-500">IP </span><span className="text-stone-200 font-mono">{baa.ip_address || '—'}</span></div>
+              <div className="sm:col-span-2"><span className="text-stone-500">Text hash </span><span className="text-stone-200 font-mono break-all">{baa.text_hash?.slice(0, 32)}…</span></div>
             </div>
           ) : (
             <p className="text-sm text-amber-300/90">Not signed — this workspace cannot activate a paid subscription until the BAA is signed.</p>
@@ -339,95 +339,95 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
         </div>
 
         <SectionTitle>Eligibility</SectionTitle>
-        <div className="bg-slate-800 rounded-xl p-4 mb-6">
+        <div className="bg-stone-800 rounded-xl p-4 mb-6">
           {eligibility ? (
             <div className="grid sm:grid-cols-3 gap-x-6 gap-y-2 text-xs">
-              <div><span className="text-slate-500">Vendor </span>
+              <div><span className="text-stone-500">Vendor </span>
                 <span className={`badge ml-1 ${eligibility.vendor ? 'badge-green' : 'badge-amber'}`}>
                   {eligibility.vendor === 'availity' ? 'Availity' : eligibility.vendor === 'rest' ? 'Live REST' : 'Not configured'}
                 </span></div>
-              <div><span className="text-slate-500">Endpoint </span>
-                <span className="text-slate-200">{eligibility.configured ? 'Configured' : '—'}</span></div>
-              <div><span className="text-slate-500">Checks (30d) </span>
+              <div><span className="text-stone-500">Endpoint </span>
+                <span className="text-stone-200">{eligibility.configured ? 'Configured' : '—'}</span></div>
+              <div><span className="text-stone-500">Checks (30d) </span>
                 <span className="text-white font-bold">{eligibility.checks_30d}</span></div>
             </div>
           ) : (
-            <p className="text-sm text-slate-500">No eligibility data.</p>
+            <p className="text-sm text-stone-500">No eligibility data.</p>
           )}
         </div>
 
         <SectionTitle>Transmission</SectionTitle>
-        <div className="bg-slate-800 rounded-xl p-4 mb-6">
+        <div className="bg-stone-800 rounded-xl p-4 mb-6">
           {transmission ? (
             <div className="grid sm:grid-cols-3 gap-x-6 gap-y-2 text-xs">
-              <div><span className="text-slate-500">Vendor </span>
+              <div><span className="text-stone-500">Vendor </span>
                 <span className={`badge ml-1 ${transmission.vendor === 'manual' ? 'badge-slate' : 'badge-green'}`}>
                   {transmission.vendor}
                 </span></div>
-              <div><span className="text-slate-500">Batches (30d) </span>
+              <div><span className="text-stone-500">Batches (30d) </span>
                 <span className="text-white font-bold">{transmission.batches_30d}</span></div>
-              <div><span className="text-slate-500">Claims transmitted (30d) </span>
+              <div><span className="text-stone-500">Claims transmitted (30d) </span>
                 <span className="text-white font-bold">{transmission.claims_transmitted_30d}</span></div>
-              <div><span className="text-slate-500">Acceptance rate </span>
+              <div><span className="text-stone-500">Acceptance rate </span>
                 <span className="text-white font-bold">{transmission.acceptance_rate == null ? '—' : `${transmission.acceptance_rate}%`}</span></div>
             </div>
           ) : (
-            <p className="text-sm text-slate-500">No transmission data.</p>
+            <p className="text-sm text-stone-500">No transmission data.</p>
           )}
         </div>
 
         <SectionTitle>EHR</SectionTitle>
-        <div className="bg-slate-800 rounded-xl p-4 mb-6">
+        <div className="bg-stone-800 rounded-xl p-4 mb-6">
           {ehr ? (
             <div className="grid sm:grid-cols-3 gap-x-6 gap-y-2 text-xs">
-              <div><span className="text-slate-500">Connections </span>
+              <div><span className="text-stone-500">Connections </span>
                 {(ehr.connections || []).length ? ehr.connections.map((c) => (
                   <span key={c.provider} className={`badge ml-1 ${c.status === 'connected' ? 'badge-green' : c.status === 'error' ? 'badge-red' : 'badge-slate'}`}>
                     {c.provider}: {c.status}
                   </span>
-                )) : <span className="text-slate-400">none</span>}</div>
-              <div><span className="text-slate-500">Encounters synced (30d) </span>
+                )) : <span className="text-stone-400">none</span>}</div>
+              <div><span className="text-stone-500">Encounters synced (30d) </span>
                 <span className="text-white font-bold">{ehr.encounters_30d}</span></div>
-              <div><span className="text-slate-500">Last sync </span>
-                <span className="text-slate-200">{ehr.connections?.[0]?.last_sync_at?.slice(0, 16).replace('T', ' ') || '—'}</span></div>
+              <div><span className="text-stone-500">Last sync </span>
+                <span className="text-stone-200">{ehr.connections?.[0]?.last_sync_at?.slice(0, 16).replace('T', ' ') || '—'}</span></div>
             </div>
           ) : (
-            <p className="text-sm text-slate-500">No EHR data.</p>
+            <p className="text-sm text-stone-500">No EHR data.</p>
           )}
         </div>
 
         <SectionTitle>AI code assist</SectionTitle>
-        <div className="bg-slate-800 rounded-xl p-4 mb-6">
+        <div className="bg-stone-800 rounded-xl p-4 mb-6">
           {coding ? (
             <div className="grid sm:grid-cols-3 gap-x-6 gap-y-2 text-xs">
-              <div><span className="text-slate-500">Coding jobs (30d) </span>
+              <div><span className="text-stone-500">Coding jobs (30d) </span>
                 <span className="text-white font-bold">{coding.jobs_30d}</span></div>
-              <div><span className="text-slate-500">Human acceptance rate </span>
+              <div><span className="text-stone-500">Human acceptance rate </span>
                 <span className="text-white font-bold">{coding.acceptance_rate == null ? '—' : `${coding.acceptance_rate}%`}</span></div>
-              <div className="text-slate-500">Codes are never auto-applied — every accepted code was reviewed by a human.</div>
+              <div className="text-stone-500">Codes are never auto-applied — every accepted code was reviewed by a human.</div>
             </div>
           ) : (
-            <p className="text-sm text-slate-500">No coding data.</p>
+            <p className="text-sm text-stone-500">No coding data.</p>
           )}
         </div>
 
         <SectionTitle>Users</SectionTitle>
         <div className="space-y-2 mb-6 max-h-48 overflow-y-auto">
           {users.map((u) => (
-            <div key={u.id} className="flex items-center justify-between text-sm bg-slate-800/60 rounded-lg px-4 py-2.5">
-              <span className="text-slate-200">{u.name} <span className="text-slate-500 text-xs ml-1">{u.email}</span></span>
+            <div key={u.id} className="flex items-center justify-between text-sm bg-stone-800/60 rounded-lg px-4 py-2.5">
+              <span className="text-stone-200">{u.name} <span className="text-stone-500 text-xs ml-1">{u.email}</span></span>
               <span className="badge badge-slate">{u.role}</span>
             </div>
           ))}
-          {users.length === 0 && <p className="text-sm text-slate-500">No users.</p>}
+          {users.length === 0 && <p className="text-sm text-stone-500">No users.</p>}
         </div>
 
         <div className="border-t border-rose-900/50 pt-5">
           <div className="text-sm font-semibold text-rose-400 mb-2">Danger zone</div>
-          <p className="text-xs text-slate-500 mb-3">Type <strong className="text-slate-300">{org.name}</strong> to permanently delete this workspace and all its data.</p>
+          <p className="text-xs text-stone-500 mb-3">Type <strong className="text-stone-300">{org.name}</strong> to permanently delete this workspace and all its data.</p>
           <div className="flex gap-2">
             <input value={confirmName} onChange={(e) => setConfirmName(e.target.value)} placeholder={org.name}
-              className="input !bg-slate-800 !border-slate-700 !text-white text-sm flex-1" />
+              className="input !bg-stone-800 !border-stone-700 !text-white text-sm flex-1" />
             <button onClick={del} disabled={confirmName !== org.name} className="btn !bg-rose-600 hover:!bg-rose-700 !text-white disabled:!opacity-40 text-sm">
               Delete workspace
             </button>
@@ -435,17 +435,17 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
         </div>
 
         <div className="flex justify-end mt-6">
-          <button onClick={onClose} className="btn btn-ghost !text-slate-300">Close</button>
+          <button onClick={onClose} className="btn btn-ghost !text-stone-300">Close</button>
         </div>
       </div>
     </Modal>
     {confirm && (
       <Modal onClose={() => !busy && setConfirm(null)}>
-        <div className="p-5 sm:p-7 bg-slate-900 text-slate-200 rounded-2xl max-w-md">
+        <div className="p-5 sm:p-7 bg-stone-900 text-stone-200 rounded-2xl max-w-md">
           <h3 className="text-lg font-bold text-white mb-3">{confirm.title}</h3>
-          <p className="text-sm text-slate-400 mb-6">{confirm.body}</p>
+          <p className="text-sm text-stone-400 mb-6">{confirm.body}</p>
           <div className="flex justify-end gap-2">
-            <button onClick={() => setConfirm(null)} disabled={busy} className="btn btn-ghost !text-slate-300 disabled:!opacity-40">Keep as is</button>
+            <button onClick={() => setConfirm(null)} disabled={busy} className="btn btn-ghost !text-stone-300 disabled:!opacity-40">Keep as is</button>
             <button onClick={confirm.onConfirm} disabled={busy}
               className={`btn !text-white disabled:!opacity-40 ${confirm.danger ? '!bg-rose-600 hover:!bg-rose-700' : 'btn-primary'}`}>
               {busy ? 'Working…' : confirm.confirmLabel}
@@ -465,20 +465,20 @@ function ClientsTab() {
   const load = () => api.super.orgs().then(setOrgs).catch((e) => toast.error(e.message));
   useEffect(() => { load(); }, []);
 
-  if (!orgs) return <Skeleton className="h-64 !bg-slate-800" />;
+  if (!orgs) return <Skeleton className="h-64 !bg-stone-800" />;
   return (
     <div>
       {drawer && <OrgDrawer orgId={drawer} onClose={() => setDrawer(null)} onChanged={load} />}
-      <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl overflow-x-auto">
-        <table className="w-full min-w-[620px] tbl !text-slate-300">
-          <thead><tr className="!text-slate-500">
+      <div className="bg-stone-800/60 border border-stone-700/60 rounded-2xl overflow-x-auto">
+        <table className="w-full min-w-[620px] tbl !text-stone-300">
+          <thead><tr className="!text-stone-500">
             <th>Workspace</th><th>Plan</th><th>Status</th><th>BAA</th><th className="!text-right">Users</th>
             <th className="!text-right">Claims</th><th>Created</th>
           </tr></thead>
           <tbody>
             {orgs.map((o) => (
-              <tr key={o.id} onClick={() => setDrawer(o.id)} className="cursor-pointer hover:!bg-slate-700/40">
-                <td className="font-medium text-white">{o.name} <span className="text-slate-500 text-xs">#{o.id}</span></td>
+              <tr key={o.id} onClick={() => setDrawer(o.id)} className="cursor-pointer hover:!bg-stone-700/40">
+                <td className="font-medium text-white">{o.name} <span className="text-stone-500 text-xs">#{o.id}</span></td>
                 <td><span className={`badge ${PLAN_BADGE[o.plan] || 'badge-slate'}`}>{PLAN_LABEL[o.plan] || o.plan}</span></td>
                 <td><span className={`badge ${STATUS_BADGE[o.plan_status] || 'badge-slate'}`}>{o.plan_status}</span></td>
                 <td>
@@ -488,7 +488,7 @@ function ClientsTab() {
                 </td>
                 <td className="!text-right">{o.user_count}</td>
                 <td className="!text-right">{o.claim_count}</td>
-                <td className="text-slate-500 text-xs">{o.created_at?.slice(0, 10)}</td>
+                <td className="text-stone-500 text-xs">{o.created_at?.slice(0, 10)}</td>
               </tr>
             ))}
           </tbody>
@@ -503,19 +503,19 @@ function ClientsTab() {
 function AiClientsTab() {
   const [rows, setRows] = useState(null);
   useEffect(() => { api.super.aiOrgs().then(setRows).catch(() => setRows([])); }, []);
-  if (!rows) return <Skeleton className="h-64 !bg-slate-800" />;
+  if (!rows) return <Skeleton className="h-64 !bg-stone-800" />;
   return (
-    <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl overflow-x-auto">
-      <table className="w-full min-w-[620px] tbl !text-slate-300">
-        <thead><tr className="!text-slate-500">
+    <div className="bg-stone-800/60 border border-stone-700/60 rounded-2xl overflow-x-auto">
+      <table className="w-full min-w-[620px] tbl !text-stone-300">
+        <thead><tr className="!text-stone-500">
           <th>AI workspace</th><th>Linked RCM org</th><th className="!text-right">Users</th>
           <th className="!text-right">KBs</th><th className="!text-right">Chunks</th>
         </tr></thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.id}>
-              <td className="font-medium text-white">{r.name} <span className="text-slate-500 text-xs">#{r.id}</span></td>
-              <td className="text-slate-400">{r.rcm_org_name ? `${r.rcm_org_name} (#${r.rcm_org_id})` : '—'}</td>
+              <td className="font-medium text-white">{r.name} <span className="text-stone-500 text-xs">#{r.id}</span></td>
+              <td className="text-stone-400">{r.rcm_org_name ? `${r.rcm_org_name} (#${r.rcm_org_id})` : '—'}</td>
               <td className="!text-right">{r.user_count}</td>
               <td className="!text-right">{r.kb_count}</td>
               <td className="!text-right">{r.chunk_count}</td>
@@ -523,7 +523,7 @@ function AiClientsTab() {
           ))}
         </tbody>
       </table>
-      {rows.length === 0 && <div className="p-8 text-sm text-slate-500 text-center">AI database not reachable or no AI workspaces yet.</div>}
+      {rows.length === 0 && <div className="p-8 text-sm text-stone-500 text-center">AI database not reachable or no AI workspaces yet.</div>}
     </div>
   );
 }
@@ -576,19 +576,19 @@ function UserDrawer({ userId, onClose, onChanged, meId }) {
 
   return (
     <Modal onClose={onClose}>
-      <div className="p-5 sm:p-7 bg-slate-900 text-slate-200 rounded-2xl">
+      <div className="p-5 sm:p-7 bg-stone-900 text-stone-200 rounded-2xl">
         <h3 className="text-lg font-bold text-white mb-5">Edit user #{userId}</h3>
-        {!loaded ? <Skeleton className="h-32 !bg-slate-700" /> : (
+        {!loaded ? <Skeleton className="h-32 !bg-stone-700" /> : (
           <div className="space-y-4">
-            <div><label className="label !text-slate-400">Name</label>
+            <div><label className="label !text-stone-400">Name</label>
               <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="input !bg-slate-800 !border-slate-700 !text-white" /></div>
-            <div><label className="label !text-slate-400">Role (all workspaces)</label>
+                className="input !bg-stone-800 !border-stone-700 !text-white" /></div>
+            <div><label className="label !text-stone-400">Role (all workspaces)</label>
               <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
-                className="input !bg-slate-800 !border-slate-700 !text-white">
+                className="input !bg-stone-800 !border-stone-700 !text-white">
                 {VALID_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
               </select></div>
-            <label className="flex items-center gap-2 text-sm text-slate-300">
+            <label className="flex items-center gap-2 text-sm text-stone-300">
               <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} className="rounded" />
               Active (can sign in)
             </label>
@@ -602,28 +602,28 @@ function UserDrawer({ userId, onClose, onChanged, meId }) {
                 <div className="flex items-center gap-2">
                   <code className="font-mono text-lg text-white">{tempPw}</code>
                   <button onClick={() => { navigator.clipboard.writeText(tempPw); toast.success('Copied'); }}
-                    className="btn !bg-slate-700 !text-white !py-1 !text-xs">Copy</button>
+                    className="btn !bg-stone-700 !text-white !py-1 !text-xs">Copy</button>
                 </div>
               </div>
             )}
             {userId !== meId && (
-              <div className="border-t border-slate-800 pt-4">
+              <div className="border-t border-stone-800 pt-4">
                 <button onClick={() => { setConfirmEmail(''); setShowDelete(true); }} className="btn !bg-rose-600 hover:!bg-rose-700 !text-white !text-sm">Delete user</button>
               </div>
             )}
             {showDelete && (
               <Modal onClose={() => !busy && setShowDelete(false)}>
-                <div className="p-5 sm:p-7 bg-slate-900 text-slate-200 rounded-2xl max-w-md">
+                <div className="p-5 sm:p-7 bg-stone-900 text-stone-200 rounded-2xl max-w-md">
                   <h3 className="text-lg font-bold text-white mb-3">Delete user?</h3>
-                  <p className="text-sm text-slate-400 mb-2">
-                    This permanently deletes <strong className="text-slate-200">{form.name || userEmail}</strong> and
+                  <p className="text-sm text-stone-400 mb-2">
+                    This permanently deletes <strong className="text-stone-200">{form.name || userEmail}</strong> and
                     removes all of their workspace memberships. They will no longer be able to sign in.
                   </p>
-                  <p className="text-xs text-slate-500 mb-3">Type <strong className="text-slate-300">{userEmail}</strong> to confirm.</p>
+                  <p className="text-xs text-stone-500 mb-3">Type <strong className="text-stone-300">{userEmail}</strong> to confirm.</p>
                   <input value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} placeholder={userEmail}
-                    className="input !bg-slate-800 !border-slate-700 !text-white text-sm w-full mb-5" />
+                    className="input !bg-stone-800 !border-stone-700 !text-white text-sm w-full mb-5" />
                   <div className="flex justify-end gap-2">
-                    <button onClick={() => setShowDelete(false)} disabled={busy} className="btn btn-ghost !text-slate-300 disabled:!opacity-40">Keep user</button>
+                    <button onClick={() => setShowDelete(false)} disabled={busy} className="btn btn-ghost !text-stone-300 disabled:!opacity-40">Keep user</button>
                     <button onClick={del} disabled={busy || confirmEmail.trim().toLowerCase() !== userEmail.trim().toLowerCase()}
                       className="btn !bg-rose-600 hover:!bg-rose-700 !text-white disabled:!opacity-40">
                       {busy ? 'Deleting…' : 'Delete permanently'}
@@ -635,7 +635,7 @@ function UserDrawer({ userId, onClose, onChanged, meId }) {
           </div>
         )}
         <div className="flex justify-end mt-6">
-          <button onClick={onClose} className="btn btn-ghost !text-slate-300">Close</button>
+          <button onClick={onClose} className="btn btn-ghost !text-stone-300">Close</button>
         </div>
       </div>
     </Modal>
@@ -651,29 +651,29 @@ function UsersTab() {
   const load = () => api.super.users(search).then(setRows).catch((e) => toast.error(e.message));
   useEffect(() => { load(); }, []);
 
-  if (!rows) return <Skeleton className="h-64 !bg-slate-800" />;
+  if (!rows) return <Skeleton className="h-64 !bg-stone-800" />;
   return (
     <div>
       {drawer && <UserDrawer userId={drawer} meId={user?.id} onClose={() => setDrawer(null)} onChanged={load} />}
       <div className="mb-4 flex flex-wrap gap-2">
         <input value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && load()}
-          placeholder="Search name or email…" className="input !bg-slate-800 !border-slate-700 !text-white flex-1 min-w-[160px] sm:max-w-xs" />
+          placeholder="Search name or email…" className="input !bg-stone-800 !border-stone-700 !text-white flex-1 min-w-[160px] sm:max-w-xs" />
         <button onClick={load} className="btn btn-dark !text-sm">Search</button>
       </div>
-      <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl overflow-x-auto">
-        <table className="w-full min-w-[620px] tbl !text-slate-300">
-          <thead><tr className="!text-slate-500"><th>Name</th><th>Email</th><th>Workspaces</th><th>Roles</th><th></th></tr></thead>
+      <div className="bg-stone-800/60 border border-stone-700/60 rounded-2xl overflow-x-auto">
+        <table className="w-full min-w-[620px] tbl !text-stone-300">
+          <thead><tr className="!text-stone-500"><th>Name</th><th>Email</th><th>Workspaces</th><th>Roles</th><th></th></tr></thead>
           <tbody>
             {rows.map((u) => (
-              <tr key={u.id} onClick={() => setDrawer(u.id)} className="cursor-pointer hover:!bg-slate-700/40">
+              <tr key={u.id} onClick={() => setDrawer(u.id)} className="cursor-pointer hover:!bg-stone-700/40">
                 <td className="font-medium text-white">
                   {u.name}
                   {u.is_superadmin === 1 && <span className="badge badge-amber ml-2">super</span>}
                 </td>
-                <td className="text-slate-400 text-xs">{u.email}</td>
-                <td className="text-slate-400 text-xs">{u.orgs || '—'}</td>
-                <td className="text-slate-400 text-xs">{u.roles || '—'}</td>
-                <td className="text-slate-500 text-xs">{u.created_at?.slice(0, 10)}</td>
+                <td className="text-stone-400 text-xs">{u.email}</td>
+                <td className="text-stone-400 text-xs">{u.orgs || '—'}</td>
+                <td className="text-stone-400 text-xs">{u.roles || '—'}</td>
+                <td className="text-stone-500 text-xs">{u.created_at?.slice(0, 10)}</td>
               </tr>
             ))}
           </tbody>
@@ -687,20 +687,20 @@ function UsersTab() {
 function SubscriptionsTab() {
   const [data, setData] = useState(null);
   useEffect(() => { api.super.subscriptions().then(setData).catch(() => {}); }, []);
-  if (!data) return <Skeleton className="h-64 !bg-slate-800" />;
+  if (!data) return <Skeleton className="h-64 !bg-stone-800" />;
   const t = data.totals;
   return (
     <div>
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <StatCard label="MRR" value={money(t.mrr_cents)} accent="text-emerald-400" />
         <StatCard label="Active" value={t.active} accent="text-emerald-400" />
-        <StatCard label="Trialing" value={t.trialing} accent="text-sky-400" />
+        <StatCard label="Trialing" value={t.trialing} accent="text-amber-500" />
         <StatCard label="Past due" value={t.past_due} accent={t.past_due ? 'text-rose-400' : 'text-white'} />
         <StatCard label="Canceled" value={t.canceled} />
       </div>
-      <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl overflow-x-auto">
-        <table className="w-full min-w-[620px] tbl !text-slate-300">
-          <thead><tr className="!text-slate-500">
+      <div className="bg-stone-800/60 border border-stone-700/60 rounded-2xl overflow-x-auto">
+        <table className="w-full min-w-[620px] tbl !text-stone-300">
+          <thead><tr className="!text-stone-500">
             <th>Workspace</th><th>Plan</th><th>Status</th><th>Stripe customer</th><th>Stripe sub</th><th>Trial ends</th><th className="!text-right">MRR</th>
           </tr></thead>
           <tbody>
@@ -709,10 +709,10 @@ function SubscriptionsTab() {
                 <td className="font-medium text-white">{s.name}</td>
                 <td><span className={`badge ${PLAN_BADGE[s.plan] || 'badge-slate'}`}>{PLAN_LABEL[s.plan] || s.plan}</span></td>
                 <td><span className={`badge ${STATUS_BADGE[s.plan_status] || 'badge-slate'}`}>{s.plan_status}</span></td>
-                <td className="font-mono text-xs text-slate-500">{trunc(s.stripe_customer_id, 18)}</td>
-                <td className="font-mono text-xs text-slate-500">{trunc(s.stripe_subscription_id, 18)}</td>
-                <td className="text-xs text-slate-500">{s.current_period_end?.slice(0, 10) || '—'}</td>
-                <td className="!text-right text-slate-200">{money(s.mrr_cents)}</td>
+                <td className="font-mono text-xs text-stone-500">{trunc(s.stripe_customer_id, 18)}</td>
+                <td className="font-mono text-xs text-stone-500">{trunc(s.stripe_subscription_id, 18)}</td>
+                <td className="text-xs text-stone-500">{s.current_period_end?.slice(0, 10) || '—'}</td>
+                <td className="!text-right text-stone-200">{money(s.mrr_cents)}</td>
               </tr>
             ))}
           </tbody>
@@ -746,39 +746,39 @@ function DemosTab() {
     } catch (e) { toast.error(e.message); }
   };
 
-  if (!rows) return <Skeleton className="h-64 !bg-slate-800" />;
+  if (!rows) return <Skeleton className="h-64 !bg-stone-800" />;
   return (
     <div className="space-y-3">
       {rows.map((d) => (
-        <div key={d.id} className="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5">
+        <div key={d.id} className="bg-stone-800/60 border border-stone-700/60 rounded-2xl p-5">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <div className="font-semibold text-white">{d.company} <span className="text-slate-500 font-normal text-sm">· {d.name}</span></div>
-              <div className="text-xs text-slate-500 mt-1">{d.email}{d.phone ? ` · ${d.phone}` : ''}{d.team_size ? ` · ${d.team_size}` : ''}</div>
-              {d.message && <p className="text-sm text-slate-400 mt-2 max-w-2xl">{d.message}</p>}
+              <div className="font-semibold text-white">{d.company} <span className="text-stone-500 font-normal text-sm">· {d.name}</span></div>
+              <div className="text-xs text-stone-500 mt-1">{d.email}{d.phone ? ` · ${d.phone}` : ''}{d.team_size ? ` · ${d.team_size}` : ''}</div>
+              {d.message && <p className="text-sm text-stone-400 mt-2 max-w-2xl">{d.message}</p>}
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <span className={`badge ${d.contacted ? 'badge-green' : 'badge-amber'}`}>{d.contacted ? 'Contacted' : 'New'}</span>
-              <button onClick={() => toggle(d)} className="btn !bg-slate-700 !text-white !py-1.5 !text-xs">
+              <button onClick={() => toggle(d)} className="btn !bg-stone-700 !text-white !py-1.5 !text-xs">
                 {d.contacted ? 'Mark new' : 'Mark contacted'}
               </button>
             </div>
           </div>
           <div className="flex gap-2 mt-3">
             <input value={notes[d.id] || ''} onChange={(e) => setNotes({ ...notes, [d.id]: e.target.value })}
-              placeholder="Internal note…" className="input !bg-slate-900 !border-slate-700 !text-white !text-xs flex-1" />
+              placeholder="Internal note…" className="input !bg-stone-900 !border-stone-700 !text-white !text-xs flex-1" />
             <button onClick={() => saveNote(d)} className="btn btn-dark !py-1.5 !text-xs">Save</button>
           </div>
-          <div className="text-[11px] text-slate-600 mt-2">{d.created_at?.slice(0, 16).replace('T', ' ')}</div>
+          <div className="text-[11px] text-stone-600 mt-2">{d.created_at?.slice(0, 16).replace('T', ' ')}</div>
         </div>
       ))}
-      {rows.length === 0 && <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-8 text-center text-sm text-slate-500">No demo requests yet.</div>}
+      {rows.length === 0 && <div className="bg-stone-800/60 border border-stone-700/60 rounded-2xl p-8 text-center text-sm text-stone-500">No demo requests yet.</div>}
     </div>
   );
 }
 
 /* ---------------- SUPPORT TICKETS ---------------- */
-const TICKET_STATUS_BADGE = { open: 'badge-amber', pending: 'badge !bg-sky-500/15 !text-sky-300 !border-sky-500/30', closed: 'badge-green' };
+const TICKET_STATUS_BADGE = { open: 'badge-amber', pending: 'badge !bg-amber-500/15 !text-amber-300 !border-amber-500/30', closed: 'badge-green' };
 const PRIORITY_BADGE = {
   low: 'badge-slate', normal: 'badge-blue', high: 'badge !bg-amber-500/15 !text-amber-300 !border-amber-500/30',
   urgent: 'badge !bg-rose-500/15 !text-rose-300 !border-rose-500/30',
@@ -830,8 +830,8 @@ function TicketDrawer({ ticketId, onClose, onChanged }) {
 
   return (
     <Modal onClose={onClose} wide>
-      <div className="p-5 sm:p-7 bg-slate-900 text-slate-200 rounded-2xl max-h-[85vh] overflow-y-auto">
-        {!data ? <Skeleton className="h-64 !bg-slate-800" /> : (() => {
+      <div className="p-5 sm:p-7 bg-stone-900 text-stone-200 rounded-2xl max-h-[85vh] overflow-y-auto">
+        {!data ? <Skeleton className="h-64 !bg-stone-800" /> : (() => {
           const t = data.ticket;
           const sla = slaStatus(t);
           const firstRespHrs = t.first_response_at
@@ -844,63 +844,63 @@ function TicketDrawer({ ticketId, onClose, onChanged }) {
                 <span className={`badge ${PRIORITY_BADGE[t.priority] || 'badge-blue'}`}>{t.priority}</span>
                 {sla === 'overdue' && <span className="badge !bg-rose-500/15 !text-rose-300 !border-rose-500/30 font-bold">OVERDUE</span>}
                 {sla === 'due-soon' && <span className="badge !bg-amber-500/15 !text-amber-300 !border-amber-500/30">Due soon</span>}
-                <span className="text-xs text-slate-500 ml-auto">#{t.id} · {t.created_at?.slice(0, 16).replace('T', ' ')}</span>
+                <span className="text-xs text-stone-500 ml-auto">#{t.id} · {t.created_at?.slice(0, 16).replace('T', ' ')}</span>
               </div>
               <h3 className="text-xl font-bold text-white mb-1">{t.subject}</h3>
-              <div className="text-sm text-slate-400 mb-4">{t.name} · {t.email}{t.org_name && <span> · {t.org_name}</span>}</div>
-              <div className="text-xs text-slate-500 mb-5">
+              <div className="text-sm text-stone-400 mb-4">{t.name} · {t.email}{t.org_name && <span> · {t.org_name}</span>}</div>
+              <div className="text-xs text-stone-500 mb-5">
                 SLA due {t.sla_due_at?.slice(0, 16).replace('T', ' ')}
                 {firstRespHrs !== null && <span> · first response {firstRespHrs < 1 ? `${Math.round(firstRespHrs * 60)}m` : `${firstRespHrs.toFixed(1)}h`}</span>}
               </div>
 
               <div className="space-y-3 mb-6">
-                <div className="bg-slate-800 rounded-xl p-4">
-                  <div className="text-[11px] text-slate-500 mb-1">{t.name} · original message</div>
-                  <div className="text-sm text-slate-200 whitespace-pre-wrap">{t.message}</div>
+                <div className="bg-stone-800 rounded-xl p-4">
+                  <div className="text-[11px] text-stone-500 mb-1">{t.name} · original message</div>
+                  <div className="text-sm text-stone-200 whitespace-pre-wrap">{t.message}</div>
                 </div>
                 {data.replies.map((r) => (
-                  <div key={r.id} className={`rounded-xl p-4 ${r.author_type === 'staff' ? 'bg-sky-950/40 border border-sky-800/50' : 'bg-slate-800'}`}>
-                    <div className="text-[11px] text-slate-500 mb-1">
+                  <div key={r.id} className={`rounded-xl p-4 ${r.author_type === 'staff' ? 'bg-stone-900/40 border border-amber-800/50' : 'bg-stone-800'}`}>
+                    <div className="text-[11px] text-stone-500 mb-1">
                       {r.author_type === 'staff' ? `Staff${r.author_name ? ` · ${r.author_name}` : ''}` : t.name} · {r.created_at?.slice(0, 16).replace('T', ' ')}
                     </div>
-                    <div className="text-sm text-slate-200 whitespace-pre-wrap">{r.body}</div>
+                    <div className="text-sm text-stone-200 whitespace-pre-wrap">{r.body}</div>
                   </div>
                 ))}
               </div>
 
               <div className="flex items-center gap-2 mb-2 flex-wrap">
-                <label className="label !text-slate-400 !mb-0">Reply to customer</label>
+                <label className="label !text-stone-400 !mb-0">Reply to customer</label>
                 <select value="" onChange={(e) => {
                   const c = CANNED_REPLIES.find((x) => x.id === e.target.value);
                   if (c) setReply((prev) => (prev ? prev + '\n\n' + c.body : c.body));
                   e.target.value = '';
                 }}
-                  className="input !bg-slate-800 !border-slate-700 !text-white !text-xs !py-1.5 !w-auto ml-auto"
+                  className="input !bg-stone-800 !border-stone-700 !text-white !text-xs !py-1.5 !w-auto ml-auto"
                   aria-label="Insert canned reply">
                   <option value="">Canned replies…</option>
                   {CANNED_REPLIES.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
                 </select>
               </div>
               <textarea value={reply} onChange={(e) => setReply(e.target.value)} rows={3}
-                className="input !bg-slate-800 !border-slate-700 !text-white mb-3" placeholder="Write a reply… (sending moves the ticket to pending)" />
+                className="input !bg-stone-800 !border-stone-700 !text-white mb-3" placeholder="Write a reply… (sending moves the ticket to pending)" />
               <button onClick={sendReply} disabled={busy || !reply.trim()} className="btn btn-primary !text-sm mb-6">
                 {busy ? 'Sending…' : 'Send reply'}
               </button>
 
               <div className="grid sm:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="label !text-slate-400">Status</label>
+                  <label className="label !text-stone-400">Status</label>
                   <select value={t.status} onChange={(e) => saveMeta({ status: e.target.value }, `Status → ${e.target.value}`)}
-                    className="input !bg-slate-800 !border-slate-700 !text-white">
+                    className="input !bg-stone-800 !border-stone-700 !text-white">
                     <option value="open">open</option>
                     <option value="pending">pending (waiting on customer)</option>
                     <option value="closed">closed</option>
                   </select>
                 </div>
                 <div>
-                  <label className="label !text-slate-400">Priority</label>
+                  <label className="label !text-stone-400">Priority</label>
                   <select value={t.priority} onChange={(e) => saveMeta({ priority: e.target.value }, `Priority → ${e.target.value}`)}
-                    className="input !bg-slate-800 !border-slate-700 !text-white">
+                    className="input !bg-stone-800 !border-stone-700 !text-white">
                     <option value="low">low</option>
                     <option value="normal">normal</option>
                     <option value="high">high</option>
@@ -908,12 +908,12 @@ function TicketDrawer({ ticketId, onClose, onChanged }) {
                   </select>
                 </div>
               </div>
-              <label className="label !text-slate-400">Internal note <span className="text-rose-400/80">(never shown to the customer)</span></label>
+              <label className="label !text-stone-400">Internal note <span className="text-rose-400/80">(never shown to the customer)</span></label>
               <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3}
-                className="input !bg-slate-800 !border-slate-700 !text-white mb-3" placeholder="Private note…" />
+                className="input !bg-stone-800 !border-stone-700 !text-white mb-3" placeholder="Private note…" />
               <div className="flex gap-2 flex-wrap">
                 <button onClick={() => saveMeta({ internal_note: note }, 'Note saved')} className="btn btn-dark !text-sm">Save note</button>
-                <button onClick={onClose} className="btn btn-ghost !text-slate-300 ml-auto">Close</button>
+                <button onClick={onClose} className="btn btn-ghost !text-stone-300 ml-auto">Close</button>
               </div>
             </div>
           );
@@ -930,22 +930,22 @@ function SupportTab() {
   const load = () => api.super.tickets().then(setRows).catch((e) => toast.error(e.message));
   useEffect(() => { load(); }, []);
 
-  if (!rows) return <Skeleton className="h-64 !bg-slate-800" />;
+  if (!rows) return <Skeleton className="h-64 !bg-stone-800" />;
   return (
     <div>
       {openId && <TicketDrawer ticketId={openId} onClose={() => setOpenId(null)} onChanged={load} />}
-      <div className="text-xs text-slate-500 mb-3">
-        Our promise: reply within <span className="text-slate-300 font-semibold">one business day</span>.
+      <div className="text-xs text-stone-500 mb-3">
+        Our promise: reply within <span className="text-stone-300 font-semibold">one business day</span>.
         Tickets past their SLA show as <span className="text-rose-300 font-semibold">OVERDUE</span>.
       </div>
-      <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl overflow-x-auto">
-        <table className="w-full min-w-[620px] tbl !text-slate-300">
-          <thead><tr className="!text-slate-500"><th></th><th>Subject</th><th>From</th><th>Workspace</th><th>SLA</th><th>Replies</th><th>Received</th></tr></thead>
+      <div className="bg-stone-800/60 border border-stone-700/60 rounded-2xl overflow-x-auto">
+        <table className="w-full min-w-[620px] tbl !text-stone-300">
+          <thead><tr className="!text-stone-500"><th></th><th>Subject</th><th>From</th><th>Workspace</th><th>SLA</th><th>Replies</th><th>Received</th></tr></thead>
           <tbody>
             {rows.map((t) => {
               const sla = slaStatus(t);
               return (
-                <tr key={t.id} onClick={() => setOpenId(t.id)} className="cursor-pointer hover:!bg-slate-700/40">
+                <tr key={t.id} onClick={() => setOpenId(t.id)} className="cursor-pointer hover:!bg-stone-700/40">
                   <td>
                     <div className="flex gap-1 flex-wrap">
                       <span className={`badge ${TICKET_STATUS_BADGE[t.status] || 'badge-amber'}`}>{t.status}</span>
@@ -958,21 +958,21 @@ function SupportTab() {
                       <span className="ml-2 badge !bg-emerald-500/15 !text-emerald-300 !border-emerald-500/30">needs reply</span>
                     )}
                   </td>
-                  <td className="text-slate-400 text-xs">{t.name} · {t.email}</td>
-                  <td className="text-slate-400 text-xs">{t.org_name || '—'}</td>
+                  <td className="text-stone-400 text-xs">{t.name} · {t.email}</td>
+                  <td className="text-stone-400 text-xs">{t.org_name || '—'}</td>
                   <td>
                     {sla === 'overdue' && <span className="badge !bg-rose-500/15 !text-rose-300 !border-rose-500/30 font-bold">OVERDUE</span>}
                     {sla === 'due-soon' && <span className="badge !bg-amber-500/15 !text-amber-300 !border-amber-500/30">Due soon</span>}
-                    {sla === 'ok' && <span className="text-slate-500 text-xs">{t.sla_due_at?.slice(5, 16).replace('T', ' ') || '—'}</span>}
+                    {sla === 'ok' && <span className="text-stone-500 text-xs">{t.sla_due_at?.slice(5, 16).replace('T', ' ') || '—'}</span>}
                   </td>
-                  <td className="text-slate-400 text-xs">{t.reply_count || 0}</td>
-                  <td className="text-slate-500 text-xs">{t.created_at?.slice(0, 16).replace('T', ' ')}</td>
+                  <td className="text-stone-400 text-xs">{t.reply_count || 0}</td>
+                  <td className="text-stone-500 text-xs">{t.created_at?.slice(0, 16).replace('T', ' ')}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
-        {rows.length === 0 && <div className="p-8 text-center text-sm text-slate-500">No support tickets yet.</div>}
+        {rows.length === 0 && <div className="p-8 text-center text-sm text-stone-500">No support tickets yet.</div>}
       </div>
     </div>
   );
@@ -1035,32 +1035,32 @@ function DbTab() {
 
   return (
     <div className="grid lg:grid-cols-[240px_1fr] gap-5">
-      <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-3 h-fit max-h-[70vh] overflow-y-auto">
-        <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide px-2 py-2">Tables</div>
+      <div className="bg-stone-800/60 border border-stone-700/60 rounded-2xl p-3 h-fit max-h-[70vh] overflow-y-auto">
+        <div className="text-xs font-semibold text-stone-500 uppercase tracking-wide px-2 py-2">Tables</div>
         {(tables || []).map((t) => (
           <button key={t.name} onClick={() => pick(t.name)}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm flex justify-between items-center ${table === t.name ? 'bg-emerald-600/20 text-emerald-300' : 'text-slate-300 hover:bg-slate-700/50'}`}>
+            className={`w-full text-left px-3 py-2 rounded-lg text-sm flex justify-between items-center ${table === t.name ? 'bg-emerald-600/20 text-emerald-300' : 'text-stone-300 hover:bg-stone-700/50'}`}>
             <span className="font-mono text-xs">{t.name}</span>
-            <span className="text-[11px] text-slate-500">{t.rows}</span>
+            <span className="text-[11px] text-stone-500">{t.rows}</span>
           </button>
         ))}
       </div>
 
       <div>
-        {!table && <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-10 text-center text-sm text-slate-500">Select a table to browse its rows.</div>}
-        {table && !data && <Skeleton className="h-64 !bg-slate-800" />}
+        {!table && <div className="bg-stone-800/60 border border-stone-700/60 rounded-2xl p-10 text-center text-sm text-stone-500">Select a table to browse its rows.</div>}
+        {table && !data && <Skeleton className="h-64 !bg-stone-800" />}
         {table && data && (
           <div>
             <div className="flex gap-2 mb-4 flex-wrap">
               <input value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (setPage(1), loadRows(table, 1, search))}
-                placeholder={`Search ${table}…`} className="input !bg-slate-800 !border-slate-700 !text-white max-w-xs !text-sm" />
+                placeholder={`Search ${table}…`} className="input !bg-stone-800 !border-stone-700 !text-white max-w-xs !text-sm" />
               <button onClick={() => { setPage(1); loadRows(table, 1, search); }} className="btn btn-dark !text-sm">Search</button>
               <button onClick={openAdd} className="btn btn-primary !text-sm ml-auto">+ Add row</button>
             </div>
-            <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl overflow-hidden">
+            <div className="bg-stone-800/60 border border-stone-700/60 rounded-2xl overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[620px] tbl !text-slate-300">
-                  <thead><tr className="!text-slate-500">
+                <table className="w-full min-w-[620px] tbl !text-stone-300">
+                  <thead><tr className="!text-stone-500">
                     {data.columns.map((c) => <th key={c.name} className="!text-xs font-mono">{c.name}</th>)}
                     <th className="!text-right">Actions</th>
                   </tr></thead>
@@ -1068,12 +1068,12 @@ function DbTab() {
                     {data.rows.map((r) => (
                       <tr key={r.id ?? JSON.stringify(r).slice(0, 20)}>
                         {data.columns.map((c) => (
-                          <td key={c.name} className="text-xs font-mono text-slate-400 max-w-[220px] truncate" title={String(r[c.name] ?? '')}>
+                          <td key={c.name} className="text-xs font-mono text-stone-400 max-w-[220px] truncate" title={String(r[c.name] ?? '')}>
                             {String(r[c.name] ?? '—').slice(0, 60)}
                           </td>
                         ))}
                         <td className="!text-right whitespace-nowrap">
-                          <button onClick={() => openEdit(r)} className="text-sky-400 hover:text-sky-300 text-xs font-semibold mr-3">Edit</button>
+                          <button onClick={() => openEdit(r)} className="text-amber-500 hover:text-amber-300 text-xs font-semibold mr-3">Edit</button>
                           <button onClick={() => del(r.id)} className="text-rose-400 hover:text-rose-300 text-xs font-semibold">Delete</button>
                         </td>
                       </tr>
@@ -1081,14 +1081,14 @@ function DbTab() {
                   </tbody>
                 </table>
               </div>
-              {data.rows.length === 0 && <div className="p-8 text-center text-sm text-slate-500">No rows.</div>}
+              {data.rows.length === 0 && <div className="p-8 text-center text-sm text-stone-500">No rows.</div>}
             </div>
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-3 text-sm text-slate-500">
+              <div className="flex items-center justify-between mt-3 text-sm text-stone-500">
                 <span className="text-xs">{data.total} rows · page {page} of {totalPages}</span>
                 <div className="flex gap-2">
-                  <button disabled={page <= 1} onClick={() => { setPage(page - 1); loadRows(table, page - 1); }} className="btn !bg-slate-700 !text-white !px-3 !py-1.5 !text-xs disabled:!opacity-40">← Prev</button>
-                  <button disabled={page >= totalPages} onClick={() => { setPage(page + 1); loadRows(table, page + 1); }} className="btn !bg-slate-700 !text-white !px-3 !py-1.5 !text-xs disabled:!opacity-40">Next →</button>
+                  <button disabled={page <= 1} onClick={() => { setPage(page - 1); loadRows(table, page - 1); }} className="btn !bg-stone-700 !text-white !px-3 !py-1.5 !text-xs disabled:!opacity-40">← Prev</button>
+                  <button disabled={page >= totalPages} onClick={() => { setPage(page + 1); loadRows(table, page + 1); }} className="btn !bg-stone-700 !text-white !px-3 !py-1.5 !text-xs disabled:!opacity-40">Next →</button>
                 </div>
               </div>
             )}
@@ -1098,24 +1098,24 @@ function DbTab() {
 
       {editing && (
         <Modal onClose={() => setEditing(null)} wide>
-          <div className="p-5 sm:p-7 bg-slate-900 text-slate-200 rounded-2xl max-h-[85vh] overflow-y-auto">
+          <div className="p-5 sm:p-7 bg-stone-900 text-stone-200 rounded-2xl max-h-[85vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-white mb-5">{editing === 'add' ? `Add row — ${table}` : `Edit row #${editing.id} — ${table}`}</h3>
             <div className="grid sm:grid-cols-2 gap-4">
               {editable(editing === 'add').map((c) => (
                 <div key={c.name} className={String(form[c.name] ?? '').length > 80 ? 'sm:col-span-2' : ''}>
-                  <label className="label !text-slate-400 font-mono !text-xs">{c.name} <span className="text-slate-600">({c.type})</span></label>
+                  <label className="label !text-stone-400 font-mono !text-xs">{c.name} <span className="text-stone-600">({c.type})</span></label>
                   {String(form[c.name] ?? '').length > 80 ? (
                     <textarea value={form[c.name] ?? ''} onChange={(e) => setForm({ ...form, [c.name]: e.target.value })} rows={3}
-                      className="input !bg-slate-800 !border-slate-700 !text-white font-mono !text-xs" />
+                      className="input !bg-stone-800 !border-stone-700 !text-white font-mono !text-xs" />
                   ) : (
                     <input value={form[c.name] ?? ''} onChange={(e) => setForm({ ...form, [c.name]: e.target.value })}
-                      className="input !bg-slate-800 !border-slate-700 !text-white font-mono !text-xs" />
+                      className="input !bg-stone-800 !border-stone-700 !text-white font-mono !text-xs" />
                   )}
                 </div>
               ))}
             </div>
             <div className="flex justify-end gap-2 mt-6">
-              <button onClick={() => setEditing(null)} className="btn btn-ghost !text-slate-300">Cancel</button>
+              <button onClick={() => setEditing(null)} className="btn btn-ghost !text-stone-300">Cancel</button>
               <button onClick={save} className="btn btn-primary">{editing === 'add' ? 'Add row' : 'Save changes'}</button>
             </div>
           </div>
@@ -1140,9 +1140,9 @@ export default function SuperAdmin() {
   const go = (id) => { setTab(id); setNavOpen(false); };
   const sideNav = (onNavigate) => (
     <>
-      <div className="px-5 py-6 border-b border-slate-800">
+      <div className="px-5 py-6 border-b border-stone-800">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center font-extrabold text-slate-950">C</div>
+          <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center font-extrabold text-stone-950">C</div>
           <div>
             <div className="font-bold text-white leading-tight">ClaimPaid</div>
             <div className="text-[10px] font-bold text-amber-400 tracking-[0.2em]">SUPER ADMIN</div>
@@ -1152,37 +1152,37 @@ export default function SuperAdmin() {
       <nav className="p-3 space-y-1 flex-1 overflow-y-auto">
         {TABS.map(([id, label]) => (
           <button key={id} onClick={() => (onNavigate ? onNavigate(id) : setTab(id))}
-            className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium ${tab === id ? 'bg-emerald-600/20 text-emerald-300' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}>
+            className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium ${tab === id ? 'bg-emerald-600/20 text-emerald-300' : 'text-stone-400 hover:bg-stone-800 hover:text-stone-200'}`}>
             {label}
           </button>
         ))}
       </nav>
-      <div className="p-4 border-t border-slate-800">
-        <div className="text-xs text-slate-500 mb-2 truncate">{user?.email}</div>
+      <div className="p-4 border-t border-stone-800">
+        <div className="text-xs text-stone-500 mb-2 truncate">{user?.email}</div>
         <div className="flex gap-2">
-          <a href="/app/" className="btn !bg-slate-800 !text-slate-300 !text-xs flex-1 !py-2 text-center">← App</a>
-          <button onClick={logout} className="btn !bg-slate-800 !text-slate-300 !text-xs flex-1 !py-2">Sign out</button>
+          <a href="/app/" className="btn !bg-stone-800 !text-stone-300 !text-xs flex-1 !py-2 text-center">← App</a>
+          <button onClick={logout} className="btn !bg-stone-800 !text-stone-300 !text-xs flex-1 !py-2">Sign out</button>
         </div>
       </div>
     </>
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 md:flex">
+    <div className="min-h-screen bg-stone-950 text-stone-200 md:flex">
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-60 shrink-0 bg-slate-900 border-r border-slate-800 flex-col md:sticky md:top-0 md:h-screen">
+      <aside className="hidden md:flex w-60 shrink-0 bg-stone-900 border-r border-stone-800 flex-col md:sticky md:top-0 md:h-screen">
         {sideNav()}
       </aside>
 
       {/* Mobile top bar */}
-      <div className="md:hidden sticky top-0 z-40 bg-slate-900/95 backdrop-blur border-b border-slate-800 flex items-center gap-3 px-4 py-3">
+      <div className="md:hidden sticky top-0 z-40 bg-stone-900/95 backdrop-blur border-b border-stone-800 flex items-center gap-3 px-4 py-3">
         <button onClick={() => setNavOpen(true)} aria-label="Open menu"
-          className="w-10 h-10 rounded-xl bg-slate-800 flex flex-col items-center justify-center gap-[5px] shrink-0">
-          <span className="block w-5 h-0.5 bg-slate-200 rounded" />
-          <span className="block w-5 h-0.5 bg-slate-200 rounded" />
-          <span className="block w-5 h-0.5 bg-slate-200 rounded" />
+          className="w-10 h-10 rounded-xl bg-stone-800 flex flex-col items-center justify-center gap-[5px] shrink-0">
+          <span className="block w-5 h-0.5 bg-stone-200 rounded" />
+          <span className="block w-5 h-0.5 bg-stone-200 rounded" />
+          <span className="block w-5 h-0.5 bg-stone-200 rounded" />
         </button>
-        <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center font-extrabold text-slate-950">C</div>
+        <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center font-extrabold text-stone-950">C</div>
         <div className="min-w-0">
           <div className="font-bold text-white leading-tight text-sm truncate">{TABS.find((t) => t[0] === tab)[1]}</div>
           <div className="text-[9px] font-bold text-amber-400 tracking-[0.2em]">SUPER ADMIN</div>
@@ -1192,8 +1192,8 @@ export default function SuperAdmin() {
       {/* Mobile drawer */}
       {navOpen && (
         <div className="md:hidden fixed inset-0 z-50 flex">
-          <div className="absolute inset-0 bg-slate-950/70" onClick={() => setNavOpen(false)} />
-          <aside className="relative w-72 max-w-[85vw] bg-slate-900 border-r border-slate-800 flex flex-col h-full shadow-2xl">
+          <div className="absolute inset-0 bg-stone-950/70" onClick={() => setNavOpen(false)} />
+          <aside className="relative w-72 max-w-[85vw] bg-stone-900 border-r border-stone-800 flex flex-col h-full shadow-2xl">
             {sideNav(go)}
           </aside>
         </div>

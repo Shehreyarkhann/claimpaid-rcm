@@ -65,19 +65,19 @@ function NewBatchModal({ onClose, onCreated }) {
 
   return (
     <Modal onClose={onClose} wide>
-      <h3 className="text-lg font-semibold text-slate-900 mb-1">New transmission batch</h3>
-      <p className="text-sm text-slate-500 mb-4">
+      <h3 className="text-lg font-semibold text-stone-900 mb-1">New transmission batch</h3>
+      <p className="text-sm text-stone-500 mb-4">
         Only scrub-clean claims (or warnings) that aren't in another batch are listed.
         Claims missing subscriber data show what's needed — fill it inline before generating.
       </p>
       {error && <div className="mb-4 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}
-      {!rows && <div className="text-sm text-slate-500">Loading claims…</div>}
+      {!rows && <div className="text-sm text-stone-500">Loading claims…</div>}
       {rows && !rows.length && <EmptyState icon="📭" title="Nothing to transmit" hint="Scrub claims clean first — transmittable claims appear here." />}
       {rows && rows.length > 0 && (
         <>
-          <div className="max-h-96 overflow-auto border border-slate-200 rounded-xl">
+          <div className="max-h-96 overflow-auto border border-stone-200 rounded-xl">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-slate-50">
+              <thead className="sticky top-0 bg-stone-50">
                 <tr>
                   <th className="p-2 w-8"><input type="checkbox" checked={sel.size === rows.length && rows.length > 0}
                     onChange={() => setSel(sel.size === rows.length ? new Set() : new Set(rows.map((r) => r.id)))} /></th>
@@ -90,7 +90,7 @@ function NewBatchModal({ onClose, onCreated }) {
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50">
+                  <tr key={r.id} className="border-t border-stone-100 hover:bg-stone-50">
                     <td className="p-2"><input type="checkbox" checked={sel.has(r.id)} onChange={() => toggle(r.id)} /></td>
                     <td className="p-2 font-mono text-xs">{r.claim_number}</td>
                     <td className="p-2">{r.patient_name}</td>
@@ -119,7 +119,7 @@ function NewBatchModal({ onClose, onCreated }) {
             </table>
           </div>
           <div className="flex items-center justify-between mt-4">
-            <div className="text-sm text-slate-500">{sel.size} claim(s) selected</div>
+            <div className="text-sm text-stone-500">{sel.size} claim(s) selected</div>
             <button className="btn btn-primary" disabled={busy || !sel.size} onClick={create}>
               {busy ? 'Creating…' : 'Create draft batch'}
             </button>
@@ -241,8 +241,8 @@ function BatchDetail({ id, onBack }) {
       {/* Step 1: generate */}
       {st === 'draft' && (
         <div className="card p-6 mb-5">
-          <div className="font-semibold text-slate-900 mb-1">1 · Generate the 837P file</div>
-          <p className="text-sm text-slate-500 mb-4">Builds a valid 005010X222A1 file from these claims and runs structural validation (segment counts, control numbers, required loops).</p>
+          <div className="font-semibold text-stone-900 mb-1">1 · Generate the 837P file</div>
+          <p className="text-sm text-stone-500 mb-4">Builds a valid 005010X222A1 file from these claims and runs structural validation (segment counts, control numbers, required loops).</p>
           <button className="btn btn-primary" disabled={busy} onClick={generate}>{busy ? 'Generating…' : '⚙️ Generate 837P'}</button>
           {validation && (
             <div className="mt-4 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
@@ -255,8 +255,8 @@ function BatchDetail({ id, onBack }) {
       {/* Step 2: download + transmit */}
       {st === 'generated' && (
         <div className="card p-6 mb-5">
-          <div className="font-semibold text-slate-900 mb-1">2 · Transmit</div>
-          <p className="text-sm text-slate-500 mb-4">
+          <div className="font-semibold text-stone-900 mb-1">2 · Transmit</div>
+          <p className="text-sm text-stone-500 mb-4">
             Method: <strong>{vendor}</strong>.{' '}
             {vendor === 'manual'
               ? 'Download the file, upload it in your clearinghouse portal, then confirm below — nothing is marked transmitted without your confirmation.'
@@ -267,7 +267,7 @@ function BatchDetail({ id, onBack }) {
           <div className="flex flex-wrap gap-2 items-center">
             <button className="btn" disabled={busy} onClick={download}>⬇ Download 837P</button>
             {vendor === 'manual' && (
-              <label className="flex items-center gap-2 text-sm text-slate-700 ml-2">
+              <label className="flex items-center gap-2 text-sm text-stone-700 ml-2">
                 <input type="checkbox" checked={confirmManual} onChange={(e) => setConfirmManual(e.target.checked)} />
                 I uploaded this file to my clearinghouse portal
               </label>
@@ -282,8 +282,8 @@ function BatchDetail({ id, onBack }) {
       {/* Step 3: ack upload */}
       {['transmitted', 'acknowledged', 'partial'].includes(st) && (
         <div className="card p-6 mb-5">
-          <div className="font-semibold text-slate-900 mb-1">3 · Upload acknowledgement</div>
-          <p className="text-sm text-slate-500 mb-4">Upload the 999 (functional ack) or 277CA (claim-level accept/reject) your clearinghouse returns. Statuses update per claim with reason codes.</p>
+          <div className="font-semibold text-stone-900 mb-1">3 · Upload acknowledgement</div>
+          <p className="text-sm text-stone-500 mb-4">Upload the 999 (functional ack) or 277CA (claim-level accept/reject) your clearinghouse returns. Statuses update per claim with reason codes.</p>
           <div className="flex flex-wrap gap-2 items-center">
             <select className="input" style={{ width: 160 }} value={ackType} onChange={(e) => setAckType(e.target.value)}>
               <option value="999">999 — functional ack</option>
@@ -295,13 +295,13 @@ function BatchDetail({ id, onBack }) {
             </button>
           </div>
           {ackResult && (
-            <div className="mt-4 text-sm bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+            <div className="mt-4 text-sm bg-stone-50 border border-stone-200 rounded-xl px-4 py-3">
               <div className="font-medium mb-2">Result: <span className={`badge ${STATUS_BADGE[ackResult.batchStatus] || 'badge-slate'}`}>{ackResult.batchStatus}</span></div>
               {ackResult.claims?.map((c, i) => (
                 <div key={i} className="flex items-center gap-2 py-1 text-xs font-mono">
                   <span>claim #{c.claimId}</span>
                   <span className={`badge ${c.status === 'accepted' ? 'badge-green' : 'badge-rose'}`}>{c.status}</span>
-                  {c.category && <span className="text-slate-500">{c.category}{c.reasonCode ? `:${c.reasonCode}` : ''}</span>}
+                  {c.category && <span className="text-stone-500">{c.category}{c.reasonCode ? `:${c.reasonCode}` : ''}</span>}
                 </div>
               ))}
             </div>
@@ -311,17 +311,17 @@ function BatchDetail({ id, onBack }) {
 
       {/* Claims in batch */}
       <div className="card p-6">
-        <div className="font-semibold text-slate-900 mb-3">Claims in this batch</div>
+        <div className="font-semibold text-stone-900 mb-3">Claims in this batch</div>
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-slate-500">
+            <tr className="text-left text-stone-500">
               <th className="p-2">Claim</th><th className="p-2">Patient</th><th className="p-2">Payer</th>
               <th className="p-2 text-right">Amount</th><th className="p-2">X12 status</th>
             </tr>
           </thead>
           <tbody>
             {batch.claims?.map((c) => (
-              <tr key={c.id} className="border-t border-slate-100">
+              <tr key={c.id} className="border-t border-stone-100">
                 <td className="p-2 font-mono text-xs">{c.claim_number}</td>
                 <td className="p-2">{c.patient_name}</td>
                 <td className="p-2">{c.payer_name}</td>
@@ -350,25 +350,25 @@ function OutboxPanel() {
   if (!rows || !rows.length) return null;
   return (
     <div className="card p-6 mt-5">
-      <div className="font-semibold text-slate-900 mb-1">Transmission outbox</div>
-      <p className="text-sm text-slate-500 mb-4">Every claim's path through the clearinghouse: queued → sent → acknowledged. A failed (rejected) claim can be released back for correction and re-batching.</p>
+      <div className="font-semibold text-stone-900 mb-1">Transmission outbox</div>
+      <p className="text-sm text-stone-500 mb-4">Every claim's path through the clearinghouse: queued → sent → acknowledged. A failed (rejected) claim can be released back for correction and re-batching.</p>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-slate-500">
+            <tr className="text-left text-stone-500">
               <th className="p-2">Claim</th><th className="p-2">Batch</th><th className="p-2">Vendor</th>
               <th className="p-2">Status</th><th className="p-2">Sent</th><th className="p-2">Ack</th><th className="p-2" />
             </tr>
           </thead>
           <tbody>
             {rows.map((o) => (
-              <tr key={o.id} className="border-t border-slate-100">
+              <tr key={o.id} className="border-t border-stone-100">
                 <td className="p-2 font-mono text-xs">{o.claim_number}</td>
-                <td className="p-2 font-mono text-xs text-slate-500">{o.batch_number || '—'}</td>
+                <td className="p-2 font-mono text-xs text-stone-500">{o.batch_number || '—'}</td>
                 <td className="p-2">{o.vendor || '—'}</td>
                 <td className="p-2"><span className={`badge ${OUTBOX_BADGE[o.status] || 'badge-slate'}`}>{o.status}</span></td>
-                <td className="p-2 text-slate-500">{o.sent_at ? fmtDate(o.sent_at.slice(0, 10)) : '—'}</td>
-                <td className="p-2 text-slate-500">{o.ack_at ? fmtDate(o.ack_at.slice(0, 10)) : '—'}</td>
+                <td className="p-2 text-stone-500">{o.sent_at ? fmtDate(o.sent_at.slice(0, 10)) : '—'}</td>
+                <td className="p-2 text-stone-500">{o.ack_at ? fmtDate(o.ack_at.slice(0, 10)) : '—'}</td>
                 <td className="p-2 text-right">
                   {o.status === 'failed' && <button className="btn btn-sm btn-outline" onClick={() => requeue(o.id)}>Release for re-batch</button>}
                 </td>
@@ -415,7 +415,7 @@ export default function Transmission() {
         actions={<button className="btn btn-primary" onClick={() => setShowNew(true)}>+ New batch</button>}
       />
       {error && <div className="mb-4 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}
-      {!batches && <div className="text-sm text-slate-500">Loading batches…</div>}
+      {!batches && <div className="text-sm text-stone-500">Loading batches…</div>}
       {batches && !batches.length && (
         <EmptyState icon="📤" title="No batches yet"
           hint="Create a batch from scrub-clean claims, generate the 837P, transmit, then process the ack."
@@ -425,20 +425,20 @@ export default function Transmission() {
         <div className="card p-6">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-slate-500">
+              <tr className="text-left text-stone-500">
                 <th className="p-2">Batch</th><th className="p-2 text-right">Claims</th><th className="p-2">Status</th>
                 <th className="p-2">Vendor</th><th className="p-2">Created</th><th className="p-2">Transmitted</th><th className="p-2" />
               </tr>
             </thead>
             <tbody>
               {batches.map((b) => (
-                <tr key={b.id} className="border-t border-slate-100 hover:bg-slate-50 cursor-pointer" onClick={() => setSelected(b.id)}>
+                <tr key={b.id} className="border-t border-stone-100 hover:bg-stone-50 cursor-pointer" onClick={() => setSelected(b.id)}>
                   <td className="p-2 font-mono text-xs font-medium">{b.batch_number}</td>
                   <td className="p-2 text-right">{b.claim_count}</td>
                   <td className="p-2"><span className={`badge ${STATUS_BADGE[b.status] || 'badge-slate'}`}>{b.status}</span></td>
                   <td className="p-2">{b.vendor}</td>
-                  <td className="p-2 text-slate-500">{fmtDate(b.created_at?.slice(0, 10))}</td>
-                  <td className="p-2 text-slate-500">{b.transmitted_at ? fmtDate(b.transmitted_at.slice(0, 10)) : '—'}</td>
+                  <td className="p-2 text-stone-500">{fmtDate(b.created_at?.slice(0, 10))}</td>
+                  <td className="p-2 text-stone-500">{b.transmitted_at ? fmtDate(b.transmitted_at.slice(0, 10)) : '—'}</td>
                   <td className="p-2 text-right" onClick={(e) => e.stopPropagation()}>
                     {b.status === 'draft' && (
                       <button className="btn btn-ghost !text-rose-600 text-xs" onClick={() => del(b.id, b.batch_number)}>Delete</button>

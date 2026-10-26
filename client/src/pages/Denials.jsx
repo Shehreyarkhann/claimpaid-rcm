@@ -85,9 +85,9 @@ function AppealDrawer({ appealId, onClose, onChanged, team }) {
       <div className="p-7">
         <div className="flex items-start justify-between mb-1">
           <div>
-            <div className="text-xs font-mono text-slate-400">{appeal.claim_number}</div>
+            <div className="text-xs font-mono text-stone-400">{appeal.claim_number}</div>
             <h3 className="text-xl font-bold tracking-tight">{appeal.patient_name}</h3>
-            <div className="text-sm text-slate-500 mt-0.5">{appeal.payer} · {fmtDate(appeal.service_date)} · {appeal.denial_reason}</div>
+            <div className="text-sm text-stone-500 mt-0.5">{appeal.payer} · {fmtDate(appeal.service_date)} · {appeal.denial_reason}</div>
           </div>
           <button onClick={onClose} className="btn-ghost btn !px-2.5">✕</button>
         </div>
@@ -103,11 +103,11 @@ function AppealDrawer({ appealId, onClose, onChanged, team }) {
         </div>
 
         {letter && (
-          <div className="mb-6 border border-slate-200 rounded-2xl overflow-hidden">
-            <div className="bg-slate-900 text-white px-5 py-3 flex items-center justify-between">
+          <div className="mb-6 border border-stone-200 rounded-2xl overflow-hidden">
+            <div className="bg-stone-900 text-white px-5 py-3 flex items-center justify-between">
               <div>
                 <div className="font-semibold text-sm">{letter.subject}</div>
-                <div className="text-[11px] text-slate-400">Auto-drafted from denial reason · review before sending</div>
+                <div className="text-[11px] text-stone-400">Auto-drafted from denial reason · review before sending</div>
               </div>
               <div className="flex gap-2">
                 <button onClick={() => { navigator.clipboard.writeText(letter.text); toast.success('Letter copied to clipboard'); }}
@@ -121,7 +121,7 @@ function AppealDrawer({ appealId, onClose, onChanged, team }) {
               </div>
             </div>
             <div className="bg-white px-6 py-5 max-h-[320px] overflow-y-auto">
-              <pre className="whitespace-pre-wrap font-serif text-[13px] leading-relaxed text-slate-700">{letter.text}</pre>
+              <pre className="whitespace-pre-wrap font-serif text-[13px] leading-relaxed text-stone-700">{letter.text}</pre>
             </div>
           </div>
         )}
@@ -129,14 +129,14 @@ function AppealDrawer({ appealId, onClose, onChanged, team }) {
         {/* Related prior authorization — the cross-link */}
         {appeal.linked_auths && appeal.linked_auths.length > 0 && (
           <div className="mb-6">
-            <div className="text-sm font-semibold text-slate-700 mb-2">✅ Linked authorizations ({appeal.linked_auths.length})</div>
+            <div className="text-sm font-semibold text-stone-700 mb-2">✅ Linked authorizations ({appeal.linked_auths.length})</div>
             <div className="space-y-2">
               {appeal.linked_auths.map((a) => (
                 <div key={a.id} className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-sm">
                   <div>
-                    <span className="font-semibold text-slate-900">Auth #{a.id}</span>
-                    <span className="text-slate-500"> · {a.cpt_codes || '—'} · {a.auth_number || 'no auth #'}</span>
-                    <div className="text-xs text-slate-400 mt-0.5 capitalize">{a.status.replace('_', ' ')}{a.payer ? ` · ${a.payer}` : ''}</div>
+                    <span className="font-semibold text-stone-900">Auth #{a.id}</span>
+                    <span className="text-stone-500"> · {a.cpt_codes || '—'} · {a.auth_number || 'no auth #'}</span>
+                    <div className="text-xs text-stone-400 mt-0.5 capitalize">{a.status.replace('_', ' ')}{a.payer ? ` · ${a.payer}` : ''}</div>
                   </div>
                   <button
                     onClick={async () => {
@@ -162,21 +162,21 @@ function AppealDrawer({ appealId, onClose, onChanged, team }) {
         {authMatches && authMatches.matches.length > 0 && (
           <div className="mb-6">
             <button onClick={() => setShowAuths(!showAuths)}
-              className="w-full flex items-center justify-between bg-violet-50 border border-violet-200 rounded-xl px-4 py-3 hover:bg-violet-100/70 transition">
-              <span className="text-sm font-semibold text-violet-900">
+              className="w-full flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 hover:bg-amber-100/70 transition">
+              <span className="text-sm font-semibold text-amber-900">
                 🔗 {authMatches.matches.length} related authorization{authMatches.matches.length === 1 ? '' : 's'} found
-                <span className="font-normal text-violet-600"> — same patient or payer</span>
+                <span className="font-normal text-amber-700"> — same patient or payer</span>
               </span>
-              <span className="text-violet-600 text-lg">{showAuths ? '−' : '+'}</span>
+              <span className="text-amber-700 text-lg">{showAuths ? '−' : '+'}</span>
             </button>
             {showAuths && (
               <div className="mt-2 space-y-2">
                 {authMatches.matches.map((a) => (
-                  <div key={a.id} className="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm">
+                  <div key={a.id} className="flex items-center justify-between bg-white border border-stone-200 rounded-xl px-4 py-3 text-sm">
                     <div>
-                      <span className="font-semibold text-slate-900">Auth #{a.id}</span>
-                      <span className="text-slate-500"> · {a.cpt_codes || '—'} · {a.auth_number || 'no auth #'}</span>
-                      <div className="text-xs text-slate-400 mt-0.5">
+                      <span className="font-semibold text-stone-900">Auth #{a.id}</span>
+                      <span className="text-stone-500"> · {a.cpt_codes || '—'} · {a.auth_number || 'no auth #'}</span>
+                      <div className="text-xs text-stone-400 mt-0.5">
                         {a.effective_status === 'expired' ? 'Expired' : a.effective_status === 'approved' ? `Valid through ${a.valid_to}` : a.effective_status.replace('_', ' ')}
                         {a.patient_name === appeal.patient_name
                           ? <span className="ml-1.5 badge badge-violet !text-[10px]">Same patient</span>
@@ -236,20 +236,20 @@ function AppealDrawer({ appealId, onClose, onChanged, team }) {
           </div>
         </div>
 
-        <div className="text-sm font-semibold text-slate-700 mb-3">Activity timeline</div>
+        <div className="text-sm font-semibold text-stone-700 mb-3">Activity timeline</div>
         <div className="space-y-3 mb-5 max-h-[280px] overflow-y-auto pr-1">
-          {appeal.notes.length === 0 && <div className="text-sm text-slate-400">No notes yet — document your first action below.</div>}
+          {appeal.notes.length === 0 && <div className="text-sm text-stone-400">No notes yet — document your first action below.</div>}
           {appeal.notes.map((n) => (
             <div key={n.id} className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 shrink-0">
+              <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-xs font-bold text-stone-500 shrink-0">
                 {n.author.split(' ').map((w) => w[0]).join('').slice(0, 2)}
               </div>
-              <div className="flex-1 bg-slate-50 rounded-xl px-4 py-3">
+              <div className="flex-1 bg-stone-50 rounded-xl px-4 py-3">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-semibold text-slate-700">{n.author}</span>
-                  <span className="text-[11px] text-slate-400">{new Date(n.created_at).toLocaleString()}</span>
+                  <span className="text-xs font-semibold text-stone-700">{n.author}</span>
+                  <span className="text-[11px] text-stone-400">{new Date(n.created_at).toLocaleString()}</span>
                 </div>
-                <div className="text-sm text-slate-700">{n.note}</div>
+                <div className="text-sm text-stone-700">{n.note}</div>
               </div>
             </div>
           ))}
@@ -263,7 +263,7 @@ function AppealDrawer({ appealId, onClose, onChanged, team }) {
             ['👥 Peer-to-peer', 'Peer-to-peer review requested with medical director. '],
           ].map(([label, text]) => (
             <button key={label} onClick={() => setNoteText((t) => t + text)}
-              className="text-[11px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg px-2.5 py-1.5 transition">
+              className="text-[11px] font-medium bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-lg px-2.5 py-1.5 transition">
               {label}
             </button>
           ))}
@@ -313,8 +313,8 @@ function StartAppealModal({ denials, preselectClaimId, onClose, onStarted, team 
     <Modal onClose={onClose} wide>
       <div className="p-7">
         <h3 className="text-xl font-bold tracking-tight mb-1">Open a new appeal</h3>
-        <p className="text-sm text-slate-500 mb-5">Denied claims without an appeal yet, sorted by dollars at stake.</p>
-        <div className="max-h-[300px] overflow-y-auto border border-slate-200 rounded-xl mb-5">
+        <p className="text-sm text-stone-500 mb-5">Denied claims without an appeal yet, sorted by dollars at stake.</p>
+        <div className="max-h-[300px] overflow-y-auto border border-stone-200 rounded-xl mb-5">
           <table className="w-full text-sm tbl">
             <thead className="sticky top-0"><tr><th></th><th>Claim #</th><th>Patient</th><th>Payer</th><th>Reason</th><th className="!text-right">At stake</th></tr></thead>
             <tbody>
@@ -325,13 +325,13 @@ function StartAppealModal({ denials, preselectClaimId, onClose, onStarted, team 
                   <td className="font-mono text-xs">{d.claim_number}</td>
                   <td>{d.patient_name}</td>
                   <td>{d.payer}</td>
-                  <td className="text-xs text-slate-500">{d.denial_reason}</td>
+                  <td className="text-xs text-stone-500">{d.denial_reason}</td>
                   <td className="!text-right font-semibold">{fmtMoney2(d.at_stake)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {denials.length === 0 && <div className="p-6 text-center text-sm text-slate-400">Every denied claim already has an appeal. Nice work.</div>}
+          {denials.length === 0 && <div className="p-6 text-center text-sm text-stone-400">Every denied claim already has an appeal. Nice work.</div>}
         </div>
         <div className="grid sm:grid-cols-3 gap-3 mb-4">
           <div><label className="label">Priority</label>
@@ -418,7 +418,7 @@ export default function Denials({ initialAppealId, initialStartAppealClaimId, on
       <div className="flex flex-wrap items-center gap-2 mb-5">
         {tabs.map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition ${tab === t.id ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300'}`}>
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition ${tab === t.id ? 'bg-stone-900 text-white' : 'bg-white border border-stone-200 text-stone-600 hover:border-stone-300'}`}>
             {t.label}
           </button>
         ))}
@@ -451,12 +451,12 @@ export default function Denials({ initialAppealId, initialStartAppealClaimId, on
                   return (
                     <tr key={a.id} onClick={() => setDrawerId(a.id)} className="cursor-pointer">
                       <td className="font-mono text-xs">{a.claim_number}</td>
-                      <td className="font-medium">{a.patient_name}<div className="text-xs text-slate-400 font-normal">{a.payer}</div></td>
-                      <td className="text-xs text-slate-500 max-w-[220px]">{a.denial_reason}</td>
+                      <td className="font-medium">{a.patient_name}<div className="text-xs text-stone-400 font-normal">{a.payer}</div></td>
+                      <td className="text-xs text-stone-500 max-w-[220px]">{a.denial_reason}</td>
                       <td className="!text-right font-semibold">{fmtMoney2(a.at_stake)}</td>
                       <td><span className={`badge ${PRIORITY_META[a.priority].badge}`}>{PRIORITY_META[a.priority].label}</span></td>
-                      <td className="text-xs">{a.assignee_name || <span className="text-slate-400">Unassigned</span>}</td>
-                      <td className={`text-xs ${overdue ? 'text-rose-600 font-semibold' : 'text-slate-500'}`}>
+                      <td className="text-xs">{a.assignee_name || <span className="text-stone-400">Unassigned</span>}</td>
+                      <td className={`text-xs ${overdue ? 'text-rose-600 font-semibold' : 'text-stone-500'}`}>
                         {a.follow_up_date ? fmtDate(a.follow_up_date) : '—'}{overdue ? ' ⚠' : ''}
                       </td>
                       <td><span className={`badge ${STATUS_META[a.status].badge}`}>{STATUS_META[a.status].label}</span></td>
@@ -470,8 +470,8 @@ export default function Denials({ initialAppealId, initialStartAppealClaimId, on
       )}
 
       {unworked.length > 0 && tab === 'all' && (
-        <div className="mt-4 text-sm text-slate-500">
-          <strong className="text-slate-700">{unworked.length}</strong> denied claims have no appeal yet
+        <div className="mt-4 text-sm text-stone-500">
+          <strong className="text-stone-700">{unworked.length}</strong> denied claims have no appeal yet
           ({fmtMoney2(unworked.reduce((s, d) => s + d.at_stake, 0))} at stake).
           {canWrite && <button onClick={() => setShowStart(true)} className="ml-2 text-emerald-600 font-semibold hover:underline">Start working them →</button>}
         </div>

@@ -68,18 +68,18 @@ export default function Digest() {
 
       {eraResult && !eraResult.error && (
         <div className="card p-5 mb-5 !border-emerald-200 bg-emerald-50/50">
-          <div className="font-semibold text-slate-900 mb-1">835 processed — {eraResult.file}</div>
-          <div className="text-sm text-slate-600">
+          <div className="font-semibold text-stone-900 mb-1">835 processed — {eraResult.file}</div>
+          <div className="text-sm text-stone-600">
             {eraResult.payer && <>Payer: <strong>{eraResult.payer}</strong> · </>}
             {eraResult.checkNumber && <>Check/EFT: <strong>{eraResult.checkNumber}</strong> · </>}
             {eraResult.payDate && <>Date: <strong>{eraResult.payDate}</strong></>}
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-            {[['Matched', eraResult.matched, 'text-slate-700'], ['Paid in full', eraResult.paid, 'text-emerald-700'],
+            {[['Matched', eraResult.matched, 'text-stone-700'], ['Paid in full', eraResult.paid, 'text-emerald-700'],
               ['Partial', eraResult.partial, 'text-amber-700'], ['Denied', eraResult.denied, 'text-rose-700']].map(([l, v, c]) => (
-              <div key={l} className="bg-white rounded-xl border border-slate-200 p-3 text-center">
+              <div key={l} className="bg-white rounded-xl border border-stone-200 p-3 text-center">
                 <div className={`text-2xl font-bold ${c}`}>{v}</div>
-                <div className="text-xs text-slate-500">{l}</div>
+                <div className="text-xs text-stone-500">{l}</div>
               </div>
             ))}
           </div>
@@ -89,7 +89,7 @@ export default function Digest() {
               {eraResult.unmatched.length > 5 && ` +${eraResult.unmatched.length - 5} more`}
             </div>
           )}
-          <button onClick={() => setEraResult(null)} className="text-xs text-slate-500 underline mt-3">dismiss</button>
+          <button onClick={() => setEraResult(null)} className="text-xs text-stone-500 underline mt-3">dismiss</button>
         </div>
       )}
       {eraResult?.error && (
@@ -105,33 +105,33 @@ export default function Digest() {
         <>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div className="card p-5 border-l-4 !border-l-amber-400">
-              <div className="text-3xl font-bold text-slate-900">{data.overdueFollowups}</div>
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mt-1">Overdue follow-ups</div>
+              <div className="text-3xl font-bold text-stone-900">{data.overdueFollowups}</div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-stone-500 mt-1">Overdue follow-ups</div>
             </div>
             <div className="card p-5 border-l-4 !border-l-rose-400">
-              <div className="text-3xl font-bold text-slate-900">{data.filingCritical.count}</div>
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mt-1">Filing deadlines ≤ 14d</div>
+              <div className="text-3xl font-bold text-stone-900">{data.filingCritical.count}</div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-stone-500 mt-1">Filing deadlines ≤ 14d</div>
               <div className="text-xs text-rose-600 mt-1 font-medium">{fmtMoney(data.filingCritical.amount)} at stake</div>
             </div>
             <div className="card p-5 border-l-4 !border-l-orange-400">
-              <div className="text-3xl font-bold text-slate-900">{data.unworkedDenials.count}</div>
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mt-1">Unworked denials</div>
-              <div className="text-xs text-slate-500 mt-1">{fmtMoney(data.unworkedDenials.amount)} waiting</div>
+              <div className="text-3xl font-bold text-stone-900">{data.unworkedDenials.count}</div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-stone-500 mt-1">Unworked denials</div>
+              <div className="text-xs text-stone-500 mt-1">{fmtMoney(data.unworkedDenials.amount)} waiting</div>
             </div>
             <div className="card p-5 border-l-4 !border-l-emerald-400">
               <div className="text-3xl font-bold text-emerald-700">{fmtMoney(data.recoveredThisWeek.amount)}</div>
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mt-1">Recovered this week</div>
-              <div className="text-xs text-slate-500 mt-1">{data.recoveredThisWeek.count} appeals won</div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-stone-500 mt-1">Recovered this week</div>
+              <div className="text-xs text-stone-500 mt-1">{data.recoveredThisWeek.count} appeals won</div>
             </div>
           </div>
 
           {(data.authAlerts?.expiring?.length > 0 || (data.authAlerts?.staleWaiting || 0) > 0) && (
             <div className="card p-6 mb-6 !border-amber-200 bg-amber-50/40">
-              <h3 className="font-semibold text-slate-900 mb-3">⚠️ Prior authorization alerts</h3>
+              <h3 className="font-semibold text-stone-900 mb-3">⚠️ Prior authorization alerts</h3>
               <div className="space-y-2">
                 {data.authAlerts.expiring.map((a) => (
                   <div key={a.id} className="flex items-center justify-between text-sm bg-white rounded-xl border border-amber-100 px-4 py-2.5">
-                    <span><strong>{a.patient_name}</strong> <span className="text-slate-500">· auth #{a.id} · valid through {a.valid_to}</span></span>
+                    <span><strong>{a.patient_name}</strong> <span className="text-stone-500">· auth #{a.id} · valid through {a.valid_to}</span></span>
                     <span className={`badge ${a.days_left < 0 ? 'badge-rose' : a.days_left <= 7 ? 'badge-rose' : 'badge-amber'}`}>
                       {a.days_left < 0 ? 'Expired' : `${a.days_left}d left`}
                     </span>
@@ -148,14 +148,14 @@ export default function Digest() {
 
           {(data.denialPatterns?.length > 0 || (data.unappealedDenials?.count || 0) > 0) && (
             <div className="card p-6 mb-6 !border-rose-200 bg-rose-50/30">
-              <h3 className="font-semibold text-slate-900 mb-1">🔍 Denial patterns detected</h3>
-              <p className="text-xs text-slate-500 mb-3">Same payer denying the same way, repeatedly — fix the root cause, not just the claims</p>
+              <h3 className="font-semibold text-stone-900 mb-1">🔍 Denial patterns detected</h3>
+              <p className="text-xs text-stone-500 mb-3">Same payer denying the same way, repeatedly — fix the root cause, not just the claims</p>
               <div className="space-y-2">
                 {data.denialPatterns?.map((p, i) => (
                   <div key={i} className="flex items-center justify-between text-sm bg-white rounded-xl border border-rose-100 px-4 py-2.5">
-                    <span><strong>{p.payer}</strong> <span className="text-slate-500">· {p.denial_reason}</span></span>
+                    <span><strong>{p.payer}</strong> <span className="text-stone-500">· {p.denial_reason}</span></span>
                     <span className="flex items-center gap-2">
-                      <span className="text-xs text-slate-500">{p.n} claims · ${p.at_stake.toLocaleString()} at stake</span>
+                      <span className="text-xs text-stone-500">{p.n} claims · ${p.at_stake.toLocaleString()} at stake</span>
                     </span>
                   </div>
                 ))}
@@ -169,22 +169,22 @@ export default function Digest() {
           )}
 
           <div className="card p-6">
-            <h3 className="font-semibold text-slate-900 mb-4">Recent team activity</h3>
+            <h3 className="font-semibold text-stone-900 mb-4">Recent team activity</h3>
             {data.recentActivity.length === 0 ? (
-              <div className="text-sm text-slate-400">No activity in the last 24 hours. Quiet day — or nobody's logging their work.</div>
+              <div className="text-sm text-stone-400">No activity in the last 24 hours. Quiet day — or nobody's logging their work.</div>
             ) : (
               <div className="space-y-3">
                 {data.recentActivity.map((a, i) => (
                   <div key={i} className="flex items-center gap-3 text-sm">
-                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-xs font-bold text-stone-500 shrink-0">
                       {(a.user_name || '?').split(' ').map((w) => w[0]).join('').slice(0, 2)}
                     </div>
                     <div className="flex-1">
                       <strong>{a.user_name || 'Someone'}</strong> {ACTION_LABELS[a.action] || a.action}
-                      {a.claim_number && <span className="font-mono text-xs text-slate-500"> {a.claim_number}</span>}
-                      {a.detail && <span className="text-slate-500"> — {a.detail}</span>}
+                      {a.claim_number && <span className="font-mono text-xs text-stone-500"> {a.claim_number}</span>}
+                      {a.detail && <span className="text-stone-500"> — {a.detail}</span>}
                     </div>
-                    <div className="text-xs text-slate-400 shrink-0">
+                    <div className="text-xs text-stone-400 shrink-0">
                       {new Date(a.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                     </div>
                   </div>

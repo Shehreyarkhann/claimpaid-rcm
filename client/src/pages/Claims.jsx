@@ -21,12 +21,12 @@ const EMPTY_FORM = {
 };
 
 export function FilingBadge({ days }) {
-  if (days == null) return <span className="text-slate-300">—</span>;
+  if (days == null) return <span className="text-stone-300">—</span>;
   if (days < 0) return <span className="badge badge-rose">Expired {-days}d ago</span>;
   if (days <= 14) return <span className="badge badge-rose">{days}d left</span>;
   if (days <= 30) return <span className="badge badge-amber">{days}d left</span>;
-  if (days <= 60) return <span className="text-xs text-slate-500">{days}d</span>;
-  return <span className="text-xs text-slate-400">{days}d</span>;
+  if (days <= 60) return <span className="text-xs text-stone-500">{days}d</span>;
+  return <span className="text-xs text-stone-400">{days}d</span>;
 }
 
 function ClaimModal({ claim, payers, onClose, onSaved, onCheckEligibility }) {
@@ -91,9 +91,9 @@ function ClaimModal({ claim, payers, onClose, onSaved, onCheckEligibility }) {
           <div><label className="label">Denial reason</label>
             <input className="input" value={form.denial_reason} onChange={set('denial_reason')} placeholder="If denied…" /></div>
         </div>
-        <div className="mt-5 pt-5 border-t border-slate-100">
+        <div className="mt-5 pt-5 border-t border-stone-100">
           <div className="flex items-center justify-between mb-3">
-            <div className="text-sm font-semibold text-slate-700">Coding <span className="font-normal text-slate-400">— used by the claim scrubber & 837 export</span></div>
+            <div className="text-sm font-semibold text-stone-700">Coding <span className="font-normal text-stone-400">— used by the claim scrubber & 837 export</span></div>
             {claim && (
               <button className="btn btn-sm btn-outline" onClick={() => setShowCoding(true)}>
                 ✨ AI code assist
@@ -120,17 +120,17 @@ function ClaimModal({ claim, payers, onClose, onSaved, onCheckEligibility }) {
         </div>
 
         {claim && activity.length > 0 && (
-          <div className="mt-6 pt-5 border-t border-slate-100">
-            <div className="text-sm font-semibold text-slate-700 mb-3">Activity</div>
+          <div className="mt-6 pt-5 border-t border-stone-100">
+            <div className="text-sm font-semibold text-stone-700 mb-3">Activity</div>
             <div className="space-y-2.5 max-h-[200px] overflow-y-auto pr-1">
               {activity.map((a) => (
                 <div key={a.id} className="flex items-center gap-2.5 text-[13px]">
-                  <span className="text-slate-400 shrink-0 w-32 text-xs">
+                  <span className="text-stone-400 shrink-0 w-32 text-xs">
                     {new Date(a.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                   </span>
-                  <span className="text-slate-600">
-                    <strong className="text-slate-800">{a.user_name || 'System'}</strong> {a.action.replace(/_/g, ' ')}
-                    {a.detail && <span className="text-slate-500"> — {a.detail}</span>}
+                  <span className="text-stone-600">
+                    <strong className="text-stone-800">{a.user_name || 'System'}</strong> {a.action.replace(/_/g, ' ')}
+                    {a.detail && <span className="text-stone-500"> — {a.detail}</span>}
                   </span>
                 </div>
               ))}
@@ -165,7 +165,7 @@ function bandForScore(score) {
 
 function ScoreBadge({ score, band, band_label, compact }) {
   const meta = band ? { band, band_label } : bandForScore(score);
-  if (score == null || !meta) return <span className="text-slate-300">—</span>;
+  if (score == null || !meta) return <span className="text-stone-300">—</span>;
   return (
     <span className={`badge ${BAND_BADGE[meta.band]}`} title={meta.band_label}>
       {compact ? score : `${score} · ${meta.band_label}`}
@@ -183,18 +183,18 @@ function ScrubResultsModal({ result, onClose }) {
     <Modal onClose={onClose} wide>
       <div className="p-7">
         <h3 className="text-xl font-bold tracking-tight mb-1">Scrub results</h3>
-        <p className="text-sm text-slate-500 mb-5">Pre-bill validation — fix errors before submitting</p>
+        <p className="text-sm text-stone-500 mb-5">Pre-bill validation — fix errors before submitting</p>
 
         <div className="grid grid-cols-4 gap-3 mb-6">
           {[
-            ['Checked', summary.total, 'text-slate-900'],
+            ['Checked', summary.total, 'text-stone-900'],
             ['Clean', summary.clean, 'text-emerald-600'],
             ['Warnings', summary.warnings, 'text-amber-600'],
             ['Failed', summary.failed, 'text-rose-600'],
           ].map(([l, v, c]) => (
-            <div key={l} className="bg-slate-50 rounded-xl p-4 text-center">
+            <div key={l} className="bg-stone-50 rounded-xl p-4 text-center">
               <div className={`text-2xl font-bold ${c}`}>{v}</div>
-              <div className="text-xs text-slate-500 mt-0.5">{l}</div>
+              <div className="text-xs text-stone-500 mt-0.5">{l}</div>
             </div>
           ))}
         </div>
@@ -202,7 +202,7 @@ function ScrubResultsModal({ result, onClose }) {
         <div className="flex gap-2 mb-4">
           {[['all', 'All'], ['issues', 'With issues'], ['clean', 'Clean']].map(([v, l]) => (
             <button key={v} onClick={() => setFilter(v)}
-              className={`px-3.5 py-1.5 rounded-lg text-sm font-medium ${filter === v ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'}`}>
+              className={`px-3.5 py-1.5 rounded-lg text-sm font-medium ${filter === v ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-600'}`}>
               {l}
             </button>
           ))}
@@ -223,12 +223,12 @@ function ScrubResultsModal({ result, onClose }) {
               {r.issues.map((iss, i) => (
                 <div key={i} className="flex gap-2.5 text-sm py-1">
                   <span className={`badge shrink-0 ${iss.severity === 'error' ? 'badge-rose' : 'badge-amber'}`}>{iss.rule}</span>
-                  <span className="text-slate-700">{iss.message}</span>
+                  <span className="text-stone-700">{iss.message}</span>
                 </div>
               ))}
             </div>
           ))}
-          {shown.length === 0 && <div className="text-sm text-slate-400 text-center py-6">Nothing in this view.</div>}
+          {shown.length === 0 && <div className="text-sm text-stone-400 text-center py-6">Nothing in this view.</div>}
         </div>
 
         <div className="flex justify-end mt-6">
@@ -390,10 +390,10 @@ export default function Claims({ onCheckEligibility }) {
       />
       {canWrite && (
         <div className="mb-5">
-          <a href="/api/claims/template/csv" className="text-xs text-slate-500 hover:text-slate-700 underline underline-offset-2">
+          <a href="/api/claims/template/csv" className="text-xs text-stone-500 hover:text-stone-700 underline underline-offset-2">
             Download CSV template
           </a>
-          <span className="text-xs text-slate-400 ml-3">Import 837: drop in the claim file your EHR exports — claims land in the worklist, no re-keying.</span>
+          <span className="text-xs text-stone-400 ml-3">Import 837: drop in the claim file your EHR exports — claims land in the worklist, no re-keying.</span>
           <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleUpload} />
           <input ref={file837Ref} type="file" accept=".837,.txt,.edi,.dat,.x12" className="hidden" onChange={handleUpload837} />
         </div>
@@ -451,14 +451,14 @@ export default function Claims({ onCheckEligibility }) {
 
       {/* Bulk action bar */}
       {canWrite && selected.size > 0 && (
-        <div className="sticky top-4 z-30 mb-4 flex items-center gap-2 bg-slate-900 text-white rounded-2xl px-5 py-3 shadow-lg flex-wrap">
+        <div className="sticky top-4 z-30 mb-4 flex items-center gap-2 bg-stone-900 text-white rounded-2xl px-5 py-3 shadow-lg flex-wrap">
           <span className="text-sm font-semibold mr-2">{selected.size} selected</span>
           <button disabled={bulkBusy} onClick={() => bulkAction('touch', null, 'marked as worked')} className="btn !bg-white/10 hover:!bg-white/20 !text-white !py-1.5 !text-xs">✓ Mark worked</button>
           <button disabled={bulkBusy} onClick={() => bulkAction('set_status', 'in_ar', 'moved to A/R')} className="btn !bg-white/10 hover:!bg-white/20 !text-white !py-1.5 !text-xs">→ Move to A/R</button>
           <button disabled={bulkBusy} onClick={() => bulkAction('start_appeals', 'medium', '')} className="btn !bg-emerald-500 hover:!bg-emerald-600 !text-white !py-1.5 !text-xs">⚠️ Open appeals</button>
-          <button disabled={bulkBusy} onClick={runScrub} className="btn !bg-sky-500 hover:!bg-sky-600 !text-white !py-1.5 !text-xs">🔍 Scrub claims</button>
-          <button disabled={bulkBusy} onClick={export837} className="btn !bg-violet-500 hover:!bg-violet-600 !text-white !py-1.5 !text-xs">📄 Export 837P</button>
-          <button onClick={() => setSelected(new Set())} className="btn !text-slate-300 hover:!text-white !py-1.5 !text-xs ml-auto">Clear</button>
+          <button disabled={bulkBusy} onClick={runScrub} className="btn !bg-amber-500 hover:!bg-amber-700 !text-white !py-1.5 !text-xs">🔍 Scrub claims</button>
+          <button disabled={bulkBusy} onClick={export837} className="btn !bg-amber-500 hover:!bg-amber-700 !text-white !py-1.5 !text-xs">📄 Export 837P</button>
+          <button onClick={() => setSelected(new Set())} className="btn !text-stone-300 hover:!text-white !py-1.5 !text-xs ml-auto">Clear</button>
         </div>
       )}
       {scrubResult && <ScrubResultsModal result={scrubResult} onClose={() => { setScrubResult(null); fetchClaims(); }} />}
@@ -483,22 +483,22 @@ export default function Claims({ onCheckEligibility }) {
                 {data.claims.map((c) => (
                   <tr key={c.id} className={selected.has(c.id) ? '!bg-emerald-50/60' : ''}>
                     {canWrite && <td className="!pr-0"><input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleSelect(c.id)} className="rounded" /></td>}
-                    <td className="font-mono text-xs text-slate-500">{c.claim_number}</td>
+                    <td className="font-mono text-xs text-stone-500">{c.claim_number}</td>
                     <td className="font-medium">{c.patient_name}</td>
-                    <td className="text-slate-500">{c.payer}</td>
-                    <td className="text-slate-500">{c.service_date}</td>
+                    <td className="text-stone-500">{c.payer}</td>
+                    <td className="text-stone-500">{c.service_date}</td>
                     <td className="!text-right font-medium">{fmtMoney2(c.billed_amount)}</td>
-                    <td className="!text-right text-slate-500">{fmtMoney2(c.paid_amount)}</td>
+                    <td className="!text-right text-stone-500">{fmtMoney2(c.paid_amount)}</td>
                     <td>
                       <span className={`badge ${STATUS_META[c.status].badge}`}>{STATUS_META[c.status].label}</span>
                       {c.denial_reason && <div className="text-[11px] text-rose-600 mt-1">{c.denial_reason}</div>}
                     </td>
                     <td><ScoreBadge score={c.readiness_score} compact /></td>
                     <td><FilingBadge days={c.days_until_filing} /></td>
-                    <td className="!text-right text-slate-500">{c.days_in_ar}</td>
+                    <td className="!text-right text-stone-500">{c.days_in_ar}</td>
                     {canWrite && (
                       <td className="!text-center whitespace-nowrap">
-                        <button onClick={() => setModal(c)} className="text-sky-600 hover:text-sky-800 text-xs font-semibold mr-3">Edit</button>
+                        <button onClick={() => setModal(c)} className="text-amber-700 hover:text-amber-800 text-xs font-semibold mr-3">Edit</button>
                         <button onClick={() => handleDelete(c.id, c.claim_number)} className="text-rose-600 hover:text-rose-800 text-xs font-semibold">Delete</button>
                       </td>
                     )}
@@ -511,7 +511,7 @@ export default function Claims({ onCheckEligibility }) {
       )}
 
       {data && data.total > 0 && (
-        <div className="flex items-center justify-between mt-4 text-sm text-slate-500">
+        <div className="flex items-center justify-between mt-4 text-sm text-stone-500">
           <div>{data.total.toLocaleString()} claims</div>
           <div className="flex items-center gap-2">
             <button disabled={page <= 1} onClick={() => setPage(page - 1)} className="btn btn-outline !px-3 !py-1.5">← Prev</button>

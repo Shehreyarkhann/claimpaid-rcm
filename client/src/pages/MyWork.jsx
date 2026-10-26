@@ -7,7 +7,7 @@ const TYPE_META = {
   followup: { icon: '⏰', label: 'Follow-up', color: 'border-l-amber-400', bg: 'bg-amber-50' },
   filing: { icon: '📅', label: 'Filing deadline', color: 'border-l-rose-400', bg: 'bg-rose-50' },
   denial: { icon: '⚠️', label: 'Unworked denial', color: 'border-l-orange-400', bg: 'bg-orange-50' },
-  stale: { icon: '💤', label: 'Stale A/R', color: 'border-l-slate-400', bg: 'bg-slate-50' },
+  stale: { icon: '💤', label: 'Stale A/R', color: 'border-l-stone-400', bg: 'bg-stone-50' },
 };
 
 export default function MyWork({ onOpenAppeal, onOpenClaim, onStartAppeal }) {
@@ -41,10 +41,10 @@ export default function MyWork({ onOpenAppeal, onOpenClaim, onStartAppeal }) {
         title="My Work"
         subtitle={data ? `${visible.length} items prioritized for you · ${fmtMoney2(data.summary.totalAtStake)} total at stake` : 'Your prioritized daily queue'}
         actions={[
-          <div key="scope" className="flex gap-1 bg-white border border-slate-200 rounded-xl p-1">
+          <div key="scope" className="flex gap-1 bg-white border border-stone-200 rounded-xl p-1">
             {[['all', 'Team queue'], ['mine', 'Assigned to me']].map(([v, l]) => (
               <button key={v} onClick={() => setScope(v)}
-                className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition ${scope === v ? 'bg-slate-900 text-white' : 'text-slate-500 hover:text-slate-800'}`}>
+                className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition ${scope === v ? 'bg-stone-900 text-white' : 'text-stone-500 hover:text-stone-800'}`}>
                 {l}
               </button>
             ))}
@@ -82,18 +82,18 @@ export default function MyWork({ onOpenAppeal, onOpenClaim, onStartAppeal }) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-slate-900">{item.title}</span>
+                      <span className="font-semibold text-stone-900">{item.title}</span>
                       <span className="badge badge-slate">{meta.label}</span>
                       {item.urgent && <span className="badge badge-rose">Urgent</span>}
                     </div>
-                    <div className="text-sm text-slate-500 mt-0.5">{item.subtitle}</div>
-                    <div className="text-[13px] text-slate-600 mt-1.5 flex items-center gap-1.5">
-                      <span className="text-slate-400">→</span> {item.reason}
+                    <div className="text-sm text-stone-500 mt-0.5">{item.subtitle}</div>
+                    <div className="text-[13px] text-stone-600 mt-1.5 flex items-center gap-1.5">
+                      <span className="text-stone-400">→</span> {item.reason}
                     </div>
                   </div>
                   <div className="text-right shrink-0 hidden sm:block">
-                    <div className="text-lg font-bold text-slate-900">{fmtMoney2(item.amount)}</div>
-                    <div className="text-[11px] text-slate-400 uppercase tracking-wide">at stake</div>
+                    <div className="text-lg font-bold text-stone-900">{fmtMoney2(item.amount)}</div>
+                    <div className="text-[11px] text-stone-400 uppercase tracking-wide">at stake</div>
                   </div>
                   <div className="flex flex-col gap-2 shrink-0">
                     <button onClick={() => handleAction(item)} className="btn btn-primary !py-2 !text-[13px]">
@@ -109,7 +109,7 @@ export default function MyWork({ onOpenAppeal, onOpenClaim, onStartAppeal }) {
           </div>
 
           {doneKeys.size > 0 && (
-            <div className="mt-4 text-center text-sm text-slate-500">
+            <div className="mt-4 text-center text-sm text-stone-500">
               {doneKeys.size} item{doneKeys.size > 1 ? 's' : ''} worked this session 🎉
             </div>
           )}

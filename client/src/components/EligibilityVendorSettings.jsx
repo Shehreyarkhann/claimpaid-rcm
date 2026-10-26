@@ -67,9 +67,9 @@ export default function EligibilityVendorSettings() {
     <div className="card p-6 mb-5">
       <div className="flex items-center gap-2.5 mb-1">
         <div className="text-xl">🩺</div>
-        <div className="font-semibold text-slate-900">Eligibility vendor</div>
+        <div className="font-semibold text-stone-900">Eligibility vendor</div>
       </div>
-      <p className="text-sm text-slate-500 mb-5 max-w-2xl leading-relaxed">
+      <p className="text-sm text-stone-500 mb-5 max-w-2xl leading-relaxed">
         Real-time eligibility checks (270/271-style) run against this vendor. A vendor account —
         e.g. Availity, pVerify, Eligible, or Change Healthcare — <strong>plus payer enrollment</strong> for
         every payer you check against is required. Until a vendor is saved here, real-time checks
@@ -104,7 +104,7 @@ export default function EligibilityVendorSettings() {
                 <option value="demo-tst">Demo — test host (tst.api.availity.com)</option>
                 <option value="demo-qua">Demo — QA host (qua.api.availity.com)</option>
               </select>
-              <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+              <p className="text-xs text-stone-400 mt-1.5 leading-relaxed">
                 Demo-plan credentials are rejected by the production endpoints. Availity routes demo
                 plans by host — if one demo host answers "Not Found", switch to the other and re-run
                 the check. When your Standard plan is approved, switch back to Production.
@@ -115,7 +115,7 @@ export default function EligibilityVendorSettings() {
               <textarea className="input font-mono text-xs" rows={4} value={av.payer_map_lines}
                 onChange={(e) => setAv({ ...av, payer_map_lines: e.target.value })}
                 placeholder={'Aetna = AETNA\nCigna = CIGNA'} />
-              <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+              <p className="text-xs text-stone-400 mt-1.5 leading-relaxed">
                 Availity identifies payers by its own IDs (see Availity's payer list). Checks also use your
                 billing NPI from Organization / EDI settings, and your app must be subscribed to Availity's
                 Coverages API product. Free signup: developer.availity.com.

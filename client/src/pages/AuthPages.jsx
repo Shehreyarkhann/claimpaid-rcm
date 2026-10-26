@@ -4,37 +4,37 @@ import { api } from '../api';
 
 function BrandPanel() {
   return (
-    <div className="hidden lg:flex flex-col justify-between bg-[#0b1220] text-white p-12 relative overflow-hidden w-[46%]">
+    <div className="hidden lg:flex flex-col justify-between bg-[#17251F] text-white p-12 relative overflow-hidden w-[46%]">
       <div className="absolute inset-0 opacity-40"
-        style={{ background: 'radial-gradient(600px 400px at 20% 20%, rgba(16,185,129,0.25), transparent), radial-gradient(500px 400px at 80% 90%, rgba(14,165,233,0.18), transparent)' }} />
+        style={{ background: 'radial-gradient(600px 400px at 20% 20%, rgba(16,185,129,0.25), transparent), radial-gradient(500px 400px at 80% 90%, rgba(217,119,6,0.14), transparent)' }} />
       <div className="relative flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center font-extrabold text-[#0b1220] text-lg">P</div>
+        <img src="/app/claimpaid-icon.webp" alt="ClaimPaid" className="w-10 h-10 rounded-xl shadow-[0_4px_16px_rgba(16,185,129,0.4)]" />
         <div>
           <div className="font-bold text-lg leading-tight">ClaimPaid RCM</div>
-          <div className="text-xs text-slate-400">Revenue Cycle Analytics</div>
+          <div className="text-xs text-stone-400">Revenue Cycle Analytics</div>
         </div>
       </div>
       <div className="relative">
-        <div className="text-3xl font-bold leading-snug tracking-tight">
+        <div className="font-display text-3xl font-bold leading-snug tracking-tight">
           Turn denied claims<br />into recovered revenue.
         </div>
-        <p className="text-slate-400 mt-4 max-w-sm text-[15px] leading-relaxed">
+        <p className="text-stone-400 mt-4 max-w-sm text-[15px] leading-relaxed">
           Track every claim, work every denial, and watch your A/R shrink — purpose-built for billing teams.
         </p>
         <div className="grid grid-cols-3 gap-4 mt-10">
           {[
-            ['98%', 'Faster denial triage'],
-            ['$2.4M', 'Recovered by customers'],
-            ['4.9★', 'Billing team rating'],
+            ['15', 'Claim-scrubber rules'],
+            ['370', 'Coding library codes'],
+            ['7+', 'Payer deadlines built in — plus custom'],
           ].map(([v, l]) => (
             <div key={l}>
               <div className="text-2xl font-bold text-emerald-400">{v}</div>
-              <div className="text-xs text-slate-400 mt-1">{l}</div>
+              <div className="text-xs text-stone-400 mt-1">{l}</div>
             </div>
           ))}
         </div>
       </div>
-      <div className="relative text-xs text-slate-500">HIPAA-aware · SOC 2 controls · Your data stays yours</div>
+      <div className="relative text-xs text-stone-500">BAA available · Fully audit-logged · Encrypted backups</div>
     </div>
   );
 }
@@ -108,9 +108,9 @@ function GoogleButton({ onCredential, text }) {
   return (
     <div>
       <div className="flex items-center gap-3 my-1">
-        <div className="flex-1 h-px bg-slate-200" />
-        <span className="text-xs text-slate-400 font-medium">or</span>
-        <div className="flex-1 h-px bg-slate-200" />
+        <div className="flex-1 h-px bg-stone-200" />
+        <span className="text-xs text-stone-400 font-medium">or</span>
+        <div className="flex-1 h-px bg-stone-200" />
       </div>
       <div ref={btnRef} className="flex justify-center" />
     </div>
@@ -211,10 +211,10 @@ function MfaChallenge({ mfaToken, email, onBack, purpose, enforcedBanner, onVeri
           )}
           <div className="text-center">
             <div className="w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center text-2xl mx-auto mb-4">🔐</div>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">Check your email</h2>
-            <p className="text-sm text-slate-500 mt-2">
+            <h2 className="text-2xl font-bold tracking-tight text-stone-900">Check your email</h2>
+            <p className="text-sm text-stone-500 mt-2">
               We sent a 6-digit verification code to<br />
-              <strong className="text-slate-700">{email}</strong>
+              <strong className="text-stone-700">{email}</strong>
             </p>
           </div>
           {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 text-center">{error}</div>}
@@ -231,7 +231,7 @@ function MfaChallenge({ mfaToken, email, onBack, purpose, enforcedBanner, onVeri
                   inputMode="numeric"
                   maxLength={1}
                   disabled={busy}
-                  className="w-12 h-14 text-center text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition disabled:opacity-50"
+                  className="w-12 h-14 text-center text-2xl font-bold border-2 border-stone-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition disabled:opacity-50"
                 />
               ))}
             </div>
@@ -241,13 +241,13 @@ function MfaChallenge({ mfaToken, email, onBack, purpose, enforcedBanner, onVeri
           </form>
           <div className="text-center text-sm">
             {cooldown > 0 ? (
-              <span className="text-slate-400">Resend code in {cooldown}s</span>
+              <span className="text-stone-400">Resend code in {cooldown}s</span>
             ) : (
               <button onClick={resend} className="text-emerald-600 font-semibold hover:underline">Didn't get it? Resend code</button>
             )}
           </div>
           <div className="text-center">
-            <button onClick={onBack} className="text-sm text-slate-400 hover:text-slate-600">← Back to sign in</button>
+            <button onClick={onBack} className="text-sm text-stone-400 hover:text-stone-600">← Back to sign in</button>
           </div>
         </div>
       </div>
@@ -297,21 +297,21 @@ export function OrgMfaRequiredScreen({ initialToken, orgName }) {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-sm space-y-5 text-center">
           <div className="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center text-2xl mx-auto">🛡️</div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+          <h2 className="text-2xl font-bold tracking-tight text-stone-900">
             Your organization requires two-factor authentication
           </h2>
-          <p className="text-sm text-slate-500 leading-relaxed">
-            {orgName ? <><strong className="text-slate-700">{orgName}</strong> requires every member to verify with a one-time email code. </> : null}
+          <p className="text-sm text-stone-500 leading-relaxed">
+            {orgName ? <><strong className="text-stone-700">{orgName}</strong> requires every member to verify with a one-time email code. </> : null}
             This is a one-time setup — after you verify, two-factor stays on for your account and you won't see this again.
           </p>
           {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}
           <button onClick={sendCode} disabled={sending} className="btn btn-primary w-full !py-3 disabled:opacity-50">
             {sending ? 'Sending…' : 'Send verification code'}
           </button>
-          <p className="text-xs text-slate-400">
-            The code goes to <strong className="text-slate-600">{user?.email}</strong>. No access to that inbox? Ask your workspace owner to update your email address.
+          <p className="text-xs text-stone-400">
+            The code goes to <strong className="text-stone-600">{user?.email}</strong>. No access to that inbox? Ask your workspace owner to update your email address.
           </p>
-          <button onClick={logout} className="text-sm text-slate-400 hover:text-slate-600">
+          <button onClick={logout} className="text-sm text-stone-400 hover:text-stone-600">
             Sign out
           </button>
         </div>
@@ -367,24 +367,24 @@ export function Login({ goSignup, goForgot }) {
       <div className="flex-1 flex items-center justify-center p-8">
         <form onSubmit={submit} className="w-full max-w-sm space-y-5">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">Welcome back</h2>
-            <p className="text-sm text-slate-500 mt-1">Sign in to your billing workspace</p>
+            <h2 className="text-2xl font-bold tracking-tight text-stone-900">Welcome back</h2>
+            <p className="text-sm text-stone-500 mt-1">Sign in to your billing workspace</p>
           </div>
           {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}
           <Field label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" required />
           <div>
             <Field label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
             <div className="text-right mt-1.5">
-              <button type="button" onClick={goForgot} className="text-xs text-slate-500 hover:text-emerald-600 font-medium">Forgot password?</button>
+              <button type="button" onClick={goForgot} className="text-xs text-stone-500 hover:text-emerald-600 font-medium">Forgot password?</button>
             </div>
           </div>
           <button className="btn btn-primary w-full !py-3" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
           <GoogleButton onCredential={handleGoogle} text="continue_with" />
-          {busy && <p className="text-xs text-slate-500 text-center">Signing you in with Google — one moment…</p>}
-          <p className="text-sm text-slate-500 text-center">
+          {busy && <p className="text-xs text-stone-500 text-center">Signing you in with Google — one moment…</p>}
+          <p className="text-sm text-stone-500 text-center">
             New to ClaimPaid? <button type="button" onClick={goSignup} className="text-emerald-600 font-semibold hover:underline">Create an account</button>
           </p>
-          <p className="text-xs text-slate-400 text-center bg-slate-50 rounded-xl px-4 py-3">
+          <p className="text-xs text-stone-400 text-center bg-stone-50 rounded-xl px-4 py-3">
             New to ClaimPaid? <strong>Start your 30-day free trial</strong> — no card required.
           </p>
         </form>
@@ -421,8 +421,8 @@ export function Signup({ goLogin }) {
       <div className="flex-1 flex items-center justify-center p-8">
         <form onSubmit={submit} className="w-full max-w-sm space-y-5">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">Create your workspace</h2>
-            <p className="text-sm text-slate-500 mt-1">Your billing team's data stays isolated and private</p>
+            <h2 className="text-2xl font-bold tracking-tight text-stone-900">Create your workspace</h2>
+            <p className="text-sm text-stone-500 mt-1">Your billing team's data stays isolated and private</p>
           </div>
           {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}
           <Field label="Company name" value={form.orgName} onChange={set('orgName')} placeholder="Acme Billing Services" required />
@@ -430,12 +430,12 @@ export function Signup({ goLogin }) {
           <Field label="Work email" type="email" value={form.email} onChange={set('email')} placeholder="you@company.com" required />
           <div>
             <Field label="Password" type="password" value={form.password} onChange={set('password')} placeholder="8+ chars, upper, lower, number, symbol" required />
-            <p className="text-xs text-slate-400 mt-1.5">At least 8 characters with an uppercase letter, a lowercase letter, a number, and a symbol.</p>
+            <p className="text-xs text-stone-400 mt-1.5">At least 8 characters with an uppercase letter, a lowercase letter, a number, and a symbol.</p>
           </div>
           <button className="btn btn-primary w-full !py-3" disabled={busy}>{busy ? 'Creating…' : 'Create workspace'}</button>
           <GoogleButton onCredential={handleGoogle} text="signup_with" />
-          {busy && <p className="text-xs text-slate-500 text-center">Signing you in with Google — one moment…</p>}
-          <p className="text-sm text-slate-500 text-center">
+          {busy && <p className="text-xs text-stone-500 text-center">Signing you in with Google — one moment…</p>}
+          <p className="text-sm text-stone-500 text-center">
             Already have an account? <button type="button" onClick={goLogin} className="text-emerald-600 font-semibold hover:underline">Sign in</button>
           </p>
         </form>
@@ -470,8 +470,8 @@ export function ForgotPassword({ goLogin }) {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-sm space-y-5">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">Reset password</h2>
-            <p className="text-sm text-slate-500 mt-1">We'll email you a link to set a new password</p>
+            <h2 className="text-2xl font-bold tracking-tight text-stone-900">Reset password</h2>
+            <p className="text-sm text-stone-500 mt-1">We'll email you a link to set a new password</p>
           </div>
           {sent ? (
             <div className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-4">
@@ -484,7 +484,7 @@ export function ForgotPassword({ goLogin }) {
               <button className="btn btn-primary w-full !py-3" disabled={busy}>{busy ? 'Sending…' : 'Send reset link'}</button>
             </form>
           )}
-          <p className="text-sm text-slate-500 text-center">
+          <p className="text-sm text-stone-500 text-center">
             <button onClick={goLogin} className="text-emerald-600 font-semibold hover:underline">← Back to sign in</button>
           </p>
         </div>
@@ -523,8 +523,8 @@ export function ResetPassword({ goLogin }) {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-sm space-y-5">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">Set a new password</h2>
-            <p className="text-sm text-slate-500 mt-1">At least 8 characters with an uppercase letter, a lowercase letter, a number, and a symbol</p>
+            <h2 className="text-2xl font-bold tracking-tight text-stone-900">Set a new password</h2>
+            <p className="text-sm text-stone-500 mt-1">At least 8 characters with an uppercase letter, a lowercase letter, a number, and a symbol</p>
           </div>
           {!token ? (
             <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">
@@ -542,7 +542,7 @@ export function ResetPassword({ goLogin }) {
               <button className="btn btn-primary w-full !py-3" disabled={busy}>{busy ? 'Updating…' : 'Set new password'}</button>
             </form>
           )}
-          <p className="text-sm text-slate-500 text-center">
+          <p className="text-sm text-stone-500 text-center">
             <button onClick={goLogin} className="text-emerald-600 font-semibold hover:underline">← Back to sign in</button>
           </p>
         </div>

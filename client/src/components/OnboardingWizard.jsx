@@ -34,7 +34,7 @@ const STEPS = ['Welcome', 'Workspace', 'Goals', 'Plan', 'Done'];
 
 function Shell({ step, children, wide }) {
   return (
-    <div className="fixed inset-0 z-[100] bg-[#0b1220] overflow-y-auto">
+    <div className="fixed inset-0 z-[100] bg-[#17251F] overflow-y-auto">
       <div className="min-h-full flex items-center justify-center p-4 sm:p-6">
         <div className={`w-full ${wide ? 'max-w-3xl' : 'max-w-lg'}`}>
           {/* Brand */}
@@ -44,7 +44,7 @@ function Shell({ step, children, wide }) {
           </div>
           {/* Progress */}
           <div className="mb-8">
-            <div className="flex justify-between text-[11px] font-semibold uppercase tracking-widest text-slate-500 mb-2">
+            <div className="flex justify-between text-[11px] font-semibold uppercase tracking-widest text-stone-500 mb-2">
               <span>Step {step + 1} of {STEPS.length}</span>
               <span>{STEPS[step]}</span>
             </div>
@@ -64,7 +64,7 @@ function Shell({ step, children, wide }) {
 
 function BackLink({ onClick, label = '← Back' }) {
   return (
-    <button onClick={onClick} className="text-sm text-slate-400 hover:text-white transition mt-6">
+    <button onClick={onClick} className="text-sm text-stone-400 hover:text-white transition mt-6">
       {label}
     </button>
   );
@@ -72,16 +72,16 @@ function BackLink({ onClick, label = '← Back' }) {
 
 function SkipLink({ onClick }) {
   return (
-    <button onClick={onClick} className="text-sm text-slate-500 hover:text-slate-300 transition mt-6 underline underline-offset-4">
+    <button onClick={onClick} className="text-sm text-stone-500 hover:text-stone-300 transition mt-6 underline underline-offset-4">
       Skip for now →
     </button>
   );
 }
 
 const inputCls =
-  'w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 ' +
+  'w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-stone-500 ' +
   'focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20 transition text-[15px]';
-const selectCls = inputCls + ' appearance-none [&>option]:text-slate-900';
+const selectCls = inputCls + ' appearance-none [&>option]:text-stone-900';
 
 export default function OnboardingWizard({ orgName = '', initialPlan = null, onComplete }) {
   const [step, setStep] = useState(0);
@@ -139,7 +139,7 @@ export default function OnboardingWizard({ orgName = '', initialPlan = null, onC
             <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight mb-3">
               Welcome to ClaimPaid
             </h1>
-            <p className="text-slate-400 mb-8 max-w-md mx-auto">
+            <p className="text-stone-400 mb-8 max-w-md mx-auto">
               Let's get your workspace set up. It takes about a minute:
             </p>
             <div className="text-left max-w-md mx-auto space-y-3.5 mb-10">
@@ -152,7 +152,7 @@ export default function OnboardingWizard({ orgName = '', initialPlan = null, onC
                   <div className="text-2xl shrink-0">{emoji}</div>
                   <div>
                     <div className="text-white font-semibold text-[15px]">{title}</div>
-                    <div className="text-slate-400 text-sm">{desc}</div>
+                    <div className="text-stone-400 text-sm">{desc}</div>
                   </div>
                 </div>
               ))}
@@ -169,10 +169,10 @@ export default function OnboardingWizard({ orgName = '', initialPlan = null, onC
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mb-2 text-center">
               Tell us about your workspace
             </h1>
-            <p className="text-slate-400 text-center mb-8">This helps us set things up the right way.</p>
+            <p className="text-stone-400 text-center mb-8">This helps us set things up the right way.</p>
             <div className="space-y-5 max-w-md mx-auto">
               <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-500 mb-2">
+                <label className="block text-[11px] font-semibold uppercase tracking-widest text-stone-500 mb-2">
                   Company name
                 </label>
                 <input
@@ -185,7 +185,7 @@ export default function OnboardingWizard({ orgName = '', initialPlan = null, onC
                 {fieldError && <div className="text-rose-400 text-sm mt-2">{fieldError}</div>}
               </div>
               <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-500 mb-2">
+                <label className="block text-[11px] font-semibold uppercase tracking-widest text-stone-500 mb-2">
                   Team size
                 </label>
                 <select className={selectCls} value={teamSize} onChange={(e) => setTeamSize(e.target.value)}>
@@ -193,7 +193,7 @@ export default function OnboardingWizard({ orgName = '', initialPlan = null, onC
                 </select>
               </div>
               <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-500 mb-2">
+                <label className="block text-[11px] font-semibold uppercase tracking-widest text-stone-500 mb-2">
                   Your role
                 </label>
                 <select className={selectCls} value={role} onChange={(e) => setRole(e.target.value)}>
@@ -225,7 +225,7 @@ export default function OnboardingWizard({ orgName = '', initialPlan = null, onC
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mb-2 text-center">
               What should ClaimPaid do for you?
             </h1>
-            <p className="text-slate-400 text-center mb-8">Pick everything that matters — at least one.</p>
+            <p className="text-stone-400 text-center mb-8">Pick everything that matters — at least one.</p>
             <div className="grid sm:grid-cols-2 gap-3 max-w-xl mx-auto">
               {GOALS.map((g) => {
                 const on = goals.includes(g.id);
@@ -242,10 +242,10 @@ export default function OnboardingWizard({ orgName = '', initialPlan = null, onC
                     <div className="flex items-center justify-between">
                       <div className="text-white font-semibold text-[15px]">{g.label}</div>
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center text-[11px] transition ${
-                        on ? 'border-emerald-400 bg-emerald-400 text-[#0b1220]' : 'border-slate-600 text-transparent'
+                        on ? 'border-emerald-400 bg-emerald-400 text-[#17251F]' : 'border-stone-600 text-transparent'
                       }`}>✓</div>
                     </div>
-                    <div className="text-slate-400 text-sm mt-1">{g.desc}</div>
+                    <div className="text-stone-400 text-sm mt-1">{g.desc}</div>
                   </button>
                 );
               })}
@@ -275,7 +275,7 @@ export default function OnboardingWizard({ orgName = '', initialPlan = null, onC
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mb-2 text-center">
               Choose your plan
             </h1>
-            <p className="text-slate-400 text-center mb-8">Every plan starts with a 30-day free trial.</p>
+            <p className="text-stone-400 text-center mb-8">Every plan starts with a 30-day free trial.</p>
             {error && (
               <div className="max-w-2xl mx-auto mb-6 text-sm text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-xl px-4 py-3">
                 {error}
@@ -290,17 +290,17 @@ export default function OnboardingWizard({ orgName = '', initialPlan = null, onC
                   } ${p.popular ? 'md:-my-2 md:py-8' : ''}`}
                 >
                   {p.popular && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-extrabold tracking-widest bg-emerald-400 text-[#0b1220] px-3 py-1 rounded-full">
+                    <div className="absolute -top-3 left-1/2 -transtone-x-1/2 text-[10px] font-extrabold tracking-widest bg-emerald-400 text-[#17251F] px-3 py-1 rounded-full">
                       MOST POPULAR
                     </div>
                   )}
                   <div className="text-white font-bold text-lg">{p.name}</div>
-                  <div className="text-slate-400 text-xs mt-0.5 mb-4">{p.tagline}</div>
+                  <div className="text-stone-400 text-xs mt-0.5 mb-4">{p.tagline}</div>
                   <div className="text-white mb-5">
                     <span className="text-4xl font-extrabold tracking-tight">${p.price}</span>
-                    <span className="text-slate-400 text-sm">/mo</span>
+                    <span className="text-stone-400 text-sm">/mo</span>
                   </div>
-                  <ul className="text-[13px] text-slate-300 space-y-2 flex-1 mb-6">
+                  <ul className="text-[13px] text-stone-300 space-y-2 flex-1 mb-6">
                     {p.features.map((f) => <li key={f}>✓ {f}</li>)}
                   </ul>
                   <button
@@ -313,7 +313,7 @@ export default function OnboardingWizard({ orgName = '', initialPlan = null, onC
                 </div>
               ))}
             </div>
-            <p className="text-center text-slate-500 text-sm mt-6">
+            <p className="text-center text-stone-500 text-sm mt-6">
               Free for 30 days · No credit card required · Cancel anytime
             </p>
             <div className="text-center">
@@ -333,11 +333,11 @@ export default function OnboardingWizard({ orgName = '', initialPlan = null, onC
             <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight mb-3">
               You're all set! 🎉
             </h1>
-            <p className="text-slate-300 text-lg mb-2">
+            <p className="text-stone-300 text-lg mb-2">
               You're on <span className="font-bold text-white">{PLAN_NAMES[result?.plan] || 'your plan'}</span> — free for 30 days.
             </p>
             {trialEndDate && (
-              <p className="text-slate-400 mb-10">
+              <p className="text-stone-400 mb-10">
                 Your trial ends <span className="text-emerald-300 font-semibold">{trialEndDate}</span>.
                 Add a payment method anytime before then to keep going.
               </p>

@@ -4,8 +4,8 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink: '#0f172a',
-        panel: '#1e293b',
+        ink: '#17251F',
+        panel: '#24382E',
       },
     },
   },

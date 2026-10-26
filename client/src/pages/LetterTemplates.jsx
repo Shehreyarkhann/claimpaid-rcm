@@ -120,14 +120,14 @@ export default function LetterTemplates() {
           <div className="card p-3 space-y-1">
             {data.templates.map((t) => (
               <button key={t.category} onClick={() => select(t.category)}
-                className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition flex items-center justify-between ${active === t.category ? 'bg-slate-900 text-white' : 'hover:bg-slate-100 text-slate-600'}`}>
+                className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition flex items-center justify-between ${active === t.category ? 'bg-stone-900 text-white' : 'hover:bg-stone-100 text-stone-600'}`}>
                 {t.label}
                 {t.is_custom && <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${active === t.category ? 'bg-emerald-500/30 text-emerald-200' : 'bg-emerald-100 text-emerald-700'}`}>CUSTOM</span>}
               </button>
             ))}
-            <div className="border-t border-slate-100 my-2" />
+            <div className="border-t border-stone-100 my-2" />
             <button onClick={() => select('signature')}
-              className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition flex items-center justify-between ${isSig ? 'bg-slate-900 text-white' : 'hover:bg-slate-100 text-slate-600'}`}>
+              className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition flex items-center justify-between ${isSig ? 'bg-stone-900 text-white' : 'hover:bg-stone-100 text-stone-600'}`}>
               <span>✒️ Signature block</span>
               {data.signature.is_custom && <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isSig ? 'bg-emerald-500/30 text-emerald-200' : 'bg-emerald-100 text-emerald-700'}`}>CUSTOM</span>}
             </button>
@@ -141,7 +141,7 @@ export default function LetterTemplates() {
                 ? <span className="badge badge-green">Customized</span>
                 : <span className="badge badge-slate">Pulse default</span>}
             </div>
-            <p className="text-sm text-slate-500 mb-5">
+            <p className="text-sm text-stone-500 mb-5">
               {isSig
                 ? 'This appears at the end of every appeal letter, after the enclosures. Add your email, title, direct line — whatever your organization uses.'
                 : 'This is the argument section of the letter. The letterhead, claim details, and signature are filled in automatically.'}
@@ -155,14 +155,14 @@ export default function LetterTemplates() {
             <div className="flex flex-wrap gap-1.5 mb-5">
               {placeholders.map(([key, desc]) => (
                 <button key={key} title={desc} onClick={() => insertPlaceholder(key)}
-                  className="text-[11px] font-mono bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-lg px-2 py-1 transition">
+                  className="text-[11px] font-mono bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-lg px-2 py-1 transition">
                   {`{{${key}}}`}
                 </button>
               ))}
               {!isSig && (
                 <button title="Conditional: shows auth details when a linked auth exists, retro-auth request text otherwise"
                   onClick={() => insertPlaceholder('auth_section')}
-                  className="text-[11px] font-mono bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200 rounded-lg px-2 py-1 transition">
+                  className="text-[11px] font-mono bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg px-2 py-1 transition">
                   {'{{auth_section}}'}
                 </button>
               )}
@@ -170,7 +170,7 @@ export default function LetterTemplates() {
 
             {!isSig && (
               <>
-                <label className="label">Enclosures <span className="font-normal text-slate-400">(one per line)</span></label>
+                <label className="label">Enclosures <span className="font-normal text-stone-400">(one per line)</span></label>
                 <textarea value={enclosures} onChange={(e) => setEnclosures(e.target.value)}
                   className="input min-h-[90px] mb-5" />
               </>
@@ -187,11 +187,11 @@ export default function LetterTemplates() {
             </div>
 
             {showPreview && (
-              <div className="border border-slate-200 rounded-2xl overflow-hidden">
-                <div className="bg-slate-100 px-5 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+              <div className="border border-stone-200 rounded-2xl overflow-hidden">
+                <div className="bg-stone-100 px-5 py-2.5 text-xs font-semibold text-stone-500 uppercase tracking-wide">
                   Preview — sample data
                 </div>
-                <pre className={`whitespace-pre-wrap text-[13px] leading-relaxed text-slate-700 px-6 py-5 bg-white max-h-[320px] overflow-y-auto ${isSig ? '' : 'font-serif'}`}>
+                <pre className={`whitespace-pre-wrap text-[13px] leading-relaxed text-stone-700 px-6 py-5 bg-white max-h-[320px] overflow-y-auto ${isSig ? '' : 'font-serif'}`}>
                   {previewBody(body, previewData)}
                   {!isSig && '\n\nEnclosures:\n' + enclosures.split('\n').map((e) => e.trim()).filter(Boolean).map((e, i) => `  ${i + 1}. ${e}`).join('\n')}
                 </pre>

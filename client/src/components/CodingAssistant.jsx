@@ -128,7 +128,7 @@ export default function CodingAssistant({ initialNote = '', claimId = null, enco
             placeholder="Paste the visit note, SOAP note, or encounter summary here (min 50 characters)…"
           />
           <div className="mt-3 flex items-center justify-between">
-            <span className="text-xs text-slate-500">Analysis takes 30–90 seconds on the local AI model.</span>
+            <span className="text-xs text-stone-500">Analysis takes 30–90 seconds on the local AI model.</span>
             <button className="btn btn-primary" onClick={analyze} disabled={note.trim().length < 50}>
               Analyze note
             </button>
@@ -138,9 +138,9 @@ export default function CodingAssistant({ initialNote = '', claimId = null, enco
 
       {phase === 'analyzing' && (
         <div className="py-10 text-center">
-          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-emerald-600" />
-          <div className="font-medium text-slate-800">Analyzing clinical note… {elapsed}s</div>
-          <div className="mt-1 text-sm text-slate-500">The local AI model is reading the note and matching codes. This takes 30–90 seconds.</div>
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-stone-300 border-t-emerald-600" />
+          <div className="font-medium text-stone-800">Analyzing clinical note… {elapsed}s</div>
+          <div className="mt-1 text-sm text-stone-500">The local AI model is reading the note and matching codes. This takes 30–90 seconds.</div>
           <button className="btn btn-ghost btn-sm mt-4" onClick={() => { stopPolling(); setPhase('input'); }}>Cancel</button>
         </div>
       )}
@@ -155,9 +155,9 @@ export default function CodingAssistant({ initialNote = '', claimId = null, enco
       {(phase === 'done' || phase === 'analyzing') && job && phase === 'done' && (
         <div>
           {job.suggestions.length === 0 ? (
-            <div className="rounded-xl border border-slate-300 bg-slate-50 px-5 py-6 text-center">
-              <div className="font-semibold text-slate-800">The assistant abstained on this note.</div>
-              <p className="mx-auto mt-1 max-w-md text-sm text-slate-600">
+            <div className="rounded-xl border border-stone-300 bg-stone-50 px-5 py-6 text-center">
+              <div className="font-semibold text-stone-800">The assistant abstained on this note.</div>
+              <p className="mx-auto mt-1 max-w-md text-sm text-stone-600">
                 No code in the library is supported by the note's own words, so it suggested nothing rather
                 than guess. Code this note manually, or add documentation to the note and re-run.
               </p>
@@ -165,7 +165,7 @@ export default function CodingAssistant({ initialNote = '', claimId = null, enco
           ) : (
             <div className="space-y-3">
               {job.summary && (
-                <div className="text-sm text-slate-500">
+                <div className="text-sm text-stone-500">
                   {job.summary.total} suggestion{job.summary.total === 1 ? '' : 's'} —{' '}
                   <span className="font-medium text-emerald-700">{job.summary.valid} grounded</span>
                   {job.summary.review > 0 && (
@@ -177,9 +177,9 @@ export default function CodingAssistant({ initialNote = '', claimId = null, enco
                 const k = key(s);
                 const d = sel[k] || { decision: null, finalCode: '' };
                 return (
-                  <div key={k} className={`rounded-xl border p-4 ${d.decision === 'accepted' || d.decision === 'modified' ? 'border-emerald-300 bg-emerald-50/40' : d.decision === 'rejected' ? 'border-slate-200 bg-slate-50 opacity-70' : 'border-slate-200'}`}>
+                  <div key={k} className={`rounded-xl border p-4 ${d.decision === 'accepted' || d.decision === 'modified' ? 'border-emerald-300 bg-emerald-50/40' : d.decision === 'rejected' ? 'border-stone-200 bg-stone-50 opacity-70' : 'border-stone-200'}`}>
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono font-bold text-slate-900">{s.code}</span>
+                      <span className="font-mono font-bold text-stone-900">{s.code}</span>
                       <span className={`badge ${s.type === 'CPT' ? 'badge-blue' : 'badge-purple'}`}>{s.type}</span>
                       {s.in_library
                         ? <span className="badge badge-green">verified in library</span>
@@ -189,17 +189,17 @@ export default function CodingAssistant({ initialNote = '', claimId = null, enco
                         : s.status === 'review'
                           ? <span className="badge badge-amber">needs review</span>
                           : null}
-                      <span className="ml-auto text-xs text-slate-500">confidence</span>
-                      <div className="h-2 w-20 overflow-hidden rounded-full bg-slate-200">
+                      <span className="ml-auto text-xs text-stone-500">confidence</span>
+                      <div className="h-2 w-20 overflow-hidden rounded-full bg-stone-200">
                         <div className={`h-full rounded-full ${s.status === 'review' ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${Math.round((s.confidence || 0) * 100)}%` }} />
                       </div>
-                      <span className="text-xs font-medium text-slate-600">{Math.round((s.confidence || 0) * 100)}%</span>
+                      <span className="text-xs font-medium text-stone-600">{Math.round((s.confidence || 0) * 100)}%</span>
                     </div>
-                    <div className="mt-1 text-sm text-slate-700">
-                      {s.in_library ? s.library_description : <span className="italic text-slate-500">No library description — human confirmation required.</span>}
+                    <div className="mt-1 text-sm text-stone-700">
+                      {s.in_library ? s.library_description : <span className="italic text-stone-500">No library description — human confirmation required.</span>}
                     </div>
                     {s.evidence ? (
-                      <div className={`mt-2 border-l-2 pl-3 text-xs italic text-slate-600 ${s.evidence_verified ? 'border-emerald-400' : 'border-rose-300'}`}>
+                      <div className={`mt-2 border-l-2 pl-3 text-xs italic text-stone-600 ${s.evidence_verified ? 'border-emerald-400' : 'border-rose-300'}`}>
                         “{s.evidence}”
                         <div className={`mt-0.5 font-medium not-italic ${s.evidence_verified ? 'text-emerald-700' : 'text-rose-600'}`}>
                           {s.evidence_verified ? '✓ Quote verified in the note' : '⚠ Quote not found in the note — verify manually'}
@@ -208,7 +208,7 @@ export default function CodingAssistant({ initialNote = '', claimId = null, enco
                     ) : (
                       <div className="mt-2 text-xs font-medium text-rose-600">⚠ No evidence quote provided — verify manually</div>
                     )}
-                    {s.rationale && <div className="mt-1 text-xs text-slate-500">{s.rationale}</div>}
+                    {s.rationale && <div className="mt-1 text-xs text-stone-500">{s.rationale}</div>}
                     {!s.in_library && (d.decision === 'accepted' || d.decision === 'modified') && (
                       <div className="mt-2">
                         <label className="label">Confirm the correct code (required for unverified suggestions)</label>
@@ -253,8 +253,8 @@ export default function CodingAssistant({ initialNote = '', claimId = null, enco
             </div>
           )}
           {job.suggestions.length > 0 && (
-            <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
-              <div className="text-sm text-slate-500">
+            <div className="mt-5 flex items-center justify-between border-t border-stone-100 pt-4">
+              <div className="text-sm text-stone-500">
                 {acceptedCount} code{acceptedCount === 1 ? '' : 's'} selected
                 {!claimId && ' — save/link a claim to apply them'}
               </div>

@@ -8,7 +8,7 @@ import { PageHeader, Skeleton, EmptyState } from '../components/ui';
 import { useToast } from '../components/ui';
 
 const chartTooltip = {
-  contentStyle: { borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 8px 24px rgba(15,23,42,0.12)', fontSize: 12 },
+  contentStyle: { borderRadius: 12, border: '1px solid #E7E5E4', boxShadow: '0 8px 24px rgba(15,23,42,0.12)', fontSize: 12 },
 };
 
 async function downloadCSV(path, filename, toast) {
@@ -41,8 +41,8 @@ function ReportCard({ title, subtitle, action, children }) {
     <div className="card p-6">
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h3 className="font-semibold text-slate-900 tracking-tight">{title}</h3>
-          {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+          <h3 className="font-semibold text-stone-900 tracking-tight">{title}</h3>
+          {subtitle && <p className="text-xs text-stone-500 mt-0.5">{subtitle}</p>}
         </div>
         {action}
       </div>
@@ -69,13 +69,13 @@ function ArAgingReport() {
         action={<ExportButton path="/api/reports/ar-aging" filename="ar-aging-report.csv" />}>
         <ResponsiveContainer width="100%" height={320}>
           <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
-            <XAxis dataKey="payer" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-            <YAxis tickFormatter={(v) => `$${Math.round(v / 1000)}k`} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#F5EFE3" vertical={false} />
+            <XAxis dataKey="payer" tick={{ fontSize: 11, fill: '#A8A29E' }} axisLine={false} tickLine={false} />
+            <YAxis tickFormatter={(v) => `$${Math.round(v / 1000)}k`} tick={{ fontSize: 11, fill: '#A8A29E' }} axisLine={false} tickLine={false} />
             <Tooltip {...chartTooltip} formatter={(v) => fmtMoney(v)} />
             <Legend wrapperStyle={{ fontSize: 11 }} iconType="circle" />
             <Bar dataKey="0-30" stackId="a" fill="#10b981" />
-            <Bar dataKey="31-60" stackId="a" fill="#0ea5e9" />
+            <Bar dataKey="31-60" stackId="a" fill="#B45309" />
             <Bar dataKey="61-90" stackId="a" fill="#f59e0b" />
             <Bar dataKey="91-120" stackId="a" fill="#f97316" />
             <Bar dataKey="120+" stackId="a" fill="#f43f5e" radius={[4, 4, 0, 0]} />
@@ -116,9 +116,9 @@ function DenialReport() {
         action={<ExportButton path="/api/reports/denial-analysis" filename="denial-analysis.csv" />}>
         <ResponsiveContainer width="100%" height={240}>
           <LineChart data={data.trend}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
-            <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-            <YAxis tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#F5EFE3" vertical={false} />
+            <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#A8A29E' }} axisLine={false} tickLine={false} />
+            <YAxis tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11, fill: '#A8A29E' }} axisLine={false} tickLine={false} />
             <Tooltip {...chartTooltip} formatter={(v) => `${v}%`} />
             <Line type="monotone" dataKey="rate" name="Denial rate" stroke="#f43f5e" strokeWidth={2.5} dot={false} />
           </LineChart>
@@ -131,9 +131,9 @@ function DenialReport() {
               <div key={r.reason} className="flex items-center gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate">{r.reason}</div>
-                  <div className="text-xs text-slate-400">{r.count} claims · {fmtMoney(r.billed)}</div>
+                  <div className="text-xs text-stone-400">{r.count} claims · {fmtMoney(r.billed)}</div>
                 </div>
-                <div className="w-32 bg-slate-100 rounded-full h-2 overflow-hidden">
+                <div className="w-32 bg-stone-100 rounded-full h-2 overflow-hidden">
                   <div className="bg-rose-500 h-2 rounded-full" style={{ width: `${Math.min(100, (r.count / data.byReason[0].count) * 100)}%` }} />
                 </div>
                 <div className="text-sm font-bold w-8 text-right">{r.count}</div>
@@ -202,12 +202,12 @@ function ProductivityReport() {
           <div className="flex flex-wrap gap-3">
             {data.touches.map((t) => (
               <div key={t.id} className="card !rounded-xl px-4 py-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-400 to-sky-500 flex items-center justify-center text-xs font-bold text-white">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-400 to-amber-500 flex items-center justify-center text-xs font-bold text-white">
                   {t.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}
                 </div>
                 <div>
                   <div className="text-sm font-semibold">{t.name}</div>
-                  <div className="text-xs text-slate-500">{t.touches} touches</div>
+                  <div className="text-xs text-stone-500">{t.touches} touches</div>
                 </div>
               </div>
             ))}
@@ -230,12 +230,12 @@ function CollectionsReport() {
         action={<ExportButton path="/api/reports/collections" filename="collections-summary.csv" />}>
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={data.monthly} barGap={4}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
-            <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-            <YAxis tickFormatter={(v) => `$${Math.round(v / 1000)}k`} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#F5EFE3" vertical={false} />
+            <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#A8A29E' }} axisLine={false} tickLine={false} />
+            <YAxis tickFormatter={(v) => `$${Math.round(v / 1000)}k`} tick={{ fontSize: 11, fill: '#A8A29E' }} axisLine={false} tickLine={false} />
             <Tooltip {...chartTooltip} formatter={(v) => fmtMoney(v)} />
             <Legend wrapperStyle={{ fontSize: 11 }} iconType="circle" />
-            <Bar dataKey="billed" name="Billed" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="billed" name="Billed" fill="#B45309" radius={[4, 4, 0, 0]} />
             <Bar dataKey="collected" name="Collected" fill="#10b981" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
@@ -250,7 +250,7 @@ function CollectionsReport() {
                 <td className="!text-right">{fmtMoney(r.billed)}</td>
                 <td className="!text-right text-emerald-700 font-medium">{fmtMoney(r.collected)}</td>
                 <td className="!text-right"><span className={`badge ${r.rate >= 70 ? 'badge-green' : r.rate >= 50 ? 'badge-amber' : 'badge-rose'}`}>{r.rate}%</span></td>
-                <td className="!text-right text-slate-500">{r.claims}</td>
+                <td className="!text-right text-stone-500">{r.claims}</td>
               </tr>
             ))}
           </tbody>
@@ -276,14 +276,14 @@ function FilingReport() {
             <tr key={r.payer}>
               <td className="font-medium">{r.payer}</td>
               <td className="!text-right">{r.total}</td>
-              <td className="!text-right">{r.expired > 0 ? <span className="badge badge-rose">{r.expired}</span> : <span className="text-slate-300">0</span>}</td>
-              <td className="!text-right">{r.atRisk > 0 ? <span className="badge badge-amber">{r.atRisk}</span> : <span className="text-slate-300">0</span>}</td>
+              <td className="!text-right">{r.expired > 0 ? <span className="badge badge-rose">{r.expired}</span> : <span className="text-stone-300">0</span>}</td>
+              <td className="!text-right">{r.atRisk > 0 ? <span className="badge badge-amber">{r.atRisk}</span> : <span className="text-stone-300">0</span>}</td>
               <td className="!text-right"><span className={`badge ${r.onTime >= 95 ? 'badge-green' : r.onTime >= 85 ? 'badge-amber' : 'badge-rose'}`}>{r.onTime}%</span></td>
             </tr>
           ))}
         </tbody>
       </table>
-      <p className="text-xs text-slate-400 mt-4">CSV export downloads the full at-risk claim list — perfect for the morning huddle.</p>
+      <p className="text-xs text-stone-400 mt-4">CSV export downloads the full at-risk claim list — perfect for the morning huddle.</p>
     </ReportCard>
   );
 }
@@ -306,7 +306,7 @@ export default function Reports() {
       <div className="flex flex-wrap gap-2 mb-6">
         {TABS.map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition ${tab === t.id ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300'}`}>
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition ${tab === t.id ? 'bg-stone-900 text-white' : 'bg-white border border-stone-200 text-stone-600 hover:border-stone-300'}`}>
             {t.label}
           </button>
         ))}

@@ -49,9 +49,9 @@ export default function EdiSettings() {
     <div className="card p-6 mb-5">
       <div className="flex items-center gap-2.5 mb-1">
         <div className="text-xl">📡</div>
-        <div className="font-semibold text-slate-900">EDI Settings</div>
+        <div className="font-semibold text-stone-900">EDI Settings</div>
       </div>
-      <p className="text-sm text-slate-500 mb-5 max-w-2xl leading-relaxed">
+      <p className="text-sm text-stone-500 mb-5 max-w-2xl leading-relaxed">
         Your billing provider identity, used in the 837P claim files you export for your clearinghouse.
         Get these from your practice's credentialing paperwork — the NPI especially must be exact.
       </p>

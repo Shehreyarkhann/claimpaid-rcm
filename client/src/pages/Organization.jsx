@@ -26,10 +26,10 @@ function Toggle({ checked, onChange, disabled, label, hint }) {
       className="flex items-start justify-between gap-4 w-full text-left py-3"
     >
       <span>
-        <span className="block text-sm font-medium text-slate-800">{label}</span>
-        {hint && <span className="block text-xs text-slate-500 mt-0.5">{hint}</span>}
+        <span className="block text-sm font-medium text-stone-800">{label}</span>
+        {hint && <span className="block text-xs text-stone-500 mt-0.5">{hint}</span>}
       </span>
-      <span className={`mt-0.5 shrink-0 w-11 h-6 rounded-full relative transition-colors ${checked ? 'bg-emerald-500' : 'bg-slate-300'} ${disabled ? 'opacity-40' : ''}`}>
+      <span className={`mt-0.5 shrink-0 w-11 h-6 rounded-full relative transition-colors ${checked ? 'bg-emerald-500' : 'bg-stone-300'} ${disabled ? 'opacity-40' : ''}`}>
         <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${checked ? 'left-[22px]' : 'left-0.5'}`} />
       </span>
     </button>
@@ -79,20 +79,20 @@ function GeneralTab({ settings, refresh, isOwner }) {
   return (
     <div className="grid lg:grid-cols-2 gap-6">
       <div className="card p-6">
-        <h3 className="font-bold text-slate-900 mb-1">Workspace profile</h3>
-        <p className="text-sm text-slate-500 mb-4">This name appears in the sidebar and on reports.</p>
+        <h3 className="font-bold text-stone-900 mb-1">Workspace profile</h3>
+        <p className="text-sm text-stone-500 mb-4">This name appears in the sidebar and on reports.</p>
         <label className="label">Workspace name</label>
         <input className="input w-full" value={name} onChange={(e) => setName(e.target.value)} disabled={!isOwner} maxLength={80} />
-        {!isOwner && <p className="text-xs text-slate-400 mt-2">Only owners can change workspace settings.</p>}
-        <div className="mt-4 text-xs text-slate-400">
+        {!isOwner && <p className="text-xs text-stone-400 mt-2">Only owners can change workspace settings.</p>}
+        <div className="mt-4 text-xs text-stone-400">
           Created {settings.created_at ? new Date(settings.created_at.replace(' ', 'T') + 'Z').toLocaleDateString() : '—'}
-          {' · '}Plan: <span className="font-medium text-slate-500 capitalize">{settings.plan}</span>
+          {' · '}Plan: <span className="font-medium text-stone-500 capitalize">{settings.plan}</span>
         </div>
       </div>
 
       <div className="card p-6">
-        <h3 className="font-bold text-slate-900 mb-1">Localization & display</h3>
-        <p className="text-sm text-slate-500 mb-4">Timezone drives report timestamps; display prefs apply app-wide.</p>
+        <h3 className="font-bold text-stone-900 mb-1">Localization & display</h3>
+        <p className="text-sm text-stone-500 mb-4">Timezone drives report timestamps; display prefs apply app-wide.</p>
         <div className="space-y-4">
           <div>
             <label className="label">Timezone</label>
@@ -118,20 +118,20 @@ function GeneralTab({ settings, refresh, isOwner }) {
       </div>
 
       <div className="card p-6">
-        <h3 className="font-bold text-slate-900 mb-4">Usage</h3>
+        <h3 className="font-bold text-stone-900 mb-4">Usage</h3>
         <div className="grid grid-cols-3 gap-3">
           {[
             { label: 'Team members', value: settings.users },
             { label: 'Claims', value: settings.claims },
             { label: 'Appeals', value: settings.appeals },
           ].map((s) => (
-            <div key={s.label} className="rounded-xl bg-slate-50 border border-slate-100 p-4 text-center">
-              <div className="text-2xl font-extrabold text-slate-900 tabular-nums">{s.value ?? '—'}</div>
-              <div className="text-[11px] text-slate-500 mt-1">{s.label}</div>
+            <div key={s.label} className="rounded-xl bg-stone-50 border border-stone-100 p-4 text-center">
+              <div className="text-2xl font-extrabold text-stone-900 tabular-nums">{s.value ?? '—'}</div>
+              <div className="text-[11px] text-stone-500 mt-1">{s.label}</div>
             </div>
           ))}
         </div>
-        <p className="text-xs text-slate-400 mt-4">
+        <p className="text-xs text-stone-400 mt-4">
           All data is isolated to this workspace. Team members only see workspaces they've been added to.
         </p>
       </div>
@@ -193,9 +193,9 @@ function ApiTab() {
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="card p-6">
-        <h3 className="font-bold text-slate-900 mb-1">Developer API keys</h3>
-        <p className="text-sm text-slate-500 mb-4">
-          Keys authenticate machine integrations via <code className="text-xs bg-slate-100 px-1.5 py-0.5 rounded">Authorization: Bearer cp_sk_live_…</code> on <code className="text-xs bg-slate-100 px-1.5 py-0.5 rounded">/api/v1/*</code>.
+        <h3 className="font-bold text-stone-900 mb-1">Developer API keys</h3>
+        <p className="text-sm text-stone-500 mb-4">
+          Keys authenticate machine integrations via <code className="text-xs bg-stone-100 px-1.5 py-0.5 rounded">Authorization: Bearer cp_sk_live_…</code> on <code className="text-xs bg-stone-100 px-1.5 py-0.5 rounded">/api/v1/*</code>.
           Only the key hash is stored — the full key is shown <strong>once</strong> at creation.
         </p>
         <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-900 mb-5">
@@ -228,16 +228,16 @@ function ApiTab() {
       </div>
 
       <div className="card p-6">
-        <h3 className="font-bold text-slate-900 mb-4">Keys</h3>
+        <h3 className="font-bold text-stone-900 mb-4">Keys</h3>
         {!keys ? (
           <div className="space-y-2"><Skeleton className="h-12" /><Skeleton className="h-12" /></div>
         ) : keys.length === 0 ? (
-          <p className="text-sm text-slate-500">No API keys yet. Generate one above to connect an integration.</p>
+          <p className="text-sm text-stone-500">No API keys yet. Generate one above to connect an integration.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-slate-500 border-b">
+                <tr className="text-left text-xs text-stone-500 border-b">
                   <th className="pb-2 pr-3 font-medium">Name</th>
                   <th className="pb-2 pr-3 font-medium">Prefix</th>
                   <th className="pb-2 pr-3 font-medium">Created by</th>
@@ -249,12 +249,12 @@ function ApiTab() {
               </thead>
               <tbody>
                 {keys.map((k) => (
-                  <tr key={k.id} className="border-b last:border-0 border-slate-100">
-                    <td className="py-2.5 pr-3 font-medium text-slate-800">{k.name}</td>
-                    <td className="py-2.5 pr-3"><code className="text-xs bg-slate-100 px-1.5 py-0.5 rounded">{k.key_prefix}…</code></td>
-                    <td className="py-2.5 pr-3 text-slate-500 text-xs">{k.created_by || '—'}</td>
-                    <td className="py-2.5 pr-3 text-slate-500 text-xs">{k.created_at ? new Date(k.created_at.replace(' ', 'T') + 'Z').toLocaleDateString() : '—'}</td>
-                    <td className="py-2.5 pr-3 text-slate-500 text-xs">{k.last_used_at ? new Date(k.last_used_at.replace(' ', 'T') + 'Z').toLocaleString() : 'Never'}</td>
+                  <tr key={k.id} className="border-b last:border-0 border-stone-100">
+                    <td className="py-2.5 pr-3 font-medium text-stone-800">{k.name}</td>
+                    <td className="py-2.5 pr-3"><code className="text-xs bg-stone-100 px-1.5 py-0.5 rounded">{k.key_prefix}…</code></td>
+                    <td className="py-2.5 pr-3 text-stone-500 text-xs">{k.created_by || '—'}</td>
+                    <td className="py-2.5 pr-3 text-stone-500 text-xs">{k.created_at ? new Date(k.created_at.replace(' ', 'T') + 'Z').toLocaleDateString() : '—'}</td>
+                    <td className="py-2.5 pr-3 text-stone-500 text-xs">{k.last_used_at ? new Date(k.last_used_at.replace(' ', 'T') + 'Z').toLocaleString() : 'Never'}</td>
                     <td className="py-2.5 pr-3">
                       <span className={`badge ${k.revoked ? 'badge-slate' : 'badge-green'}`}>{k.revoked ? 'Revoked' : 'Active'}</span>
                     </td>
@@ -306,10 +306,10 @@ function NotificationsTab({ isOwner }) {
   if (!prefs) return <div className="card p-6 max-w-2xl"><Skeleton className="h-40" /></div>;
   return (
     <div className="card p-6 max-w-2xl">
-      <h3 className="font-bold text-slate-900 mb-1">Email notifications</h3>
-      <p className="text-sm text-slate-500 mb-2">Per-workspace email preferences. Emails queue until a mail provider is configured — preferences save and apply regardless.</p>
-      {!isOwner && <p className="text-xs text-slate-400 mb-2">Only owners can change these.</p>}
-      <div className="divide-y divide-slate-100">
+      <h3 className="font-bold text-stone-900 mb-1">Email notifications</h3>
+      <p className="text-sm text-stone-500 mb-2">Per-workspace email preferences. Emails queue until a mail provider is configured — preferences save and apply regardless.</p>
+      {!isOwner && <p className="text-xs text-stone-400 mb-2">Only owners can change these.</p>}
+      <div className="divide-y divide-stone-100">
         {NOTIF_DEFS.map((d) => (
           <div key={d.key} className="flex items-center justify-between gap-4">
             <div className="flex-1">
@@ -357,12 +357,12 @@ function SecurityTab() {
 
   return (
     <div className="card p-6 max-w-2xl">
-      <h3 className="font-bold text-slate-900 mb-1">Security</h3>
-      <p className="text-sm text-slate-500 mb-2">Workspace-level login policy. Owner-only.</p>
+      <h3 className="font-bold text-stone-900 mb-1">Security</h3>
+      <p className="text-sm text-stone-500 mb-2">Workspace-level login policy. Owner-only.</p>
       {!loaded ? (
         <Skeleton className="h-16" />
       ) : (
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-stone-100">
           <Toggle
             label="Require two-factor for everyone"
             hint="Requires every member of this workspace to complete two-factor authentication at login. Members without 2FA set up will be prompted to enroll on their next sign-in."
@@ -372,7 +372,7 @@ function SecurityTab() {
           />
         </div>
       )}
-      <div className="mt-4 rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 text-xs text-slate-500">
+      <div className="mt-4 rounded-xl bg-stone-50 border border-stone-200 px-4 py-3 text-xs text-stone-500">
         Sessions are stateless signed tokens (7-day expiry) — there is no server-side session list to review or revoke.
         Signing out clears the token on that device; changing a password does not invalidate other devices' tokens until they expire.
       </div>
@@ -437,12 +437,12 @@ function CustomizationTab() {
   return (
     <div className="grid lg:grid-cols-2 gap-6 max-w-4xl">
       <div className="card p-6">
-        <h3 className="font-bold text-slate-900 mb-1">Workspace logo</h3>
-        <p className="text-sm text-slate-500 mb-4">Shown in the app header. PNG, JPG, GIF or WebP, max 2 MB.</p>
+        <h3 className="font-bold text-stone-900 mb-1">Workspace logo</h3>
+        <p className="text-sm text-stone-500 mb-4">Shown in the app header. PNG, JPG, GIF or WebP, max 2 MB.</p>
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+          <div className="w-16 h-16 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center overflow-hidden shrink-0">
             {logoUrl ? <img src={logoUrl} alt="Workspace logo" className="w-full h-full object-contain" /> : (
-              <span className="text-slate-400 text-xs">No logo</span>
+              <span className="text-stone-400 text-xs">No logo</span>
             )}
           </div>
           <div className="flex gap-2">
@@ -458,14 +458,14 @@ function CustomizationTab() {
       </div>
 
       <div className="card p-6">
-        <h3 className="font-bold text-slate-900 mb-1">Brand accent color</h3>
-        <p className="text-sm text-slate-500 mb-4">Applied to primary buttons and accents across the app.</p>
+        <h3 className="font-bold text-stone-900 mb-1">Brand accent color</h3>
+        <p className="text-sm text-stone-500 mb-4">Applied to primary buttons and accents across the app.</p>
         <div className="flex items-center gap-3">
           <input
             type="color"
             value={brand}
             onChange={(e) => setBrand(e.target.value)}
-            className="w-12 h-12 rounded-lg border border-slate-200 cursor-pointer bg-white p-1"
+            className="w-12 h-12 rounded-lg border border-stone-200 cursor-pointer bg-white p-1"
             aria-label="Brand color picker"
           />
           <input
@@ -586,15 +586,15 @@ export default function Organization() {
     <div>
       <PageHeader title="Organization" subtitle="Workspace settings, integrations, and policy." />
 
-      <div className="flex gap-1 mb-6 border-b border-slate-200 overflow-x-auto">
+      <div className="flex gap-1 mb-6 border-b border-stone-200 overflow-x-auto">
         {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap -mb-px border-b-2 transition-colors ${
               tab === t.id
-                ? 'border-emerald-500 text-slate-900'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'border-emerald-500 text-stone-900'
+                : 'border-transparent text-stone-500 hover:text-stone-800'
             }`}
           >
             {t.label}

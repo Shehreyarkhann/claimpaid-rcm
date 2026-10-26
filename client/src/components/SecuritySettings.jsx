@@ -86,10 +86,10 @@ export default function SecuritySettings() {
         <div>
           <div className="flex items-center gap-2.5">
             <div className="text-xl">🔐</div>
-            <div className="font-semibold text-slate-900">Two-factor authentication</div>
+            <div className="font-semibold text-stone-900">Two-factor authentication</div>
             <span className={`badge ${enabled ? 'badge-green' : 'badge-slate'}`}>{enabled ? 'On' : 'Off'}</span>
           </div>
-          <p className="text-sm text-slate-500 mt-2 max-w-xl leading-relaxed">
+          <p className="text-sm text-stone-500 mt-2 max-w-xl leading-relaxed">
             {enabled
               ? 'Your account is protected. Every sign-in requires a 6-digit code sent to your email, in addition to your password.'
               : 'Add a second layer of security: every sign-in will require a 6-digit code sent to your email, in addition to your password.'}
@@ -105,15 +105,15 @@ export default function SecuritySettings() {
       {error && <div className="mt-4 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}
 
       {step === 'verifying' && (
-        <div className="mt-5 pt-5 border-t border-slate-100">
-          <p className="text-sm text-slate-600 mb-3">Enter the 6-digit code from your email to finish setup:</p>
+        <div className="mt-5 pt-5 border-t border-stone-100">
+          <p className="text-sm text-stone-600 mb-3">Enter the 6-digit code from your email to finish setup:</p>
           <div className="flex gap-2 mb-4">
             {digits.map((d, i) => (
               <input key={i} ref={(el) => (inputs.current[i] = el)} value={d}
                 onChange={(e) => setDigit(i, e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Backspace' && !digits[i] && i > 0) inputs.current[i - 1]?.focus(); }}
                 inputMode="numeric" maxLength={1} disabled={busy}
-                className="w-11 h-12 text-center text-xl font-bold border-2 border-slate-200 rounded-xl focus:border-emerald-500 outline-none" />
+                className="w-11 h-12 text-center text-xl font-bold border-2 border-stone-200 rounded-xl focus:border-emerald-500 outline-none" />
             ))}
           </div>
           <div className="flex gap-2">
@@ -126,8 +126,8 @@ export default function SecuritySettings() {
       )}
 
       {step === 'disabling' && (
-        <div className="mt-5 pt-5 border-t border-slate-100">
-          <p className="text-sm text-slate-600 mb-3">Enter your password to turn off two-factor authentication:</p>
+        <div className="mt-5 pt-5 border-t border-stone-100">
+          <p className="text-sm text-stone-600 mb-3">Enter your password to turn off two-factor authentication:</p>
           <div className="flex gap-2 max-w-sm">
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && confirmDisable()}
