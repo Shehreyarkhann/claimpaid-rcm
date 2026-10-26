@@ -41,7 +41,7 @@ export function ToastProvider({ children }) {
 
 export function Modal({ onClose, children, wide }) {
   return (
-    <div className="modal-backdrop fixed inset-0 bg-slate-900/50 backdrop-blur-[2px] flex items-center justify-center z-50 p-4" onClick={onClose}>
+    <div className="modal-backdrop fixed inset-0 bg-slate-900/50 backdrop-blur-[2px] flex items-center justify-center z-50 p-2 sm:p-4" onClick={onClose}>
       <div className={`modal-panel bg-white rounded-2xl shadow-2xl w-full ${wide ? 'max-w-3xl' : 'max-w-lg'} max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
         {children}
       </div>

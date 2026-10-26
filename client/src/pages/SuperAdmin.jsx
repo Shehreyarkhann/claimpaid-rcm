@@ -208,7 +208,7 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
   return (
     <>
     <Modal onClose={onClose} wide>
-      <div className="p-7 bg-slate-900 text-slate-200 rounded-2xl">
+      <div className="p-5 sm:p-7 bg-slate-900 text-slate-200 rounded-2xl">
         <h3 className="text-xl font-bold text-white mb-1">{org.name}</h3>
         <p className="text-xs text-slate-500 mb-6">Workspace #{org.id} · created {org.created_at?.slice(0, 10)}</p>
 
@@ -441,7 +441,7 @@ function OrgDrawer({ orgId, onClose, onChanged }) {
     </Modal>
     {confirm && (
       <Modal onClose={() => !busy && setConfirm(null)}>
-        <div className="p-7 bg-slate-900 text-slate-200 rounded-2xl max-w-md">
+        <div className="p-5 sm:p-7 bg-slate-900 text-slate-200 rounded-2xl max-w-md">
           <h3 className="text-lg font-bold text-white mb-3">{confirm.title}</h3>
           <p className="text-sm text-slate-400 mb-6">{confirm.body}</p>
           <div className="flex justify-end gap-2">
@@ -469,8 +469,8 @@ function ClientsTab() {
   return (
     <div>
       {drawer && <OrgDrawer orgId={drawer} onClose={() => setDrawer(null)} onChanged={load} />}
-      <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl overflow-hidden">
-        <table className="w-full tbl !text-slate-300">
+      <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl overflow-x-auto">
+        <table className="w-full min-w-[620px] tbl !text-slate-300">
           <thead><tr className="!text-slate-500">
             <th>Workspace</th><th>Plan</th><th>Status</th><th>BAA</th><th className="!text-right">Users</th>
             <th className="!text-right">Claims</th><th>Created</th>
@@ -505,8 +505,8 @@ function AiClientsTab() {
   useEffect(() => { api.super.aiOrgs().then(setRows).catch(() => setRows([])); }, []);
   if (!rows) return <Skeleton className="h-64 !bg-slate-800" />;
   return (
-    <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl overflow-hidden">
-      <table className="w-full tbl !text-slate-300">
+    <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl overflow-x-auto">
+      <table className="w-full min-w-[620px] tbl !text-slate-300">
         <thead><tr className="!text-slate-500">
           <th>AI workspace</th><th>Linked RCM org</th><th className="!text-right">Users</th>
           <th className="!text-right">KBs</th><th className="!text-right">Chunks</th>
@@ -576,7 +576,7 @@ function UserDrawer({ userId, onClose, onChanged, meId }) {
 
   return (
     <Modal onClose={onClose}>
-      <div className="p-7 bg-slate-900 text-slate-200 rounded-2xl">
+      <div className="p-5 sm:p-7 bg-slate-900 text-slate-200 rounded-2xl">
         <h3 className="text-lg font-bold text-white mb-5">Edit user #{userId}</h3>
         {!loaded ? <Skeleton className="h-32 !bg-slate-700" /> : (
           <div className="space-y-4">
@@ -613,7 +613,7 @@ function UserDrawer({ userId, onClose, onChanged, meId }) {
             )}
             {showDelete && (
               <Modal onClose={() => !busy && setShowDelete(false)}>
-                <div className="p-7 bg-slate-900 text-slate-200 rounded-2xl max-w-md">
+                <div className="p-5 sm:p-7 bg-slate-900 text-slate-200 rounded-2xl max-w-md">
                   <h3 className="text-lg font-bold text-white mb-3">Delete user?</h3>
                   <p className="text-sm text-slate-400 mb-2">
                     This permanently deletes <strong className="text-slate-200">{form.name || userEmail}</strong> and
@@ -655,13 +655,13 @@ function UsersTab() {
   return (
     <div>
       {drawer && <UserDrawer userId={drawer} meId={user?.id} onClose={() => setDrawer(null)} onChanged={load} />}
-      <div className="mb-4 flex gap-2">
+      <div className="mb-4 flex flex-wrap gap-2">
         <input value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && load()}
-          placeholder="Search name or email…" className="input !bg-slate-800 !border-slate-700 !text-white max-w-xs" />
+          placeholder="Search name or email…" className="input !bg-slate-800 !border-slate-700 !text-white flex-1 min-w-[160px] sm:max-w-xs" />
         <button onClick={load} className="btn btn-dark !text-sm">Search</button>
       </div>
-      <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl overflow-hidden">
-        <table className="w-full tbl !text-slate-300">
+      <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl overflow-x-auto">
+        <table className="w-full min-w-[620px] tbl !text-slate-300">
           <thead><tr className="!text-slate-500"><th>Name</th><th>Email</th><th>Workspaces</th><th>Roles</th><th></th></tr></thead>
           <tbody>
             {rows.map((u) => (
@@ -698,8 +698,8 @@ function SubscriptionsTab() {
         <StatCard label="Past due" value={t.past_due} accent={t.past_due ? 'text-rose-400' : 'text-white'} />
         <StatCard label="Canceled" value={t.canceled} />
       </div>
-      <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl overflow-hidden">
-        <table className="w-full tbl !text-slate-300">
+      <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl overflow-x-auto">
+        <table className="w-full min-w-[620px] tbl !text-slate-300">
           <thead><tr className="!text-slate-500">
             <th>Workspace</th><th>Plan</th><th>Status</th><th>Stripe customer</th><th>Stripe sub</th><th>Trial ends</th><th className="!text-right">MRR</th>
           </tr></thead>
@@ -830,7 +830,7 @@ function TicketDrawer({ ticketId, onClose, onChanged }) {
 
   return (
     <Modal onClose={onClose} wide>
-      <div className="p-7 bg-slate-900 text-slate-200 rounded-2xl max-h-[85vh] overflow-y-auto">
+      <div className="p-5 sm:p-7 bg-slate-900 text-slate-200 rounded-2xl max-h-[85vh] overflow-y-auto">
         {!data ? <Skeleton className="h-64 !bg-slate-800" /> : (() => {
           const t = data.ticket;
           const sla = slaStatus(t);
@@ -938,8 +938,8 @@ function SupportTab() {
         Our promise: reply within <span className="text-slate-300 font-semibold">one business day</span>.
         Tickets past their SLA show as <span className="text-rose-300 font-semibold">OVERDUE</span>.
       </div>
-      <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl overflow-hidden">
-        <table className="w-full tbl !text-slate-300">
+      <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl overflow-x-auto">
+        <table className="w-full min-w-[620px] tbl !text-slate-300">
           <thead><tr className="!text-slate-500"><th></th><th>Subject</th><th>From</th><th>Workspace</th><th>SLA</th><th>Replies</th><th>Received</th></tr></thead>
           <tbody>
             {rows.map((t) => {
@@ -1059,7 +1059,7 @@ function DbTab() {
             </div>
             <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full tbl !text-slate-300">
+                <table className="w-full min-w-[620px] tbl !text-slate-300">
                   <thead><tr className="!text-slate-500">
                     {data.columns.map((c) => <th key={c.name} className="!text-xs font-mono">{c.name}</th>)}
                     <th className="!text-right">Actions</th>
@@ -1098,7 +1098,7 @@ function DbTab() {
 
       {editing && (
         <Modal onClose={() => setEditing(null)} wide>
-          <div className="p-7 bg-slate-900 text-slate-200 rounded-2xl max-h-[85vh] overflow-y-auto">
+          <div className="p-5 sm:p-7 bg-slate-900 text-slate-200 rounded-2xl max-h-[85vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-white mb-5">{editing === 'add' ? `Add row — ${table}` : `Edit row #${editing.id} — ${table}`}</h3>
             <div className="grid sm:grid-cols-2 gap-4">
               {editable(editing === 'add').map((c) => (
@@ -1135,41 +1135,77 @@ const TABS = [
 export default function SuperAdmin() {
   const { user, logout } = useAuth();
   const [tab, setTab] = useState('overview');
+  const [navOpen, setNavOpen] = useState(false);
+
+  const go = (id) => { setTab(id); setNavOpen(false); };
+  const sideNav = (onNavigate) => (
+    <>
+      <div className="px-5 py-6 border-b border-slate-800">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center font-extrabold text-slate-950">C</div>
+          <div>
+            <div className="font-bold text-white leading-tight">ClaimPaid</div>
+            <div className="text-[10px] font-bold text-amber-400 tracking-[0.2em]">SUPER ADMIN</div>
+          </div>
+        </div>
+      </div>
+      <nav className="p-3 space-y-1 flex-1 overflow-y-auto">
+        {TABS.map(([id, label]) => (
+          <button key={id} onClick={() => (onNavigate ? onNavigate(id) : setTab(id))}
+            className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium ${tab === id ? 'bg-emerald-600/20 text-emerald-300' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}>
+            {label}
+          </button>
+        ))}
+      </nav>
+      <div className="p-4 border-t border-slate-800">
+        <div className="text-xs text-slate-500 mb-2 truncate">{user?.email}</div>
+        <div className="flex gap-2">
+          <a href="/app/" className="btn !bg-slate-800 !text-slate-300 !text-xs flex-1 !py-2 text-center">← App</a>
+          <button onClick={logout} className="btn !bg-slate-800 !text-slate-300 !text-xs flex-1 !py-2">Sign out</button>
+        </div>
+      </div>
+    </>
+  );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 flex">
-      <aside className="w-60 shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col">
-        <div className="px-5 py-6 border-b border-slate-800">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center font-extrabold text-slate-950">C</div>
-            <div>
-              <div className="font-bold text-white leading-tight">ClaimPaid</div>
-              <div className="text-[10px] font-bold text-amber-400 tracking-[0.2em]">SUPER ADMIN</div>
-            </div>
-          </div>
-        </div>
-        <nav className="p-3 space-y-1 flex-1">
-          {TABS.map(([id, label]) => (
-            <button key={id} onClick={() => setTab(id)}
-              className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium ${tab === id ? 'bg-emerald-600/20 text-emerald-300' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}>
-              {label}
-            </button>
-          ))}
-        </nav>
-        <div className="p-4 border-t border-slate-800">
-          <div className="text-xs text-slate-500 mb-2 truncate">{user?.email}</div>
-          <div className="flex gap-2">
-            <a href="/app/" className="btn !bg-slate-800 !text-slate-300 !text-xs flex-1 !py-2 text-center">← App</a>
-            <button onClick={logout} className="btn !bg-slate-800 !text-slate-300 !text-xs flex-1 !py-2">Sign out</button>
-          </div>
-        </div>
+    <div className="min-h-screen bg-slate-950 text-slate-200 md:flex">
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex w-60 shrink-0 bg-slate-900 border-r border-slate-800 flex-col md:sticky md:top-0 md:h-screen">
+        {sideNav()}
       </aside>
 
-      <main className="flex-1 p-8 max-w-[1400px] w-full mx-auto overflow-x-hidden">
-        <PageHeader
-          title={TABS.find((t) => t[0] === tab)[1]}
-          subtitle={tab === 'overview' ? 'Everything across ClaimPaid, in one place' : ''}
-        />
+      {/* Mobile top bar */}
+      <div className="md:hidden sticky top-0 z-40 bg-slate-900/95 backdrop-blur border-b border-slate-800 flex items-center gap-3 px-4 py-3">
+        <button onClick={() => setNavOpen(true)} aria-label="Open menu"
+          className="w-10 h-10 rounded-xl bg-slate-800 flex flex-col items-center justify-center gap-[5px] shrink-0">
+          <span className="block w-5 h-0.5 bg-slate-200 rounded" />
+          <span className="block w-5 h-0.5 bg-slate-200 rounded" />
+          <span className="block w-5 h-0.5 bg-slate-200 rounded" />
+        </button>
+        <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center font-extrabold text-slate-950">C</div>
+        <div className="min-w-0">
+          <div className="font-bold text-white leading-tight text-sm truncate">{TABS.find((t) => t[0] === tab)[1]}</div>
+          <div className="text-[9px] font-bold text-amber-400 tracking-[0.2em]">SUPER ADMIN</div>
+        </div>
+      </div>
+
+      {/* Mobile drawer */}
+      {navOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex">
+          <div className="absolute inset-0 bg-slate-950/70" onClick={() => setNavOpen(false)} />
+          <aside className="relative w-72 max-w-[85vw] bg-slate-900 border-r border-slate-800 flex flex-col h-full shadow-2xl">
+            {sideNav(go)}
+          </aside>
+        </div>
+      )}
+
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1400px] w-full mx-auto overflow-x-hidden min-w-0">
+        <div className="hidden md:block">
+          <PageHeader
+            title={TABS.find((t) => t[0] === tab)[1]}
+            subtitle={tab === 'overview' ? 'Everything across ClaimPaid, in one place' : ''}
+          />
+        </div>
         <div className="[&_h2]:!text-white">
           {tab === 'overview' && <OverviewTab />}
           {tab === 'clients' && <ClientsTab />}
