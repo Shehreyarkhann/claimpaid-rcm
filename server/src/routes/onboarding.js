@@ -43,7 +43,20 @@ router.post('/complete', authRequired, roleRequired('owner'), (req, res) => {
   }
 
   const now = new Date();
-  const ends = new Date(now.getTime() + TRIAL_DAYS * 86400000);
+  // ONE trial per user, ever (deploy #61): the 30-day window lives on the
+  // owner's account. A first onboarding starts it; every later workspace
+  // (plan switches included) mirrors the SAME window — and once it's over,
+  // new workspaces start expired, headed straight for checkout with no
+  // trial days. Deleting a workspace can never mint a fresh trial.
+  const owner = db.prepare('SELECT trial_started_at, trial_ends_at FROM users WHERE id = ?').get(req.user.id);
+  let trialStarted = owner?.trial_started_at || null;
+  let trialEnds = owner?.trial_ends_at || null;
+  if (!trialEnds) {
+    trialStarted = now.toISOString();
+    trialEnds = new Date(now.getTime() + TRIAL_DAYS * 86400000).toISOString();
+    db.prepare('UPDATE users SET trial_started_at = ?, trial_ends_at = ? WHERE id = ?')
+      .run(trialStarted, trialEnds, req.user.id);
+  }
   const data = JSON.stringify({
     teamSize: TEAM_SIZES.includes(teamSize) ? teamSize : null,
     role: ROLES.includes(role) ? role : null,
@@ -60,7 +73,7 @@ router.post('/complete', authRequired, roleRequired('owner'), (req, res) => {
       trial_started_at = ?, trial_ends_at = ?,
       onboarding_data = ?, onboarding_completed_at = ?
      WHERE id = ?`
-  ).run(name, plan, now.toISOString(), ends.toISOString(), data, now.toISOString(), org.id);
+  ).run(name, plan, trialStarted, trialEnds, data, now.toISOString(), org.id);
 
   res.status(201).json(billingStatusFor(getOrg(req.orgId)));
 });

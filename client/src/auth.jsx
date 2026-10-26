@@ -118,11 +118,17 @@ export const useAuth = () => useContext(AuthContext);
 
 export function authFetch(path, options = {}) {
   const token = localStorage.getItem('pulse_token');
-  return fetch(path, {
-    ...options,
-    headers: {
-      ...(options.headers || {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
+  const headers = {
+    ...(options.headers || {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+  // JSON string bodies need an explicit Content-Type or the server's JSON
+  // parser skips them and the endpoint sees an empty body (deploy #61:
+  // this silently broke plan switching — "Unknown plan" — and forced every
+  // cancellation to the default mode). FormData bodies are left alone so
+  // the browser sets their multipart boundary itself.
+  if (typeof options.body === 'string' && !Object.keys(headers).some((h) => h.toLowerCase() === 'content-type')) {
+    headers['Content-Type'] = 'application/json';
+  }
+  return fetch(path, { ...options, headers });
 }

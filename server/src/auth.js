@@ -137,6 +137,20 @@ function authRequired(req, res, next) {
       req.plan = null;
       req.products = { rcm: true, ai: true };
     }
+    // Plans-only backstop (deploy #61): an org with NO product access
+    // (trial over, or canceled past its window, with no paid plan) may
+    // reach only account / billing / onboarding / legal / support / super
+    // routes — every business API answers 403 PLAN_REQUIRED and the client
+    // shows the plans page. Mirrors the MFA bypass pattern above.
+    if (!req.isSuperAdmin && req.products && !req.products.rcm && !req.products.ai) {
+      const OPEN_PREFIXES = ['/api/auth', '/api/billing', '/api/onboarding', '/api/super', '/api/legal', '/api/support'];
+      if (!OPEN_PREFIXES.some((x) => fullPath.startsWith(x))) {
+        return res.status(403).json({
+          error: 'Your trial has ended and there is no active plan. Choose a plan to continue.',
+          code: 'PLAN_REQUIRED', upgrade: true,
+        });
+      }
+    }
     next();
   } catch (e) {
     return res.status(401).json({ error: 'Invalid or expired token' });

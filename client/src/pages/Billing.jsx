@@ -348,7 +348,9 @@ export default function Billing({ onBaaRequired }) {
         {status?.cancel_at_period_end && (
           <div className="mt-4 flex items-center justify-between flex-wrap gap-3 text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
             <span>
-              Your plan cancels on <strong>{fmtDate(status.current_period_end)}</strong> — you keep full access until then, and you won't be charged again.
+              {isTrialing
+                ? <>Your trial ends on <strong>{fmtDate(status.trial_ends_at)}</strong> and won't convert to a paid plan — you keep full access until then.</>
+                : <>Your plan cancels on <strong>{fmtDate(status.current_period_end)}</strong> — you keep full access until then, and you won't be charged again.</>}
             </span>
             <button className="btn btn-primary !py-1.5" disabled={busy === 'reactivate'} onClick={doReactivate}>
               {busy === 'reactivate' ? 'Working…' : 'Keep my plan'}
@@ -357,7 +359,7 @@ export default function Billing({ onBaaRequired }) {
         )}
         {isTrialing && !hasCustomer && st !== 'canceled' && (
           <div className="mt-4 text-xs text-slate-400">
-            Prefer to stop now? <button className="underline hover:text-slate-600" onClick={() => { setCancelMode('immediate'); setShowCancel(true); }}>End your trial</button> — your workspace will close today.
+            Prefer to stop now? <button className="underline hover:text-slate-600" onClick={() => { setCancelMode('immediate'); setShowCancel(true); }}>End your trial</button> — it won't convert, and you keep access until the trial end date.
           </div>
         )}
         {!status?.stripe_configured && (
@@ -372,7 +374,13 @@ export default function Billing({ onBaaRequired }) {
         <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4" onClick={() => busy !== 'cancel' && setShowCancel(false)}>
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold tracking-tight mb-2">Cancel {meta.label}?</h3>
-            {hasCustomer ? (
+            {isTrialing ? (
+              <p className="text-sm text-slate-600 mb-5">
+                Your trial will end on <strong>{fmtDate(status.trial_ends_at)}</strong> and won't convert to a paid plan.
+                You keep <strong>full access until that date</strong> — canceling never shortens a trial — and you can undo
+                this anytime before then with “Keep my plan”.
+              </p>
+            ) : hasCustomer ? (
               <>
                 <p className="text-sm text-slate-600 mb-4">
                   No hard feelings — and no cancellation fees, ever. Your data stays available in read-only export for 30 days after access ends.
@@ -388,13 +396,13 @@ export default function Billing({ onBaaRequired }) {
               </>
             ) : (
               <p className="text-sm text-slate-600 mb-5">
-                This ends your free trial today and closes the workspace. You can sign up again anytime — your trial won't restart.
+                This ends your subscription today. You can sign up again anytime.
               </p>
             )}
             <div className="flex justify-end gap-2">
               <button className="btn btn-ghost" disabled={busy === 'cancel'} onClick={() => setShowCancel(false)}>Keep my plan</button>
               <button className="btn !bg-red-600 !text-white hover:!bg-red-700" disabled={busy === 'cancel'} onClick={doCancel}>
-                {busy === 'cancel' ? 'Canceling…' : 'Yes, cancel'}
+                {busy === 'cancel' ? 'Canceling…' : isTrialing ? 'Yes, end at trial end' : 'Yes, cancel'}
               </button>
             </div>
           </div>

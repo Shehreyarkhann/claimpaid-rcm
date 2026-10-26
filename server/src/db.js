@@ -377,6 +377,11 @@ function initSchema() {
   if (!columnExists('users', 'phone')) db.exec('ALTER TABLE users ADD COLUMN phone TEXT');
   if (!columnExists('users', 'title')) db.exec('ALTER TABLE users ADD COLUMN title TEXT');
   if (!columnExists('users', 'token_version')) db.exec('ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0');
+  // One trial per USER (deploy #61): the 30-day window lives on the account,
+  // not the workspace — deleting/recreating workspaces or switching plans
+  // can never mint a second trial. Orgs mirror the owner's window.
+  if (!columnExists('users', 'trial_started_at')) db.exec('ALTER TABLE users ADD COLUMN trial_started_at TEXT');
+  if (!columnExists('users', 'trial_ends_at')) db.exec('ALTER TABLE users ADD COLUMN trial_ends_at TEXT');
   if (!columnExists('demo_requests', 'notes')) db.exec('ALTER TABLE demo_requests ADD COLUMN notes TEXT DEFAULT \'\'');  db.exec(`
     CREATE TABLE IF NOT EXISTS support_tickets (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

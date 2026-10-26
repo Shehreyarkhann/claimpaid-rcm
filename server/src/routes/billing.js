@@ -71,11 +71,20 @@ function getEffectivePlanStatus(org) {
 }
 
 // Products for an org, honoring trial expiry: an expired trial unlocks
-// nothing — and neither does a canceled subscription (deploy #54: before
-// this, a canceled org kept its paid plan's products forever).
+// nothing — and neither does a canceled subscription past its access
+// window (deploy #54: before this, a canceled org kept its paid plan's
+// products forever). Deploy #61: a subscription canceled DURING the trial
+// keeps its products until the trial end date — canceling stops the
+// conversion, never the trial itself (the Stripe/SaaS norm).
 function productsForOrg(org) {
   const eff = getEffectivePlanStatus(org);
-  if (eff === 'expired' || eff === 'canceled') return { rcm: false, ai: false };
+  if (eff === 'expired') return { rcm: false, ai: false };
+  if (eff === 'canceled') {
+    if (org?.trial_ends_at && new Date(org.trial_ends_at).getTime() > Date.now()) {
+      return productsForPlan(org?.plan);
+    }
+    return { rcm: false, ai: false };
+  }
   return productsForPlan(org?.plan);
 }
 
@@ -127,6 +136,7 @@ function billingStatusFor(org) {
   const effStatus = getEffectivePlanStatus(org);
   const trialEndsAt = org.trial_ends_at || null;
   const msLeft = trialEndsAt ? new Date(trialEndsAt).getTime() - Date.now() : 0;
+  const products = productsForOrg(org);
   return {
     plan: org.plan || 'trial',
     plan_status: effStatus,
@@ -138,7 +148,11 @@ function billingStatusFor(org) {
     has_customer: !!org.stripe_customer_id,
     has_subscription: !!org.stripe_subscription_id,
     stripe_configured: !!process.env.STRIPE_SECRET_KEY,
-    products: productsForOrg(org),
+    products,
+    // Deploy #61: single access verdict for the client's paywall gate and
+    // the server's plans-only backstop — 'plans_only' when nothing is
+    // unlocked (trial over or canceled past its window, nothing paid).
+    access: products.rcm || products.ai ? 'full' : 'plans_only',
     plans: {
       starter: { name: PLANS.starter.name, amount: PLANS.starter.amount, available: !!PLANS.starter.priceId },
       pro: { name: PLANS.pro.name, amount: PLANS.pro.amount, available: !!PLANS.pro.priceId },
@@ -249,8 +263,8 @@ router.post('/portal', authRequired, roleRequired('owner'), async (req, res) => 
 // Deploy #54: any customer can cancel at any time, in-app. Default mode is
 // 'period_end' (Stripe cancel_at_period_end — access continues until the
 // paid period ends, then the subscription.deleted webhook closes the org).
-// 'immediate' cancels in Stripe right now. An org with no Stripe
-// subscription (app-side trial, no card) simply ends its trial now.
+// 'immediate' cancels in Stripe right now. Deploy #61: during the trial,
+// both modes schedule the end AT the trial end date instead (see below).
 router.post('/cancel', authRequired, roleRequired('owner'), async (req, res) => {
   const org = getOrg(req.orgId);
   if (!org) return res.status(404).json({ error: 'Organization not found' });
@@ -259,9 +273,36 @@ router.post('/cancel', authRequired, roleRequired('owner'), async (req, res) => 
   }
   const mode = req.body?.mode === 'immediate' ? 'immediate' : 'period_end';
 
+  // Deploy #61: canceling DURING the trial never truncates it — access runs
+  // to the trial end date and the plan simply doesn't convert (Stripe/SaaS
+  // norm). This holds for both modes and both trial flavors; the requested
+  // mode only matters for paid subscriptions below.
+  if (getEffectivePlanStatus(org) === 'trialing') {
+    const endDate = org.trial_ends_at ? org.trial_ends_at.slice(0, 10) : 'the trial end date';
+    if (org.stripe_cancel_at_period_end) {
+      return res.status(400).json({ error: `Your trial is already set to end on ${endDate} without converting.` });
+    }
+    if (org.stripe_subscription_id) {
+      if (!billingConfigured(res)) return;
+      const stripe = getStripe();
+      try {
+        // On a trialing subscription this ends it AT the trial end, no charge.
+        await stripe.subscriptions.update(org.stripe_subscription_id, { cancel_at_period_end: true });
+      } catch (e) {
+        console.error('Stripe trial cancel error:', e.message);
+        return res.status(502).json({ error: 'Stripe could not schedule the cancellation. Please try again or contact support.' });
+      }
+    }
+    db.prepare('UPDATE orgs SET stripe_cancel_at_period_end = 1 WHERE id = ?').run(org.id);
+    return res.json({
+      ok: true, mode: 'trial_end', access_until: org.trial_ends_at,
+      message: `Your trial will end on ${endDate} and won't convert to a paid plan — you keep full access until then. Changed your mind? Use "Keep my plan" anytime before then.`,
+    });
+  }
+
   if (!org.stripe_subscription_id) {
     db.prepare("UPDATE orgs SET plan_status = 'canceled', stripe_cancel_at_period_end = 0 WHERE id = ?").run(org.id);
-    return res.json({ ok: true, mode: 'immediate', access_until: null, message: 'Your trial has been ended. Thanks for trying ClaimPaid.' });
+    return res.json({ ok: true, mode: 'immediate', access_until: null, message: 'Your subscription has been ended. Thanks for trying ClaimPaid.' });
   }
   if (!billingConfigured(res)) return;
   const stripe = getStripe();
@@ -286,8 +327,15 @@ router.post('/cancel', authRequired, roleRequired('owner'), async (req, res) => 
 router.post('/reactivate', authRequired, roleRequired('owner'), async (req, res) => {
   const org = getOrg(req.orgId);
   if (!org) return res.status(404).json({ error: 'Organization not found' });
-  if (!org.stripe_subscription_id || !org.stripe_cancel_at_period_end) {
+  if (!org.stripe_cancel_at_period_end) {
     return res.status(400).json({ error: 'No scheduled cancellation to undo.' });
+  }
+  // App-side trial with no Stripe subscription: clearing the flag is a
+  // purely local undo (deploy #61 — trial cancels schedule an end, they
+  // don't create a subscription to reactivate).
+  if (!org.stripe_subscription_id) {
+    db.prepare('UPDATE orgs SET stripe_cancel_at_period_end = 0 WHERE id = ?').run(org.id);
+    return res.json({ ok: true, message: 'Your trial will convert as planned — add a payment method before it ends to keep your plan.' });
   }
   if (!billingConfigured(res)) return;
   const stripe = getStripe();
@@ -463,6 +511,7 @@ async function handleWebhook(req, res) {
         }
         db.prepare(`UPDATE orgs SET plan = ?, plan_status = ?,
                     trial_ends_at = COALESCE(?, trial_ends_at),
+                    stripe_cancel_at_period_end = 0,
                     stripe_customer_id = COALESCE(stripe_customer_id, ?),
                     stripe_subscription_id = ? WHERE id = ?`)
           .run(plan, planStatus, trialEndsAt, String(session.customer), subscriptionId || null, orgId);

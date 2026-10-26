@@ -1,8 +1,11 @@
 // Deploy #54 test: self-serve cancellation + super-admin unlimited bypass.
-// - trial (no Stripe sub) cancel ends access immediately (products lock)
-// - canceled orgs lose product access (pre-#54 gap: canceled kept products)
+// Updated for the deploy #61 policy:
+// - canceling DURING the trial never truncates it: the end is scheduled at
+//   the trial end date, products stay on, "Keep my plan" undoes it
+// - when the trial window closes, access ends: expired + plans_only, and
+//   business APIs answer 403 PLAN_REQUIRED while billing stays reachable
+// - canceled (paid) orgs lose product access (pre-#54 gap)
 // - cancel with a Stripe sub but billing unconfigured -> graceful 503
-// - reactivate with nothing scheduled -> 400
 // - super-admin: status reports enterprise/active even on an expired org,
 //   claim quota never 402s, product gates stay open
 // Run: node deploy/billing-cancel-test.cjs
@@ -29,18 +32,34 @@ const CLAIM = { claim_number: 'T54-1', patient_name: 'Test Patient', payer: 'Aet
   try {
     check('server up', await waitUp(), err.slice(-300));
 
-    // Trial org: signup -> onboarding (starter) -> cancel ends everything.
+    // Trial org: signup -> onboarding (starter) -> cancel DURING the trial.
     const su = await call('POST', '/api/auth/signup', { name: 'Trial Org', email: 'trial54@test.co', password: 'Test1234!', orgName: 'Trial Co' });
     const tTok = su.body?.token;
     await call('POST', '/api/onboarding/complete', { plan: 'starter' }, tTok);
     check('trial org can create claims before cancel', (await call('POST', '/api/claims', CLAIM, tTok)).status === 201);
-    const cx = await call('POST', '/api/billing/cancel', {}, tTok);
-    check('trial cancel succeeds (no Stripe sub -> immediate)', cx.status === 200 && cx.body?.mode === 'immediate', cx);
+    const cx = await call('POST', '/api/billing/cancel', { mode: 'immediate' }, tTok);
+    check('trial cancel -> mode trial_end (even when immediate requested)', cx.status === 200 && cx.body?.mode === 'trial_end', cx);
     const st = await call('GET', '/api/billing/status', null, tTok);
-    check('status reports canceled + products locked', st.body?.plan_status === 'canceled' && st.body?.products?.rcm === false, st.body);
-    check('canceled org loses product access (claims 403)', (await call('GET', '/api/claims', null, tTok)).status === 403);
-    check('double cancel -> 400', (await call('POST', '/api/billing/cancel', {}, tTok)).status === 400);
-    check('reactivate with nothing scheduled -> 400', (await call('POST', '/api/billing/reactivate', {}, tTok)).status === 400);
+    check('status still trialing + end scheduled + products on + full access',
+      st.body?.plan_status === 'trialing' && st.body?.cancel_at_period_end === true && st.body?.products?.rcm === true && st.body?.access === 'full', st.body);
+    check('claims still work after trial cancel', (await call('GET', '/api/claims', null, tTok)).status === 200);
+    check('double cancel -> 400 (already scheduled)', (await call('POST', '/api/billing/cancel', {}, tTok)).status === 400);
+    const re = await call('POST', '/api/billing/reactivate', {}, tTok);
+    check('reactivate (Keep my plan) clears the scheduled trial end', re.status === 200, re);
+    const stR = await call('GET', '/api/billing/status', null, tTok);
+    check('flag cleared after reactivate', stR.body?.cancel_at_period_end === false, stR.body);
+    // Cancel again and run the clock out — access ends at the trial end.
+    await call('POST', '/api/billing/cancel', {}, tTok);
+    const { DatabaseSync: DS0 } = require('node:sqlite');
+    const db0 = new DS0(DB);
+    db0.prepare("UPDATE orgs SET trial_ends_at = '2020-01-01T00:00:00.000Z' WHERE id = ?").run(su.body.user.org_id);
+    db0.close();
+    const st3 = await call('GET', '/api/billing/status', null, tTok);
+    check('after trial end: expired + plans_only + products locked',
+      st3.body?.plan_status === 'expired' && st3.body?.access === 'plans_only' && st3.body?.products?.rcm === false, st3.body);
+    const blocked = await call('GET', '/api/claims', null, tTok);
+    check('after trial end: claims 403 PLAN_REQUIRED', blocked.status === 403 && blocked.body?.code === 'PLAN_REQUIRED', blocked);
+    check('billing stays reachable in plans-only state', (await call('GET', '/api/billing/status', null, tTok)).status === 200);
 
     // Paid org with a Stripe sub id but no key configured -> graceful 503.
     const su2 = await call('POST', '/api/auth/signup', { name: 'Paid Org', email: 'paid54@test.co', password: 'Test1234!', orgName: 'Paid Co' });

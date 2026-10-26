@@ -35,14 +35,18 @@ import OnboardingWizard from './components/OnboardingWizard';
 import CreateWorkspaceGate from './components/CreateWorkspaceGate';
 import { OrgSettingsProvider } from './orgSettings';
 
-// Trial-expired owners land here: Billing handles reactivation,
-// Compliance covers the BAA step if checkout demands it.
-function ExpiredScreen() {
+// Plans-only paywall (deploy #61): no active plan and no running trial —
+// the ONLY reachable surface is Billing (pick/pay for a plan) and the BAA
+// step checkout may demand. The dashboard stays closed until a plan is
+// active. `reason`: 'expired' (trial ran out) or 'canceled'.
+function ExpiredScreen({ reason }) {
   const [view, setView] = useState('billing');
   return (
     <div className="min-h-screen bg-[#f1f5f9]">
       <div className="bg-amber-500/15 border-b border-amber-500/30 px-6 py-3 text-center text-sm text-amber-900">
-        Your 30-day trial has ended — reactivate your plan below to continue. Your data is safe.
+        {reason === 'canceled'
+          ? 'Your subscription has ended — pick a plan below to continue. Your data is safe.'
+          : 'Your 30-day trial has ended — reactivate your plan below to continue. Your data is safe.'}
       </div>
       {view === 'billing' ? (
         <Billing onBaaRequired={() => setView('compliance')} />
@@ -147,9 +151,10 @@ function AuthGate({ children }) {
     );
   }
 
-  // Expired trial: paywall. Billing handles reactivation; Compliance covers the BAA step.
-  if (billing?.plan_status === 'expired') {
-    return <ExpiredScreen />;
+  // Plans-only paywall: trial over (or canceled past its window) with no
+  // paid plan — Billing is the only surface until a plan is active.
+  if (billing && billing.access === 'plans_only') {
+    return <ExpiredScreen reason={billing.plan_status === 'canceled' ? 'canceled' : 'expired'} />;
   }
 
   // AI-only subscribers don't get the RCM dashboard — point them at the AI
