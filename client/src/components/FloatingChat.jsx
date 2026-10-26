@@ -39,7 +39,7 @@ export default function FloatingChat() {
         onClick={() => setOpen(!open)}
         aria-label="Chat with ClaimPaid AI"
         className="fixed bottom-[92px] lg:bottom-6 right-4 lg:right-6 z-50 w-14 h-14 rounded-full shadow-xl flex items-center justify-center text-2xl transition-transform hover:scale-110 active:scale-95"
-        style={{ background: 'linear-gradient(135deg,#D97706,#B45309)' }}
+        style={{ background: 'linear-gradient(135deg,#10B981,#0A7A54)' }}
       >
         {open ? <span className="text-white text-xl">✕</span> : '🤖'}
       </button>
