@@ -25,65 +25,68 @@
 {"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://claimpaid.io/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://claimpaid.io/blog/"}]}
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800;9..144,900&family=Playfair+Display:wght@800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
-:root{--navy:#0b1220;--navy2:#0f172a;--panel:#111c33;--green:#10b981;--green-lt:#34d399;--violet:#8b5cf6;--violet-lt:#a78bfa;--txt:#e8eefc;--mut:#93a0bd;--line:rgba(255,255,255,.08)}
+:root{--paper:#FAF5EB;--paper2:#F3ECDC;--card:#FFFDF8;--ink:#211A13;--ink2:#453B2F;--mut:#7C7060;--line:#E4D9C3;--green:#0E9F6E;--green-dk:#0A7A54;--green-deep:#17251F;--amber:#B45309;--amber-lt:#D97706;--mint-bg:#EFFAF4}
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--navy);color:var(--txt);font-family:'Inter',system-ui,sans-serif;line-height:1.7}
-h1,h2,h3{font-family:'Sora',sans-serif}
+body{background:var(--paper);color:var(--ink2);font-family:'Inter',system-ui,sans-serif;line-height:1.7}
+h1,h2,h3{font-family:'Fraunces',Georgia,serif;color:var(--ink)}
 .wrap{max-width:1100px;margin:0 auto;padding:0 24px}
-.grad{background:linear-gradient(92deg,var(--green-lt),var(--violet-lt));-webkit-background-clip:text;background-clip:text;color:transparent}
-nav{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(14px);background:rgba(11,18,32,.85);border-bottom:1px solid var(--line)}
+.grad{color:var(--green-dk)}
+nav{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(14px);background:rgba(250,245,235,.88);border-bottom:1px solid var(--line)}
 .nav-in{display:flex;align-items:center;justify-content:space-between;height:68px}
-.logo{display:flex;align-items:center;gap:10px;font-family:'Sora';font-weight:800;font-size:21px;letter-spacing:-.4px;text-decoration:none;color:var(--txt)}
-.logo img{width:34px;height:34px;border-radius:9px;box-shadow:0 0 18px rgba(16,185,129,.45)}
-.logo span{color:var(--green-lt)}
+.logo{display:flex;align-items:center;gap:10px;font-family:'Playfair Display',Georgia,serif;font-weight:800;font-size:21px;letter-spacing:-.4px;text-decoration:none;color:var(--ink)}
+.logo img{width:34px;height:34px;border-radius:9px;box-shadow:0 4px 14px rgba(14,159,110,.35)}
+.logo .wm{color:var(--ink)}
+.logo em{font-style:normal;color:var(--green-dk)}
 .nav-links{display:flex;gap:28px;align-items:center}
-.nav-links a{color:var(--mut);text-decoration:none;font-size:14.5px;font-weight:500;transition:color .25s}
-.nav-links a:hover{color:#fff}
-.nav-links a.active{color:#fff}
+.nav-links a{color:var(--ink2);text-decoration:none;font-size:14.5px;font-weight:500;transition:color .25s}
+.nav-links a:hover{color:var(--ink)}
+.nav-links a.active{color:var(--green-dk);font-weight:700}
 .btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:15px;border-radius:12px;padding:13px 26px;text-decoration:none;border:none;transition:transform .25s,box-shadow .25s;cursor:pointer}
-.btn-green{background:linear-gradient(135deg,#10b981,#059669);color:#04120c;box-shadow:0 8px 28px rgba(16,185,129,.35)}
-.btn-green:hover{transform:translateY(-3px);box-shadow:0 14px 40px rgba(16,185,129,.5)}
-.btn-sm{padding:10px 20px;font-size:14px}
+.btn-green{background:linear-gradient(135deg,#10B981,#0A7A54);color:#fff;box-shadow:0 8px 24px rgba(14,159,110,.32)}
+.btn-green:hover{transform:translateY(-3px);box-shadow:0 14px 34px rgba(14,159,110,.42)}
+.btn-sm{padding:10px 20px;font-size:14px;color:#fff}
 header.blog-hero{padding:150px 0 40px;text-align:center}
-.blog-hero .kicker{display:inline-block;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--green-lt);border:1px solid rgba(16,185,129,.35);background:rgba(16,185,129,.08);padding:8px 18px;border-radius:100px;margin-bottom:22px}
-.blog-hero h1{font-size:clamp(36px,5vw,58px);font-weight:800;letter-spacing:-1.5px;margin-bottom:16px}
+.blog-hero .kicker{display:inline-block;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--green-dk);border:1px solid #BFE8D6;background:var(--mint-bg);padding:8px 18px;border-radius:100px;margin-bottom:22px}
+.blog-hero h1{font-size:clamp(38px,5.2vw,60px);font-weight:800;letter-spacing:-1.5px;margin-bottom:16px;line-height:1.1}
 .blog-hero p{color:var(--mut);font-size:17px;max-width:640px;margin:0 auto 34px}
 .search-wrap{max-width:560px;margin:0 auto;position:relative}
-.search-wrap input{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px 20px 15px 48px;font-size:15.5px;color:var(--txt);outline:none;transition:border-color .25s}
-.search-wrap input:focus{border-color:rgba(16,185,129,.6)}
+.search-wrap input{width:100%;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 20px 15px 48px;font-size:15.5px;color:var(--ink);outline:none;transition:border-color .25s, box-shadow .25s;font-family:'Inter',sans-serif;box-shadow:0 10px 28px rgba(90,70,20,.07)}
+.search-wrap input:focus{border-color:var(--green);box-shadow:0 10px 28px rgba(14,159,110,.14)}
 .search-wrap input::placeholder{color:var(--mut)}
-.search-wrap .icon{position:absolute;left:17px;top:50%;transform:translateY(-50%);color:var(--mut);font-size:18px}
+.search-wrap .icon{position:absolute;left:17px;top:50%;transform:translateY(-50%);color:var(--green-dk);font-size:18px}
 .tabs{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:30px 0 8px}
-.tab{background:transparent;border:1px solid var(--line);color:var(--mut);font-size:13.5px;font-weight:600;padding:9px 18px;border-radius:100px;cursor:pointer;transition:all .25s;font-family:'Inter',sans-serif}
-.tab:hover{color:#fff;border-color:rgba(16,185,129,.5)}
-.tab.active{background:rgba(16,185,129,.14);border-color:rgba(16,185,129,.6);color:var(--green-lt)}
+.tab{background:var(--card);border:1px solid var(--line);color:var(--ink2);font-size:13.5px;font-weight:600;padding:9px 18px;border-radius:100px;cursor:pointer;transition:all .25s;font-family:'Inter',sans-serif}
+.tab:hover{border-color:var(--green);color:var(--green-dk)}
+.tab.active{background:var(--green-deep);border-color:var(--green-deep);color:#FAF5EB}
 .result-line{text-align:center;color:var(--mut);font-size:13.5px;margin:14px 0 0}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:22px;padding:24px 0 90px}
-.card{background:linear-gradient(160deg,rgba(16,185,129,.06),rgba(139,92,246,.04));border:1px solid var(--line);border-radius:18px;text-decoration:none;color:var(--txt);display:flex;flex-direction:column;transition:transform .3s,border-color .3s,box-shadow .3s;overflow:hidden}
-.card:hover{transform:translateY(-6px);border-color:rgba(16,185,129,.45);box-shadow:0 20px 50px rgba(16,185,129,.12)}
-.card-img{width:100%;height:180px;object-fit:cover;display:block;background:var(--panel)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;text-decoration:none;color:var(--ink2);display:flex;flex-direction:column;transition:transform .3s,border-color .3s,box-shadow .3s;overflow:hidden;box-shadow:0 10px 28px rgba(90,70,20,.05)}
+.card:hover{transform:translateY(-6px);border-color:#BFE8D6;box-shadow:0 24px 50px rgba(90,70,20,.13)}
+.card-img{width:100%;height:180px;object-fit:cover;display:block;background:var(--paper2)}
 .card-body{padding:24px 26px 26px;display:flex;flex-direction:column;flex:1}
-.card .tag{display:inline-block;align-self:flex-start;font-size:11.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--green-lt);background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);padding:5px 12px;border-radius:100px;margin-bottom:14px}
-.card h2{font-size:20px;font-weight:700;letter-spacing:-.5px;line-height:1.35;margin-bottom:10px}
+.card .tag{display:inline-block;align-self:flex-start;font-size:11.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--green-dk);background:var(--mint-bg);border:1px solid #BFE8D6;padding:5px 12px;border-radius:100px;margin-bottom:14px}
+.card h2{font-size:20.5px;font-weight:700;letter-spacing:-.4px;line-height:1.32;margin-bottom:10px}
 .card p.excerpt{color:var(--mut);font-size:14.5px;flex:1;margin-bottom:18px}
 .card .meta{display:flex;gap:14px;font-size:12.5px;color:var(--mut)}
 .card .meta span::before{content:'• ';color:var(--green)}
 .card .meta span:first-child::before{content:''}
 #no-results{display:none;text-align:center;padding:60px 20px;color:var(--mut)}
-#no-results h2{font-size:24px;color:#fff;margin-bottom:10px}
+#no-results h2{font-size:24px;margin-bottom:10px}
 footer{border-top:1px solid var(--line);padding:40px 0;color:var(--mut);font-size:13.5px}
 .foot{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px}
-.foot a{color:var(--mut);text-decoration:none}
-.foot a:hover{color:var(--green-lt)}
+.foot a{color:var(--ink2);text-decoration:none}
+.foot a:hover{color:var(--green-dk)}
 .foot-links{display:flex;gap:22px}
 @media(max-width:640px){.nav-links a:not(.btn){display:none}.tabs{justify-content:flex-start;overflow-x:auto;padding-bottom:6px}}
+
+.card-img{display:none}
 </style>
 </head>
 <body>
 <nav><div class="wrap nav-in">
-  <a class="logo" href="/"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo"/>Claim<span>Paid</span></a>
+  <a class="logo" href="/"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo"/><span class="wm">Claim<em>Paid</em></span></a>
   <div class="nav-links">
     <a href="/">Product</a><a href="/blog/" class="active">Blog</a>
     <a class="btn btn-green btn-sm" href="/app/">Get started</a>
@@ -368,7 +371,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;color:var(--mut);font-siz
 </div></main>
 
 <footer><div class="wrap foot">
-  <a class="logo" href="/" style="font-size:17px"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo" style="width:28px;height:28px"/>Claim<span>Paid</span></a>
+  <a class="logo" href="/" style="font-size:17px"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo" style="width:28px;height:28px"/><span class="wm">Claim<em>Paid</em></span></a>
   <div class="foot-links"><a href="/blog/">Blog</a><a href="/legal/terms">Terms</a><a href="/legal/privacy">Privacy</a><a href="mailto:support@claimpaid.io">support@claimpaid.io</a></div>
   <div>© 2026 ClaimPaid · Get your claims paid.</div>
 </div></footer>
