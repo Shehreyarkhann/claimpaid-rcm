@@ -47,10 +47,15 @@ BRAVE_API_KEY="${BRAVE_API_KEY:-}"      # optional web-fallback search
 # (MFA codes then print to the server log instead of sending).
 EMAIL_PROVIDER="${EMAIL_PROVIDER:-smtp}"
 SMTP_HOST="${SMTP_HOST:-smtp.resend.com}"
-SMTP_PORT="${SMTP_PORT:-587}"
+# SMTP_PORT / SMTP_FROM / SMTP_SECURE must default EMPTY here: keep_or()
+# prefers any non-empty shell value over the existing .env, and a hardcoded
+# default here silently clobbered production's tuned values on deploy #58
+# (port 2587 — DO blocks 587 — and the branded From). Empty = preserve file.
+SMTP_PORT="${SMTP_PORT:-}"
 SMTP_USER="${SMTP_USER:-resend}"
 SMTP_PASS="${SMTP_PASS:-}"
-SMTP_FROM="${SMTP_FROM:-noreply@claimpaid.io}"
+SMTP_FROM="${SMTP_FROM:-}"
+SMTP_SECURE="${SMTP_SECURE:-}"
 # Stripe billing (leave empty to run without online checkout)
 STRIPE_SECRET_KEY="${STRIPE_SECRET_KEY:-}"
 STRIPE_PRICE_STARTER="${STRIPE_PRICE_STARTER:-}"
@@ -175,10 +180,11 @@ if [[ -f "${APP_DIR}/server/.env" ]]; then
   _get() { grep -E "^$1=" <<<"$_EXISTING" | cut -d= -f2- || true; }
   EMAIL_PROVIDER="$(keep_or EMAIL_PROVIDER "$(_get EMAIL_PROVIDER)")"; [[ -z "$EMAIL_PROVIDER" ]] && EMAIL_PROVIDER="smtp"
   SMTP_HOST="$(keep_or SMTP_HOST "$(_get SMTP_HOST)")";       [[ -z "$SMTP_HOST" ]] && SMTP_HOST="smtp.resend.com"
-  SMTP_PORT="$(keep_or SMTP_PORT "$(_get SMTP_PORT)")";       [[ -z "$SMTP_PORT" ]] && SMTP_PORT="587"
+  SMTP_PORT="$(keep_or SMTP_PORT "$(_get SMTP_PORT)")";       [[ -z "$SMTP_PORT" ]] && SMTP_PORT="2587"
   SMTP_USER="$(keep_or SMTP_USER "$(_get SMTP_USER)")";       [[ -z "$SMTP_USER" ]] && SMTP_USER="resend"
   SMTP_PASS="$(keep_or SMTP_PASS "$(_get SMTP_PASS)")"
-  SMTP_FROM="$(keep_or SMTP_FROM "$(_get SMTP_FROM)")"
+  SMTP_FROM="$(keep_or SMTP_FROM "$(_get SMTP_FROM)")";       [[ -z "$SMTP_FROM" ]] && SMTP_FROM="ClaimPaid <no-reply@claimpaid.io>"
+  SMTP_SECURE="$(keep_or SMTP_SECURE "$(_get SMTP_SECURE)")"
   STRIPE_SECRET_KEY="$(keep_or STRIPE_SECRET_KEY "$(_get STRIPE_SECRET_KEY)")"
   STRIPE_PRICE_STARTER="$(keep_or STRIPE_PRICE_STARTER "$(_get STRIPE_PRICE_STARTER)")"
   STRIPE_PRICE_PRO="$(keep_or STRIPE_PRICE_PRO "$(_get STRIPE_PRICE_PRO)")"
@@ -197,6 +203,7 @@ JWT_SECRET=${JWT_SECRET}
 EMAIL_PROVIDER=${EMAIL_PROVIDER}
 SMTP_HOST=${SMTP_HOST}
 SMTP_PORT=${SMTP_PORT}
+SMTP_SECURE=${SMTP_SECURE}
 SMTP_USER=${SMTP_USER}
 SMTP_PASS=${SMTP_PASS}
 SMTP_FROM=${SMTP_FROM}
