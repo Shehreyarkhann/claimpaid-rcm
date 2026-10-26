@@ -1,44 +1,61 @@
 #!/usr/bin/env bash
-# ClaimPaid email port fix: tests which Resend SMTP ports actually answer
-# from this droplet, switches SMTP_PORT in the prod .env to the first
+# ClaimPaid email port fix v2: probes each Resend SMTP port for a real 220
+# banner (TLS-aware), switches SMTP_PORT in the prod .env to the first
 # working one, and restarts the app. If 587 already works, changes nothing.
 set -u
-HOST=smtp.resend.com
 ENV_FILE=/opt/claimpaid-rcm/server/.env
 
-banner_ok() {
-  timeout 8 bash -c "exec 3<>/dev/tcp/$HOST/$1; head -c 80 <&3" 2>/dev/null | grep -q "220"
+probe() {
+  # $1 = port, $2 = tls (1 = implicit TLS). Prints banner; exit 0 iff 220.
+  python3 - "$1" "$2" <<'PYEOF'
+import socket, ssl, sys
+port = int(sys.argv[1]); tls = sys.argv[2] == "1"
+host = "smtp.resend.com"
+try:
+    raw = socket.create_connection((host, port), timeout=6)
+    if tls:
+        ctx = ssl.create_default_context()
+        s = ctx.wrap_socket(raw, server_hostname=host)
+    else:
+        s = raw
+    s.settimeout(6)
+    data = s.recv(160).decode("utf-8", "replace").strip()
+    print(data if data else "<empty>")
+    sys.exit(0 if data.startswith("220") else 1)
+except Exception as e:
+    print("ERR %s" % e)
+    sys.exit(1)
+PYEOF
 }
 
-echo "Testing SMTP ports at $HOST ..."
-declare -A STATUS
-for p in 587 2587 2465 465; do
-  if banner_ok "$p"; then
-    echo "$p OK (SMTP answered)"
-    STATUS[$p]=ok
+echo "Probing SMTP ports at smtp.resend.com ..."
+declare -A OK
+for spec in "587 0" "2587 0" "2465 1" "465 1"; do
+  set -- $spec
+  echo "-- port $1:"
+  if out=$(probe "$1" "$2"); then
+    echo "   OK: $out"
+    OK[$1]=1
   else
-    echo "$p DEAD (no answer)"
-    STATUS[$p]=dead
+    echo "   DEAD: $out"
+    OK[$1]=0
   fi
 done
 
-if [ "${STATUS[587]:-dead}" = "ok" ]; then
-  echo "Port 587 works — the problem is NOT the port. Nothing changed."
-  echo "Tell Bot: 587 OK but mail still hangs"
+if [ "${OK[587]:-0}" = "1" ]; then
+  echo "Port 587 answers fine — the problem is NOT the port. Nothing changed."
+  echo "Tell Bot: 587 banner OK but mail still hangs"
   exit 0
 fi
 
-# Pick the first working alternate. 2587 = STARTTLS, 2465 = implicit TLS, 465 = implicit TLS (auto).
-NEWPORT=""
-SECURE=""
+NEWPORT=""; SECURE=""
 for p in 2587 2465 465; do
-  if [ "${STATUS[$p]:-dead}" = "ok" ]; then NEWPORT=$p; break; fi
+  if [ "${OK[$p]:-0}" = "1" ]; then NEWPORT=$p; break; fi
 done
 case "$NEWPORT" in
   2587) SECURE="false" ;;
-  2465) SECURE="true" ;;
-  465)  SECURE="true" ;;
-  *) echo "No working SMTP port found. Nothing changed. Tell Bot: all ports dead"; exit 1 ;;
+  2465|465) SECURE="true" ;;
+  *) echo "No working SMTP port found. Nothing changed. Tell Bot: all ports dead v2"; exit 1 ;;
 esac
 
 cp "$ENV_FILE" "$ENV_FILE.bak.$(date +%s)"
@@ -48,16 +65,13 @@ path = sys.argv[1]
 updates = {"SMTP_PORT": os.environ["NEWPORT"], "SMTP_SECURE": os.environ["SECURE"]}
 with open(path) as f:
     lines = f.read().splitlines()
-seen = set()
-out = []
+seen = set(); out = []
 for line in lines:
     s = line.strip()
     if "=" in s and not s.startswith("#"):
         k = s.split("=", 1)[0].strip()
         if k in updates:
-            out.append(f"{k}={updates[k]}")
-            seen.add(k)
-            continue
+            out.append(f"{k}={updates[k]}"); seen.add(k); continue
     out.append(line)
 for k, v in updates.items():
     if k not in seen:
