@@ -408,7 +408,11 @@ export const setOrgDateFormat = (f) => {
 
 export const fmtDate = (d) => {
   if (!d) return '—';
-  const dt = new Date(d + 'T12:00:00');
+  // Accepts date-only ('2026-10-26'), SQLite datetimes ('2026-10-26 12:10:32')
+  // and ISO strings — appending 'T12:00:00' to a datetime produced
+  // "Invalid Date" (e.g. ERA upload timestamps).
+  const s = String(d);
+  const dt = new Date(s.includes('T') ? s : s.includes(' ') ? s.replace(' ', 'T') : s + 'T12:00:00');
   if (orgDateFormat === 'YYYY-MM-DD') {
     const p = (n) => String(n).padStart(2, '0');
     return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`;
