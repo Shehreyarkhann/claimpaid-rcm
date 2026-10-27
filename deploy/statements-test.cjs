@@ -71,6 +71,7 @@ async function partA() {
   check('link charges the remaining balance ($70 -> 7000c)', calls.price.unit_amount === 7000, JSON.stringify(calls.price));
   check('link metadata carries statement + org', calls.link.metadata.statement_id === '7' && calls.link.metadata.org_id === '3', JSON.stringify(calls.link.metadata));
   check('link uses after_completion (not the rejected after_payment)', !!calls.link.after_completion && calls.link.after_completion.type === 'redirect' && !('after_payment' in calls.link), JSON.stringify(Object.keys(calls.link)));
+  check('link opts out of Managed Payments (patient statements are never MoR-eligible)', !!calls.link.managed_payments && calls.link.managed_payments.enabled === false, JSON.stringify(calls.link.managed_payments));
   check('link returns id + url', link.id === 'plink_x' && link.url.includes('buy.stripe.com'));
 
   // PDF: valid header, carries the statement number, multi-line content.

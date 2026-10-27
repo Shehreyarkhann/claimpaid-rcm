@@ -158,6 +158,11 @@ async function createStripePaymentLink(stripe, stmt, orgName) {
     line_items: [{ price: price.id, quantity: 1 }],
     metadata: { statement_id: String(stmt.id), org_id: String(stmt.org_id), kind: 'patient_statement' },
     after_completion: { type: 'redirect', redirect: { url: 'https://claimpaid.io/app/' } },
+    // Patient statements are healthcare receivables, never Managed Payments
+    // eligible (Stripe MoR covers digital goods only). Accounts with Managed
+    // Payments on by default otherwise reject the link for a missing product
+    // tax code — so statement links always opt out explicitly.
+    managed_payments: { enabled: false },
   });
   return { id: link.id, url: link.url };
 }
