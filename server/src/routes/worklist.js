@@ -48,19 +48,32 @@ router.get('/', (req, res) => {
     });
   }
 
+  // "Assigned to me" for claim-derived items: assignment lives on appeals
+  // (claims carry no assignee), so an item is mine only when an OPEN appeal
+  // on that claim is assigned to me. Unassigned claims stay in Team queue.
+  const mineClaim = scope === 'mine'
+    ? `AND EXISTS (SELECT 1 FROM appeals am WHERE am.claim_id = c.id AND am.org_id = ?
+        AND am.status NOT IN ('won', 'lost') AND am.assigned_to = ?)`
+    : '';
+  const assigneeSelect = `
+           (SELECT u.name FROM appeals ao LEFT JOIN users u ON u.id = ao.assigned_to
+            WHERE ao.claim_id = c.id AND ao.org_id = c.org_id AND ao.status NOT IN ('won', 'lost')
+            ORDER BY ao.id DESC LIMIT 1) AS assignee_name,`;
+
   // 2. Filing deadlines at risk — score 900 (expired) / 850 (≤14d) / 800 (≤30d)
   const atRisk = db.prepare(`
     SELECT c.id AS claim_id, c.claim_number, c.patient_name, p.name AS payer, c.status,
-           (c.billed_amount - c.paid_amount) AS at_stake,
+           (c.billed_amount - c.paid_amount) AS at_stake,${assigneeSelect}
            ${FILING_SELECT}
     FROM claims c
     JOIN payers p ON p.id = c.payer_id
     ${FILING_JOIN}
     WHERE c.org_id = ? AND c.status IN ('pending', 'in_ar', 'denied')
       AND CAST(julianday(date(c.service_date, '+' || COALESCE(fr.filing_days, 365) || ' days')) - julianday('now') AS INTEGER) <= 30
+      ${mineClaim}
     ORDER BY days_until_filing ASC
     LIMIT 50
-  `).all(org);
+  `).all(...(scope === 'mine' ? [org, org, req.user.id] : [org]));
 
   for (const r of atRisk) {
     // Skip if already covered by an overdue follow-up on the same claim
@@ -79,13 +92,16 @@ router.get('/', (req, res) => {
       amount: Math.round(r.at_stake * 100) / 100,
       due: r.filing_deadline,
       claim_id: r.claim_id,
+      assignee: r.assignee_name || null,
       urgent: d <= 14,
       action: { label: 'Open claim', kind: 'claim', id: r.claim_id },
     });
   }
 
   // 3. Unworked high-dollar denials — score 700+
-  const unworked = db.prepare(`
+  // Under scope=mine these never appear: an unworked denial has no appeal,
+  // so nothing assigns it to anyone — it is unassigned Team queue work.
+  const unworked = scope === 'mine' ? [] : db.prepare(`
     SELECT c.id AS claim_id, c.claim_number, c.patient_name, p.name AS payer,
            c.denial_reason, (c.billed_amount - c.paid_amount) AS at_stake
     FROM claims c
@@ -114,15 +130,16 @@ router.get('/', (req, res) => {
   // 4. Stale A/R — untouched 45+ days, still open — score 500+
   const stale = db.prepare(`
     SELECT c.id AS claim_id, c.claim_number, c.patient_name, p.name AS payer, c.status,
-           (c.billed_amount - c.paid_amount) AS at_stake, c.days_in_ar,
+           (c.billed_amount - c.paid_amount) AS at_stake, c.days_in_ar,${assigneeSelect}
            CAST(julianday('now') - julianday(COALESCE(c.last_touched_at, c.created_at)) AS INTEGER) AS days_untouched
     FROM claims c
     JOIN payers p ON p.id = c.payer_id
     WHERE c.org_id = ? AND c.status IN ('pending', 'in_ar')
       AND CAST(julianday('now') - julianday(COALESCE(c.last_touched_at, c.created_at)) AS INTEGER) >= 45
+      ${mineClaim}
     ORDER BY days_untouched DESC
     LIMIT 30
-  `).all(org);
+  `).all(...(scope === 'mine' ? [org, org, req.user.id] : [org]));
 
   for (const r of stale) {
     if (items.some((i) => i.claim_id === r.claim_id)) continue;
@@ -135,6 +152,7 @@ router.get('/', (req, res) => {
       reason: `Untouched for ${r.days_untouched} days — needs a touch`,
       amount: Math.round(r.at_stake * 100) / 100,
       claim_id: r.claim_id,
+      assignee: r.assignee_name || null,
       action: { label: 'Open claim', kind: 'claim', id: r.claim_id },
     });
   }

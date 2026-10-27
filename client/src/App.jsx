@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './auth';
-import { ToastProvider } from './components/ui';
+import { ToastProvider, ConfirmHost } from './components/ui';
 import Shell from './components/Shell';
 import FloatingChat from './components/FloatingChat';
 import Dashboard from './pages/Dashboard';
@@ -293,6 +293,7 @@ function Workspace() {
         onUpgrade={() => { setLimitInfo(null); go('billing'); }}
       />
     )}
+    <ConfirmHost />
     </>
   );
 }
@@ -315,7 +316,7 @@ function SuperAdminGate() {
     window.location.href = '/app/';
     return null;
   }
-  return <SuperAdmin />;
+  return (<><SuperAdmin /><ConfirmHost /></>);
 }
 
 export default function App() {

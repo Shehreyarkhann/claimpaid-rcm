@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import Avatar from '../components/Avatar';
 import { useAuth, authFetch } from '../auth';
 import { api } from '../api';
-import { Modal, EmptyState, PageHeader, Skeleton } from '../components/ui';
+import { Modal, EmptyState, PageHeader, Skeleton, confirmDialog } from '../components/ui';
 import SecuritySettings from '../components/SecuritySettings';
 import EdiSettings from '../components/EdiSettings';
 import { useToast } from '../components/ui';
@@ -85,7 +85,7 @@ export default function Team() {
   };
 
   const remove = async (id, name) => {
-    if (!window.confirm(`Remove ${name} from your team? Their appeals will become unassigned.`)) return;
+    if (!(await confirmDialog({ title: `Remove ${name} from your team?`, body: 'Their appeals will become unassigned.', confirmLabel: 'Remove member' }))) return;
     try {
       const res = await authFetch(`/api/auth/team/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error((await res.json()).error);

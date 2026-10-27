@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth, authFetch } from '../auth';
 import { api, fmtMoney } from '../api';
-import { PageHeader, Skeleton, EmptyState, Modal, Badge } from '../components/ui';
+import { PageHeader, Skeleton, EmptyState, Modal, Badge, confirmDialog } from '../components/ui';
 import { useToast } from '../components/ui';
 
 const STATUS_META = {
@@ -416,7 +416,7 @@ export default function Authorizations() {
   const applyFilters = () => load();
 
   const remove = async (id, patient) => {
-    if (!window.confirm(`Delete authorization for ${patient}?`)) return;
+    if (!(await confirmDialog({ title: `Delete authorization for ${patient}?`, confirmLabel: 'Delete authorization' }))) return;
     try {
       const res = await authFetch(`/api/authz/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Delete failed');

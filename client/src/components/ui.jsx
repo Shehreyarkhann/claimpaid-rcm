@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 
 const ToastContext = createContext(null);
 export const useToast = () => useContext(ToastContext);
@@ -46,6 +46,44 @@ export function Modal({ onClose, children, wide }) {
         {children}
       </div>
     </div>
+  );
+}
+
+// Themed confirmation dialog — the app-wide replacement for window.confirm.
+// Call sites: if (!(await confirmDialog({ title, body, confirmLabel }))) return;
+// App.jsx (and the super-admin gate) mount <ConfirmHost /> once.
+let confirmSetter = null;
+export function confirmDialog(opts = {}) {
+  return new Promise((resolve) => {
+    if (!confirmSetter) { // host not mounted (shouldn't happen) — fail closed to native
+      resolve(window.confirm(opts.body || opts.title || 'Are you sure?'));
+      return;
+    }
+    confirmSetter({ ...opts, resolve });
+  });
+}
+
+export function ConfirmHost() {
+  const [pending, setPending] = useState(null);
+  useEffect(() => {
+    confirmSetter = setPending;
+    return () => { confirmSetter = null; };
+  }, []);
+  if (!pending) return null;
+  const done = (v) => { pending.resolve(v); setPending(null); };
+  return (
+    <Modal onClose={() => done(false)}>
+      <div className="p-7">
+        <h3 className="text-xl font-bold tracking-tight mb-2">{pending.title || 'Are you sure?'}</h3>
+        {pending.body && <p className="text-sm text-stone-600 mb-6">{pending.body}</p>}
+        <div className="flex justify-end gap-2">
+          <button className="btn btn-ghost" onClick={() => done(false)}>{pending.cancelLabel || 'Cancel'}</button>
+          <button className="btn !bg-rose-600 hover:!bg-rose-700 !text-white" onClick={() => done(true)}>
+            {pending.confirmLabel || 'Confirm'}
+          </button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 

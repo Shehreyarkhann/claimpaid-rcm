@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { authFetch } from '../auth';
-import { PageHeader, Skeleton } from '../components/ui';
+import { PageHeader, Skeleton, confirmDialog } from '../components/ui';
 import { useToast } from '../components/ui';
 
 const SAMPLE = {
@@ -90,7 +90,7 @@ export default function LetterTemplates() {
   };
 
   const reset = async () => {
-    if (!window.confirm('Reset this template to the Pulse default? Your custom version will be lost.')) return;
+    if (!(await confirmDialog({ title: 'Reset this template to the ClaimPaid default?', body: 'Your custom version will be lost.', confirmLabel: 'Reset template' }))) return;
     try {
       const res = await authFetch(`/api/appeals/letter-templates/${active}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Reset failed');

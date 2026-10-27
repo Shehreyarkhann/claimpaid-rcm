@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api, fmtMoney2, fmtDate } from '../api';
 import { authFetch } from '../auth';
-import { PageHeader, EmptyState, Modal, useToast } from '../components/ui';
+import { PageHeader, EmptyState, Modal, Skeleton, useToast, confirmDialog } from '../components/ui';
 
 const STATUS_BADGE = {
   draft: 'badge-slate', generated: 'badge-blue', transmitted: 'badge-violet',
@@ -65,67 +65,72 @@ function NewBatchModal({ onClose, onCreated }) {
 
   return (
     <Modal onClose={onClose} wide>
-      <h3 className="text-lg font-semibold text-stone-900 mb-1">New transmission batch</h3>
-      <p className="text-sm text-stone-500 mb-4">
-        Only scrub-clean claims (or warnings) that aren't in another batch are listed.
-        Claims missing subscriber data show what's needed — fill it inline before generating.
-      </p>
-      {error && <div className="mb-4 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}
-      {!rows && <div className="text-sm text-stone-500">Loading claims…</div>}
-      {rows && !rows.length && <EmptyState icon="📭" title="Nothing to transmit" hint="Scrub claims clean first — transmittable claims appear here." />}
-      {rows && rows.length > 0 && (
-        <>
-          <div className="max-h-96 overflow-auto border border-stone-200 rounded-xl">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-stone-50">
-                <tr>
-                  <th className="p-2 w-8"><input type="checkbox" checked={sel.size === rows.length && rows.length > 0}
-                    onChange={() => setSel(sel.size === rows.length ? new Set() : new Set(rows.map((r) => r.id)))} /></th>
-                  <th className="text-left p-2">Claim</th>
-                  <th className="text-left p-2">Patient</th>
-                  <th className="text-left p-2">Payer</th>
-                  <th className="text-right p-2">Amount</th>
-                  <th className="text-left p-2">Subscriber data</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.id} className="border-t border-stone-100 hover:bg-stone-50">
-                    <td className="p-2"><input type="checkbox" checked={sel.has(r.id)} onChange={() => toggle(r.id)} /></td>
-                    <td className="p-2 font-mono text-xs">{r.claim_number}</td>
-                    <td className="p-2">{r.patient_name}</td>
-                    <td className="p-2">{r.payer_name}</td>
-                    <td className="p-2 text-right">{fmtMoney2(r.billed_amount)}</td>
-                    <td className="p-2">
-                      {r.missing.length === 0
-                        ? <span className="badge badge-green">ready</span>
-                        : (
-                          <div className="space-y-1">
-                            {r.missing.map((m, i) => <div key={i} className="badge badge-amber mr-1">{m}</div>)}
-                            <div className="flex gap-1 mt-1">
-                              <input className="input !py-1 !text-xs" style={{ width: 110 }} placeholder="Member ID"
-                                defaultValue={r.member_id || ''}
-                                onBlur={(e) => e.target.value !== (r.member_id || '') && saveField(r.id, 'member_id', e.target.value)} />
-                              <input className="input !py-1 !text-xs" style={{ width: 120 }} placeholder="DOB YYYY-MM-DD"
-                                defaultValue={r.patient_dob || ''}
-                                onBlur={(e) => e.target.value !== (r.patient_dob || '') && saveField(r.id, 'patient_dob', e.target.value)} />
-                            </div>
-                          </div>
-                        )}
-                    </td>
+      <div className="p-7">
+        <h3 className="text-xl font-bold tracking-tight mb-1">New transmission batch</h3>
+        <p className="text-sm text-stone-500 mb-5">
+          Only scrub-clean claims (or warnings) that aren't in another batch are listed.
+          Claims missing subscriber data show what's needed — fill it inline before generating.
+        </p>
+        {error && <div className="mb-4 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}
+        {!rows && <div className="space-y-3"><Skeleton className="h-14" /><Skeleton className="h-14" /><Skeleton className="h-14" /></div>}
+        {rows && !rows.length && <EmptyState icon="📭" title="Nothing to transmit" hint="Scrub claims clean first — transmittable claims appear here." />}
+        {rows && rows.length > 0 && (
+          <>
+            <div className="max-h-96 overflow-auto border border-stone-200 rounded-xl">
+              <table className="w-full tbl">
+                <thead className="sticky top-0">
+                  <tr>
+                    <th className="w-10"><input type="checkbox" checked={sel.size === rows.length && rows.length > 0}
+                      onChange={() => setSel(sel.size === rows.length ? new Set() : new Set(rows.map((r) => r.id)))} /></th>
+                    <th>Claim</th>
+                    <th>Patient</th>
+                    <th>Payer</th>
+                    <th className="!text-right">Amount</th>
+                    <th>Subscriber data</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex items-center justify-between mt-4">
-            <div className="text-sm text-stone-500">{sel.size} claim(s) selected</div>
-            <button className="btn btn-primary" disabled={busy || !sel.size} onClick={create}>
-              {busy ? 'Creating…' : 'Create draft batch'}
-            </button>
-          </div>
-        </>
-      )}
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.id}>
+                      <td><input type="checkbox" checked={sel.has(r.id)} onChange={() => toggle(r.id)} /></td>
+                      <td className="font-mono text-xs">{r.claim_number}</td>
+                      <td>{r.patient_name}</td>
+                      <td>{r.payer_name}</td>
+                      <td className="!text-right">{fmtMoney2(r.billed_amount)}</td>
+                      <td>
+                        {r.missing.length === 0
+                          ? <span className="badge badge-green">ready</span>
+                          : (
+                            <div className="space-y-1">
+                              {r.missing.map((m, i) => <div key={i} className="badge badge-amber mr-1">{m}</div>)}
+                              <div className="flex gap-1 mt-1">
+                                <input className="input !py-1 !text-xs w-[110px]" placeholder="Member ID"
+                                  defaultValue={r.member_id || ''}
+                                  onBlur={(e) => e.target.value !== (r.member_id || '') && saveField(r.id, 'member_id', e.target.value)} />
+                                <input className="input !py-1 !text-xs w-[130px]" placeholder="DOB YYYY-MM-DD"
+                                  defaultValue={r.patient_dob || ''}
+                                  onBlur={(e) => e.target.value !== (r.patient_dob || '') && saveField(r.id, 'patient_dob', e.target.value)} />
+                              </div>
+                            </div>
+                          )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex items-center justify-between mt-5">
+              <div className="text-sm text-stone-500">{sel.size} claim(s) selected</div>
+              <div className="flex gap-2">
+                <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+                <button className="btn btn-primary" disabled={busy || !sel.size} onClick={create}>
+                  {busy ? 'Creating…' : 'Create draft batch'}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
     </Modal>
   );
 }
@@ -395,7 +400,7 @@ export default function Transmission() {
   useEffect(load, []);
 
   const del = async (id, batch_number) => {
-    if (!window.confirm(`Delete draft batch ${batch_number}? Claims return to unbatched.`)) return;
+    if (!(await confirmDialog({ title: `Delete draft batch ${batch_number}?`, body: 'Claims return to unbatched.', confirmLabel: 'Delete batch' }))) return;
     try {
       await api.transmission.deleteBatch(id);
       toast.success('Draft batch deleted');

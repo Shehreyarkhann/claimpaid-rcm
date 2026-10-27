@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth, authFetch } from '../auth';
 import { api, fmtMoney2 } from '../api';
-import { Modal, EmptyState, PageHeader, Skeleton } from '../components/ui';
+import { Modal, EmptyState, PageHeader, Skeleton, confirmDialog } from '../components/ui';
 import { useToast } from '../components/ui';
 import { useOrgSettings } from '../orgSettings';
 import CodingAssistant from '../components/CodingAssistant';
@@ -239,7 +239,7 @@ function ScrubResultsModal({ result, onClose }) {
   );
 }
 
-export default function Claims({ onCheckEligibility }) {
+export default function Claims({ onCheckEligibility, initialClaimId, onConsumed }) {
   const { user } = useAuth();
   const toast = useToast();
   const [data, setData] = useState(null);
@@ -259,6 +259,21 @@ export default function Claims({ onCheckEligibility }) {
   const canWrite = ['owner', 'biller'].includes(user?.role);
 
   const fetchClaims = () => api.claims({ search, status, payer, page, limit }).then((d) => { setData(d); setSelected(new Set()); }).catch((e) => toast.error(e.message));
+
+  // Cross-page deep link (My Work "Open claim", EHR "View claim"): fetch the
+  // claim directly — it may sit on any page of the paginated list — and open
+  // it in the same modal the list's Edit button uses.
+  useEffect(() => {
+    if (!initialClaimId) return;
+    let cancelled = false;
+    api.claimDetail(initialClaimId)
+      .then((d) => { if (!cancelled) setModal(d); })
+      .catch(() => { if (!cancelled) toast.error('That claim could not be opened'); })
+      .finally(() => { if (!cancelled) onConsumed?.(); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialClaimId]);
+
   useEffect(() => { api.payers().then(setPayers).catch(() => {}); }, []);
   useEffect(() => { fetchClaims(); }, [page, limit]);
 
@@ -327,7 +342,7 @@ export default function Claims({ onCheckEligibility }) {
   };
 
   const handleDelete = async (id, claimNumber) => {
-    if (!window.confirm(`Delete claim ${claimNumber}? This cannot be undone.`)) return;
+    if (!(await confirmDialog({ title: `Delete claim ${claimNumber}?`, body: 'This cannot be undone.', confirmLabel: 'Delete claim' }))) return;
     try {
       const res = await authFetch(`/api/claims/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Delete failed');

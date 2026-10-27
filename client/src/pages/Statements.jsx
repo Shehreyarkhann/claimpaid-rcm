@@ -23,6 +23,16 @@ function downloadPdf(id, number) {
     });
 }
 
+function copyLink(url, toast) {
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(url)
+      .then(() => toast.success('Pay link copied'))
+      .catch(() => toast.error('Copy failed — open the statement to see the link'));
+  } else {
+    toast.error('Copy is not available in this browser — open the statement to see the link');
+  }
+}
+
 function PayModal({ stmt, onClose, onDone }) {
   const toast = useToast();
   const [amount, setAmount] = useState(String(stmt.balance ?? (stmt.amount_due - stmt.amount_paid)));
@@ -35,27 +45,30 @@ function PayModal({ stmt, onClose, onDone }) {
       .catch((e) => { toast.error(e.message); setBusy(false); });
   };
   return (
-    <Modal title={`Record payment — ${stmt.statement_number}`} onClose={onClose}>
-      <div className="space-y-3">
-        <p className="text-sm text-stone-400">{stmt.patient_name} · balance {fmtMoney(stmt.balance ?? (stmt.amount_due - stmt.amount_paid))}</p>
-        <div>
-          <label className="label">Amount</label>
-          <input className="input" type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
-        </div>
-        <div>
-          <label className="label">Method</label>
-          <select className="input" value={method} onChange={(e) => setMethod(e.target.value)}>
-            <option value="check">Check</option>
-            <option value="cash">Cash</option>
-            <option value="card_offline">Card (in office)</option>
-            <option value="money_order">Money order</option>
-            <option value="other">Other</option>
-          </select>
-        </div>
-        <p className="text-xs text-stone-500">Payments allocate to the oldest charges on the statement first.</p>
-        <div className="flex gap-2 justify-end pt-1">
-          <button className="btn-ghost" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Record payment'}</button>
+    <Modal onClose={onClose}>
+      <div className="p-7">
+        <h3 className="text-xl font-bold tracking-tight mb-1">Record payment — {stmt.statement_number}</h3>
+        <p className="text-sm text-stone-500 mb-5">{stmt.patient_name} · balance {fmtMoney(stmt.balance ?? (stmt.amount_due - stmt.amount_paid))}</p>
+        <div className="space-y-4">
+          <div>
+            <label className="label">Amount</label>
+            <input className="input" type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          </div>
+          <div>
+            <label className="label">Method</label>
+            <select className="input" value={method} onChange={(e) => setMethod(e.target.value)}>
+              <option value="check">Check</option>
+              <option value="cash">Cash</option>
+              <option value="card_offline">Card (in office)</option>
+              <option value="money_order">Money order</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <p className="text-xs text-stone-500">Payments allocate to the oldest charges on the statement first.</p>
+          <div className="flex gap-2 justify-end pt-1">
+            <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+            <button className="btn btn-primary" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Record payment'}</button>
+          </div>
         </div>
       </div>
     </Modal>
@@ -68,51 +81,73 @@ function DetailModal({ id, onClose, refresh }) {
   const [paying, setPaying] = useState(false);
   useEffect(() => { api.statements.detail(id).then(setStmt).catch((e) => toast.error(e.message)); }, [id]);
   if (!stmt) return (
-    <Modal title="Statement" onClose={onClose}><Skeleton rows={5} /></Modal>
+    <Modal onClose={onClose}>
+      <div className="p-7 space-y-3">
+        <Skeleton className="h-6 w-56" />
+        <Skeleton className="h-14" />
+        <Skeleton className="h-14" />
+        <Skeleton className="h-14" />
+      </div>
+    </Modal>
   );
   const [label, badge] = STATUS[stmt.status] || [stmt.status, 'badge-slate'];
   return (
-    <Modal title={`${stmt.statement_number} — ${stmt.patient_name}`} onClose={onClose} wide>
-      <div className="space-y-4">
-        <div className="flex flex-wrap gap-2 items-center">
-          <span className={`badge ${badge}`}>{label}</span>
-          <span className="text-sm text-stone-400">Due {fmtDate(stmt.due_date)} · Total {fmtMoney(stmt.amount_due)} · Paid {fmtMoney(stmt.amount_paid)} · <strong className="text-stone-200">Balance {fmtMoney(stmt.balance)}</strong></span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="table w-full">
-            <thead><tr><th>Date</th><th>Claim</th><th>Payer</th><th className="text-right">Billed</th><th className="text-right">Ins paid</th><th className="text-right">Adjust</th><th className="text-right">Patient owes</th></tr></thead>
-            <tbody>
-              {stmt.lines.map((l) => (
-                <tr key={l.id}>
-                  <td>{fmtDate(l.service_date)}</td><td>{l.claim_number}</td><td>{l.payer_name}</td>
-                  <td className="text-right">{fmtMoney(l.billed)}</td><td className="text-right">{fmtMoney(l.insurance_paid)}</td>
-                  <td className="text-right">{fmtMoney(l.adjustments)}</td><td className="text-right">{fmtMoney(l.amount)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {stmt.payments?.length > 0 && (
-          <div>
-            <p className="label mb-1">Payments</p>
-            {stmt.payments.map((p) => (
-              <p key={p.id} className="text-sm text-stone-300">{fmtDate(p.created_at)} — {fmtMoney(p.amount)} ({p.method === 'stripe' ? 'Stripe (online)' : p.method})</p>
-            ))}
+    <Modal onClose={onClose} wide>
+      <div className="p-7">
+        <h3 className="text-xl font-bold tracking-tight mb-4">{stmt.statement_number} — {stmt.patient_name}</h3>
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-2 items-center">
+            <span className={`badge ${badge}`}>{label}</span>
+            <span className="text-sm text-stone-500">Due {fmtDate(stmt.due_date)} · Total {fmtMoney(stmt.amount_due)} · Paid {fmtMoney(stmt.amount_paid)} · <strong className="text-stone-900">Balance {fmtMoney(stmt.balance)}</strong></span>
           </div>
-        )}
-        {stmt.payment_link_url && stmt.status !== 'paid' && (
-          <p className="text-sm">Pay link: <a className="text-emerald-400 underline break-all" href={stmt.payment_link_url} target="_blank" rel="noreferrer">{stmt.payment_link_url}</a></p>
-        )}
-        <div className="flex flex-wrap gap-2 justify-end">
-          <button className="btn-ghost" onClick={() => downloadPdf(stmt.id, stmt.statement_number).catch((e) => toast.error(e.message))}>Download PDF</button>
-          {stmt.status !== 'paid' && stmt.status !== 'void' && (
-            <button className="btn-ghost" onClick={() => setPaying(true)}>Record payment</button>
+          <div className="overflow-x-auto">
+            <table className="w-full tbl">
+              <thead><tr><th>Date</th><th>Claim</th><th>Payer</th><th className="!text-right">Billed</th><th className="!text-right">Ins paid</th><th className="!text-right">Adjust</th><th className="!text-right">Patient owes</th></tr></thead>
+              <tbody>
+                {stmt.lines.map((l) => (
+                  <tr key={l.id}>
+                    <td>{fmtDate(l.service_date)}</td><td>{l.claim_number}</td><td>{l.payer_name}</td>
+                    <td className="!text-right">{fmtMoney(l.billed)}</td><td className="!text-right">{fmtMoney(l.insurance_paid)}</td>
+                    <td className="!text-right">{fmtMoney(l.adjustments)}</td><td className="!text-right">{fmtMoney(l.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {stmt.payments?.length > 0 && (
+            <div>
+              <p className="label mb-1">Payments</p>
+              {stmt.payments.map((p) => (
+                <p key={p.id} className="text-sm text-stone-600">{fmtDate(p.created_at)} — {fmtMoney(p.amount)} ({p.method === 'stripe' ? 'Stripe (online)' : p.method})</p>
+              ))}
+            </div>
           )}
-          <button className="btn-primary" onClick={onClose}>Done</button>
+          {stmt.payment_link_url && stmt.status !== 'paid' && (
+            <div className="flex flex-wrap items-center gap-2 bg-stone-50 border border-stone-200 rounded-xl px-4 py-3">
+              <span className="text-sm font-medium text-stone-700 mr-auto">Online pay link is live on this statement</span>
+              <a className="btn btn-outline !py-1.5 !text-xs" href={stmt.payment_link_url} target="_blank" rel="noreferrer">Open pay link</a>
+              <button className="btn btn-ghost !py-1.5 !text-xs" onClick={() => copyLink(stmt.payment_link_url, toast)}>Copy link</button>
+            </div>
+          )}
+          <div className="flex flex-wrap gap-2 justify-end">
+            <button className="btn btn-ghost" onClick={() => downloadPdf(stmt.id, stmt.statement_number).catch((e) => toast.error(e.message))}>Download PDF</button>
+            {stmt.status !== 'paid' && stmt.status !== 'void' && (
+              <button className="btn btn-ghost" onClick={() => setPaying(true)}>Record payment</button>
+            )}
+            <button className="btn btn-primary" onClick={onClose}>Done</button>
+          </div>
         </div>
       </div>
       {paying && <PayModal stmt={stmt} onClose={() => setPaying(false)} onDone={() => { setPaying(false); api.statements.detail(id).then(setStmt); refresh(); }} />}
     </Modal>
+  );
+}
+
+function LoadingRows({ n = 3 }) {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: n }).map((_, i) => <Skeleton key={i} className="h-14" />)}
+    </div>
   );
 }
 
@@ -142,7 +177,7 @@ export default function Statements() {
   const payLink = (s) => {
     setBusyId(`link-${s.id}`);
     api.statements.paymentLink(s.id)
-      .then(() => { toast.success('Payment link created — it is printed on the PDF'); load(); })
+      .then(() => { toast.success('Payment link created — open or copy it from the statements list'); load(); })
       .catch((e) => toast.error(e.message))
       .finally(() => setBusyId(null));
   };
@@ -158,19 +193,19 @@ export default function Statements() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Patient Statements" sub="Bill patients for what insurance left behind — statement, PDF, and an online pay link per statement." />
+      <PageHeader title="Patient Statements" subtitle="Bill patients for what insurance left behind — statement, PDF, and an online pay link per statement." />
 
       <section className="card p-4 sm:p-5">
         <div className="flex items-baseline justify-between mb-3">
           <h3 className="font-semibold">Patient balances</h3>
-          <span className="text-sm text-stone-400">{balances ? `${fmtMoney(totalOutstanding)} outstanding across ${balances.length} patient(s)` : ''}</span>
+          <span className="text-sm text-stone-500">{balances ? `${fmtMoney(totalOutstanding)} outstanding across ${balances.length} patient(s)` : ''}</span>
         </div>
-        {balances === null ? <Skeleton rows={3} /> : balances.length === 0 ? (
-          <EmptyState title="No patient balances" sub="When an ERA posts patient responsibility to a claim, the patient shows up here ready to bill." />
+        {balances === null ? <LoadingRows /> : balances.length === 0 ? (
+          <EmptyState icon="🧾" title="No patient balances" hint="When an ERA posts patient responsibility to a claim, the patient shows up here ready to bill." />
         ) : (
           <div className="overflow-x-auto">
-            <table className="table w-full">
-              <thead><tr><th>Patient</th><th>Member ID</th><th>Claims</th><th>Oldest visit</th><th className="text-right">Balance due</th><th /></tr></thead>
+            <table className="w-full tbl">
+              <thead><tr><th>Patient</th><th>Member ID</th><th>Claims</th><th>Oldest visit</th><th className="!text-right">Balance due</th><th /></tr></thead>
               <tbody>
                 {balances.map((b) => (
                   <tr key={`${b.patient_name}-${b.member_id || ''}`}>
@@ -178,10 +213,10 @@ export default function Statements() {
                     <td>{b.member_id || '—'}</td>
                     <td>{b.claims}</td>
                     <td>{fmtDate(b.oldest_service_date)}</td>
-                    <td className="text-right font-semibold">{fmtMoney(b.total_due)}</td>
-                    <td className="text-right">
+                    <td className="!text-right font-semibold">{fmtMoney(b.total_due)}</td>
+                    <td className="!text-right">
                       {canWrite && (
-                        <button className="btn-primary btn-sm" disabled={busyId === `gen-${b.patient_name}`} onClick={() => generate(b)}>
+                        <button className="btn btn-primary !py-2 !text-[13px]" disabled={busyId === `gen-${b.patient_name}`} onClick={() => generate(b)}>
                           {busyId === `gen-${b.patient_name}` ? 'Creating…' : 'Create statement'}
                         </button>
                       )}
@@ -196,12 +231,12 @@ export default function Statements() {
 
       <section className="card p-4 sm:p-5">
         <h3 className="font-semibold mb-3">Statements</h3>
-        {list === null ? <Skeleton rows={3} /> : list.length === 0 ? (
-          <EmptyState title="No statements yet" sub="Create one from a patient balance above." />
+        {list === null ? <LoadingRows /> : list.length === 0 ? (
+          <EmptyState icon="📄" title="No statements yet" hint="Create one from a patient balance above." />
         ) : (
           <div className="overflow-x-auto">
-            <table className="table w-full">
-              <thead><tr><th>Statement</th><th>Patient</th><th>Created</th><th>Due date</th><th>Status</th><th className="text-right">Total</th><th className="text-right">Balance</th><th /></tr></thead>
+            <table className="w-full tbl">
+              <thead><tr><th>Statement</th><th>Patient</th><th>Created</th><th>Due date</th><th>Status</th><th className="!text-right">Total</th><th className="!text-right">Balance</th><th /></tr></thead>
               <tbody>
                 {list.map((s) => {
                   const [label, badge] = STATUS[s.status] || [s.status, 'badge-slate'];
@@ -212,19 +247,27 @@ export default function Statements() {
                       <td>{fmtDate(s.created_at)}</td>
                       <td>{fmtDate(s.due_date)}</td>
                       <td><span className={`badge ${badge}`}>{label}</span></td>
-                      <td className="text-right">{fmtMoney(s.amount_due)}</td>
-                      <td className="text-right font-semibold">{fmtMoney(s.balance)}</td>
-                      <td className="text-right whitespace-nowrap">
-                        <button className="btn-ghost btn-sm" onClick={() => setDetailId(s.id)}>View</button>
-                        <button className="btn-ghost btn-sm" onClick={() => downloadPdf(s.id, s.statement_number).catch((e) => toast.error(e.message))}>PDF</button>
+                      <td className="!text-right">{fmtMoney(s.amount_due)}</td>
+                      <td className="!text-right font-semibold">{fmtMoney(s.balance)}</td>
+                      <td className="!text-right whitespace-nowrap">
+                        <button className="btn btn-ghost !py-1.5 !text-xs" onClick={() => setDetailId(s.id)}>View</button>
+                        <button className="btn btn-ghost !py-1.5 !text-xs" onClick={() => downloadPdf(s.id, s.statement_number).catch((e) => toast.error(e.message))}>PDF</button>
                         {canWrite && s.status !== 'paid' && s.status !== 'void' && !s.payment_link_url && (
-                          <button className="btn-ghost btn-sm" disabled={busyId === `link-${s.id}`} onClick={() => payLink(s)}>Pay link</button>
+                          <button className="btn btn-ghost !py-1.5 !text-xs" disabled={busyId === `link-${s.id}`} onClick={() => payLink(s)}>
+                            {busyId === `link-${s.id}` ? 'Creating…' : 'Pay link'}
+                          </button>
+                        )}
+                        {canWrite && s.status !== 'paid' && s.status !== 'void' && s.payment_link_url && (
+                          <>
+                            <a className="btn btn-ghost !py-1.5 !text-xs" href={s.payment_link_url} target="_blank" rel="noreferrer">Open pay link</a>
+                            <button className="btn btn-ghost !py-1.5 !text-xs" onClick={() => copyLink(s.payment_link_url, toast)}>Copy link</button>
+                          </>
                         )}
                         {canWrite && s.status !== 'paid' && s.status !== 'void' && (
-                          <button className="btn-ghost btn-sm" onClick={() => setPayStmt(s)}>Record payment</button>
+                          <button className="btn btn-ghost !py-1.5 !text-xs" onClick={() => setPayStmt(s)}>Record payment</button>
                         )}
                         {canWrite && s.amount_paid === 0 && s.status !== 'paid' && s.status !== 'void' && (
-                          <button className="btn-ghost btn-sm" disabled={busyId === `void-${s.id}`} onClick={() => voidStmt(s)}>Void</button>
+                          <button className="btn btn-ghost !py-1.5 !text-xs" disabled={busyId === `void-${s.id}`} onClick={() => voidStmt(s)}>Void</button>
                         )}
                       </td>
                     </tr>
@@ -235,7 +278,7 @@ export default function Statements() {
           </div>
         )}
         <p className="text-xs text-stone-500 mt-3">
-          Online payments run through Stripe — patients pay from the link printed on the statement PDF, and the
+          Online payments run through Stripe — patients pay from the link on the statement PDF, and the
           statement settles itself when the payment lands. Cash and check payments can be recorded manually.
         </p>
       </section>

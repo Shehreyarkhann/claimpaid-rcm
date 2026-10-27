@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../auth';
 import { api } from '../api';
-import { PageHeader, Skeleton, Modal } from '../components/ui';
+import { PageHeader, Skeleton, Modal, confirmDialog } from '../components/ui';
 import { useToast } from '../components/ui';
 
 const PAYER_TYPES = ['Commercial', 'Government', 'Patient'];
@@ -97,7 +97,7 @@ export default function FilingRules() {
     catch (e) { toast.error(e.message); }
   };
   const removeRule = async (id, name) => {
-    if (!window.confirm(`Delete custom rule "${name}"?`)) return;
+    if (!(await confirmDialog({ title: `Delete custom rule "${name}"?`, confirmLabel: 'Delete rule' }))) return;
     try { await api.deleteCustomRule(id); toast.success('Rule deleted'); loadRules(); }
     catch (e) { toast.error(e.message); }
   };

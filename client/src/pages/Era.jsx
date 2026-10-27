@@ -54,8 +54,8 @@ function MatchModal({ line, onClose, onDone }) {
 
   return (
     <Modal onClose={onClose} wide>
-      <div className="p-6">
-        <h3 className="text-lg font-bold text-stone-900 mb-1">Match ERA line to a claim</h3>
+      <div className="p-7">
+        <h3 className="text-xl font-bold tracking-tight mb-1">Match ERA line to a claim</h3>
         <p className="text-sm text-stone-500 mb-4">
           ERA reference <strong>{line.clp_ref}</strong>
           {line.patient_name && <> · patient {line.patient_name}</>} · billed {fmtMoney(line.billed)} · paid {fmtMoney(line.paid)}

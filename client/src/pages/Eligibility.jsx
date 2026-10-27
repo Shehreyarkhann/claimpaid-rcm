@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth, authFetch } from '../auth';
 import { api } from '../api';
-import { PageHeader, Skeleton, EmptyState, Modal } from '../components/ui';
+import { PageHeader, Skeleton, EmptyState, Modal, confirmDialog } from '../components/ui';
 import { useToast } from '../components/ui';
 
 const STATUS_META = {
@@ -334,7 +334,7 @@ export default function Eligibility({ initialPrefill, onConsumed }) {
   useEffect(() => { api.payers().then(setPayers).catch(() => {}); }, []);
 
   const remove = async (id, patient) => {
-    if (!window.confirm(`Delete eligibility record for ${patient}?`)) return;
+    if (!(await confirmDialog({ title: `Delete eligibility record for ${patient}?`, confirmLabel: 'Delete record' }))) return;
     try {
       const res = await authFetch(`/api/eligibility/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Delete failed');

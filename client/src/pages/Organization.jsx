@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
-import { PageHeader, Skeleton, useToast } from '../components/ui';
+import { PageHeader, Skeleton, useToast, confirmDialog } from '../components/ui';
 import { useAuth } from '../auth';
 import { useOrgSettings } from '../orgSettings';
 import EligibilityVendorSettings from '../components/EligibilityVendorSettings';
@@ -175,7 +175,7 @@ function ApiTab() {
   };
 
   const revoke = async (id, keyName) => {
-    if (!window.confirm(`Revoke the API key "${keyName}"? Integrations using it will stop working immediately.`)) return;
+    if (!(await confirmDialog({ title: `Revoke the API key "${keyName}"?`, body: 'Integrations using it will stop working immediately.', confirmLabel: 'Revoke key' }))) return;
     setRevoking(id);
     try {
       await api.settings.revokeApiKey(id);
@@ -425,7 +425,7 @@ function CustomizationTab() {
   };
 
   const removeLogo = async () => {
-    if (!window.confirm('Remove the workspace logo?')) return;
+    if (!(await confirmDialog({ title: 'Remove the workspace logo?', confirmLabel: 'Remove logo' }))) return;
     try {
       await api.settings.deleteLogo();
       setLogoUrl(null);

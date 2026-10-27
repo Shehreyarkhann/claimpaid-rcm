@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api';
 import { useAuth } from '../auth';
-import { useToast } from '../components/ui';
+import { useToast, Modal, confirmDialog } from '../components/ui';
 import CodingAssistant from '../components/CodingAssistant';
 
 // EHR integration: pull encounters from the practice's EHR and convert them
@@ -71,7 +71,7 @@ export default function Ehr({ onViewClaim }) {
   const athenaConn = connFor('athenahealth');
 
   const disconnect = async (provider) => {
-    if (!window.confirm(`Disconnect ${provider}? Stored tokens will be wiped.`)) return;
+    if (!(await confirmDialog({ title: `Disconnect ${provider}?`, body: 'Stored tokens will be wiped.', confirmLabel: 'Disconnect' }))) return;
     setBusy(provider); try { await api.ehr.disconnect(provider); toast.success('Disconnected'); load(); }
     catch (e) { toast.error(e.message); } finally { setBusy(null); }
   };
@@ -343,9 +343,9 @@ export default function Ehr({ onViewClaim }) {
 
       {/* athenahealth app settings modal */}
       {showAthenaSetup && (
-        <div className="fixed inset-0 bg-stone-900/50 flex items-center justify-center z-50 p-4" onClick={() => setShowAthenaSetup(false)}>
-          <div className="bg-white rounded-2xl p-6 w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-semibold text-stone-900 mb-1">athenahealth app settings</h3>
+        <Modal onClose={() => setShowAthenaSetup(false)}>
+          <div className="p-7">
+            <h3 className="text-xl font-bold tracking-tight mb-1">athenahealth app settings</h3>
             <p className="text-xs text-stone-500 mb-4 leading-relaxed">
               From your app in the athenahealth Developer Console (developer.api.athena.io).
               Server environment variables (<code className="font-mono">ATHENA_CLIENT_ID</code> /
@@ -381,13 +381,13 @@ export default function Ehr({ onViewClaim }) {
               </div>
             </div>
             <div className="flex justify-end gap-2 mt-5">
-              <button className="btn" onClick={() => setShowAthenaSetup(false)}>Cancel</button>
+              <button className="btn btn-ghost" onClick={() => setShowAthenaSetup(false)}>Cancel</button>
               <button className="btn btn-primary" onClick={saveAthenaSetup} disabled={busy === 'cfg'}>
                 {busy === 'cfg' ? 'Saving…' : 'Save'}
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
       {codingEncounter && (
         <CodingAssistant

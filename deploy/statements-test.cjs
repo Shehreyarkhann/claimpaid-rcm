@@ -3,6 +3,9 @@
 // Stripe payment-link construction with a fake client, PDF bytes.
 // Part B (HTTP): balances -> generate -> lock -> PDF -> manual payments
 // (partial, overpay guard, payoff) -> void releases balances -> isolation.
+// Part C (HTTP, fake Stripe): payment-link route end-to-end via
+// STRIPE_API_BASE — price for the remaining balance, link metadata,
+// URL persisted, draft -> open.
 'use strict';
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -179,10 +182,113 @@ async function partB() {
   check('statement list returns both statements with balances', Array.isArray(list.data) && list.data.length === 3 && list.data.every((r) => 'balance' in r), JSON.stringify(list.data).slice(0, 160));
 }
 
+// ---------------- Part C: payment link against a fake Stripe API -----------
+// The route's Stripe client must honor STRIPE_API_BASE exactly like
+// billing.js, create a one-off Price for the remaining balance, then a
+// Payment Link carrying statement metadata, and persist the URL + flip
+// draft -> open. (Deploy #75: this path was previously untestable.)
+const C_PORT = 4111;
+const C_BASE = `http://127.0.0.1:${C_PORT}`;
+const C_TMP = '/tmp/stmt-api-link';
+const C_DB = path.join(C_TMP, 'test.db');
+const FAKE_PORT = 4112;
+let serverC, fakeStripe;
+
+async function apiC(method, p, body, token) {
+  const res = await fetch(C_BASE + p, {
+    method,
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  return { status: res.status, data };
+}
+
+async function partC() {
+  console.log('Part C — payment link (HTTP, fake Stripe)');
+  const http = require('http');
+  const seen = { prices: null, links: null };
+  fakeStripe = http.createServer((req, res) => {
+    let body = '';
+    req.on('data', (d) => { body += d; });
+    req.on('end', () => {
+      res.setHeader('Content-Type', 'application/json');
+      const params = new URLSearchParams(body);
+      if (req.method === 'POST' && req.url === '/v1/prices') {
+        seen.prices = Object.fromEntries(params.entries());
+        return res.end(JSON.stringify({ id: 'price_fake', object: 'price' }));
+      }
+      if (req.method === 'POST' && req.url === '/v1/payment_links') {
+        seen.links = Object.fromEntries(params.entries());
+        return res.end(JSON.stringify({ id: 'plink_fake', object: 'payment_link', url: 'https://buy.stripe.com/fake_123', active: true }));
+      }
+      res.statusCode = 404;
+      res.end(JSON.stringify({ error: { message: 'fake stripe: unhandled ' + req.method + ' ' + req.url } }));
+    });
+  });
+  await new Promise((r) => fakeStripe.listen(FAKE_PORT, r));
+
+  fs.rmSync(C_TMP, { recursive: true, force: true });
+  fs.mkdirSync(C_TMP, { recursive: true });
+  serverC = spawn('node', ['src/index.js'], {
+    cwd: path.join(__dirname, '..', 'server'),
+    env: {
+      ...process.env, PORT: String(C_PORT), DB_PATH: C_DB, JWT_SECRET: 'test-secret', EHR_AUTOPULL: 'off',
+      STRIPE_SECRET_KEY: 'sk_test_fake', STRIPE_API_BASE: `http://127.0.0.1:${FAKE_PORT}`,
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  serverC.stderr.on('data', (d) => process.stderr.write(`[serverC] ${d}`));
+  for (let i = 0; i < 60; i++) {
+    try { const r = await fetch(C_BASE + '/api/health'); if (r.ok) break; } catch { /* wait */ }
+    await sleep(500);
+  }
+  const s = await apiC('POST', '/api/auth/signup', { orgName: 'Link Org', name: 'Owner', email: 'link@test.co', password: 'Test1234!' });
+  const t = s.data.token;
+  check('signup (link org)', s.status === 201, JSON.stringify(s.data).slice(0, 150));
+
+  const { DatabaseSync } = require('node:sqlite');
+  const raw = new DatabaseSync(C_DB);
+  const orgId = raw.prepare("SELECT id FROM orgs WHERE name = 'Link Org'").get().id;
+  raw.prepare("INSERT INTO payers (name, type) VALUES ('Cigna', 'commercial')").run();
+  const payerId = raw.prepare("SELECT id FROM payers WHERE name = 'Cigna'").get().id;
+  raw.prepare(`INSERT INTO claims (org_id, claim_number, patient_name, payer_id, service_date,
+    billed_amount, paid_amount, status, adjustment_amount, patient_resp_amount, member_id)
+    VALUES (?, 'CLM-C1', 'Carol Patient', ?, '2026-08-05', 100, 35, 'paid', 0, 65, 'MBR-C')`).run(orgId, payerId);
+  raw.close();
+
+  const gen = await apiC('POST', '/api/statements/generate', { patient_name: 'Carol Patient', member_id: 'MBR-C' }, t);
+  check('statement generated (link org)', gen.status === 201 && gen.data.amount_due === 65, JSON.stringify(gen.data).slice(0, 200));
+  const stmtId = gen.data.id;
+
+  const link = await apiC('POST', `/api/statements/${stmtId}/payment-link`, {}, t);
+  check('payment link created via Stripe API', link.status === 200 && link.data.payment_link_url === 'https://buy.stripe.com/fake_123',
+    `got ${link.status} ${JSON.stringify(link.data).slice(0, 200)}`);
+  check('statement flips draft -> open with link id stored', link.data.status === 'open' && link.data.payment_link_id === 'plink_fake',
+    JSON.stringify(link.data).slice(0, 200));
+  check('Stripe price charges the remaining balance ($65 -> 6500c)',
+    !!seen.prices && seen.prices.unit_amount === '6500' && seen.prices.currency === 'usd', JSON.stringify(seen.prices));
+  check('Stripe price uses the created price + statement metadata',
+    !!seen.links && seen.links['line_items[0][price]'] === 'price_fake' && seen.links['metadata[statement_id]'] === String(stmtId),
+    JSON.stringify(seen.links));
+
+  const detail = await apiC('GET', `/api/statements/${stmtId}`, null, t);
+  check('detail returns the stored pay link', detail.status === 200 && detail.data.payment_link_url === 'https://buy.stripe.com/fake_123');
+  const list = await apiC('GET', '/api/statements', null, t);
+  check('list returns the pay link for row actions', Array.isArray(list.data) && list.data[0]?.payment_link_url === 'https://buy.stripe.com/fake_123',
+    JSON.stringify(list.data).slice(0, 160));
+
+  serverC.kill(); serverC = null;
+  fakeStripe.close(); fakeStripe = null;
+}
+
 (async () => {
   try { await partA(); } catch (e) { failed++; console.log('  FAIL Part A threw:', e.message); }
   try { await partB(); } catch (e) { failed++; console.log('  FAIL Part B threw:', e.message); }
+  try { await partC(); } catch (e) { failed++; console.log('  FAIL Part C threw:', e.message); }
   if (server) server.kill();
+  if (serverC) serverC.kill();
+  if (fakeStripe) fakeStripe.close();
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })();

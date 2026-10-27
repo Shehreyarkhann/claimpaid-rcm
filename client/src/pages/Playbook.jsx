@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth, authFetch } from '../auth';
 import { api } from '../api';
-import { Modal, EmptyState, PageHeader, Skeleton } from '../components/ui';
+import { Modal, EmptyState, PageHeader, Skeleton, confirmDialog } from '../components/ui';
 import { useToast } from '../components/ui';
 
 const CAT_COLORS = {
@@ -83,7 +83,7 @@ export default function Playbook() {
   const applyFilters = () => load();
 
   const remove = async (id, title) => {
-    if (!window.confirm(`Delete "${title}"?`)) return;
+    if (!(await confirmDialog({ title: `Delete "${title}"?`, confirmLabel: 'Delete entry' }))) return;
     try {
       const res = await authFetch(`/api/playbook/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Delete failed');

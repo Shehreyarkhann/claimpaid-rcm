@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { api, fmtMoney2 } from '../api';
-import { PageHeader, Skeleton } from '../components/ui';
+import { PageHeader, Skeleton, Modal } from '../components/ui';
 import { useToast } from '../components/ui';
 
 const PLAN_META = {
@@ -371,9 +371,9 @@ export default function Billing({ onBaaRequired }) {
 
       {/* ── Cancel confirm modal ── */}
       {showCancel && (
-        <div className="fixed inset-0 bg-stone-900/50 flex items-center justify-center z-50 p-4" onClick={() => busy !== 'cancel' && setShowCancel(false)}>
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-bold tracking-tight mb-2">Cancel {meta.label}?</h3>
+        <Modal onClose={() => busy !== 'cancel' && setShowCancel(false)}>
+          <div className="p-7">
+            <h3 className="text-xl font-bold tracking-tight mb-2">Cancel {meta.label}?</h3>
             {isTrialing ? (
               <p className="text-sm text-stone-600 mb-5">
                 Your trial will end on <strong>{fmtDate(status.trial_ends_at)}</strong> and won't convert to a paid plan.
@@ -401,19 +401,19 @@ export default function Billing({ onBaaRequired }) {
             )}
             <div className="flex justify-end gap-2">
               <button className="btn btn-ghost" disabled={busy === 'cancel'} onClick={() => setShowCancel(false)}>Keep my plan</button>
-              <button className="btn !bg-red-600 !text-white hover:!bg-red-700" disabled={busy === 'cancel'} onClick={doCancel}>
+              <button className="btn !bg-rose-600 !text-white hover:!bg-rose-700" disabled={busy === 'cancel'} onClick={doCancel}>
                 {busy === 'cancel' ? 'Canceling…' : isTrialing ? 'Yes, end at trial end' : 'Yes, cancel'}
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* ── Switch-plan confirm modal ── */}
       {switchTarget && (
-        <div className="fixed inset-0 bg-stone-900/50 flex items-center justify-center z-50 p-4" onClick={() => busy !== switchTarget && setSwitchTarget(null)}>
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-bold tracking-tight mb-2">Switch to {PLAN_META[switchTarget]?.label}?</h3>
+        <Modal onClose={() => busy !== switchTarget && setSwitchTarget(null)}>
+          <div className="p-7">
+            <h3 className="text-xl font-bold tracking-tight mb-2">Switch to {PLAN_META[switchTarget]?.label}?</h3>
             <p className="text-sm text-stone-600 mb-2">
               {PLAN_META[switchTarget]?.desc}. The switch takes effect immediately — your team, claims and data don't change.
             </p>
@@ -436,7 +436,7 @@ export default function Billing({ onBaaRequired }) {
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* ── Usage this month ── */}

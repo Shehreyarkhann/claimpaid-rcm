@@ -18,7 +18,16 @@ function getStripe() {
   if (_stripe) return _stripe;
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) return null;
-  _stripe = require('stripe')(key);
+  // STRIPE_API_BASE exists so tests can point the SDK at a fake Stripe
+  // (mirrors billing.js; this SDK version takes host/port/protocol).
+  let cfg;
+  if (process.env.STRIPE_API_BASE) {
+    try {
+      const u = new URL(process.env.STRIPE_API_BASE);
+      cfg = { protocol: u.protocol.replace(':', ''), host: u.hostname, port: u.port || undefined };
+    } catch {}
+  }
+  _stripe = require('stripe')(key, cfg);
   return _stripe;
 }
 

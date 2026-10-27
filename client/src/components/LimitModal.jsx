@@ -44,7 +44,7 @@ export default function LimitModal({ info, onClose, onUpgrade }) {
           <button onClick={onUpgrade} className="btn btn-primary !px-6">
             Upgrade plan →
           </button>
-          <button onClick={onClose} className="btn btn-secondary !px-6">
+          <button onClick={onClose} className="btn btn-outline !px-6">
             Not now
           </button>
         </div>

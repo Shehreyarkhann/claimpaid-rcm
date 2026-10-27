@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../auth';
 import { api, fmtMoney2 } from '../api';
-import { Modal, EmptyState, PageHeader, Skeleton, useToast } from '../components/ui';
+import { Modal, EmptyState, PageHeader, Skeleton, useToast, confirmDialog } from '../components/ui';
 import { CANNED_REPLIES } from '../cannedReplies';
 import SystemStatusTab from './SystemStatusTab';
 
@@ -1023,7 +1023,7 @@ function DbTab() {
     } catch (e) { toast.error(e.message); }
   };
   const del = async (id) => {
-    if (!window.confirm(`Delete row #${id} from ${table}?`)) return;
+    if (!(await confirmDialog({ title: `Delete row #${id} from ${table}?`, confirmLabel: 'Delete row' }))) return;
     try {
       await api.super.deleteRow(table, id);
       toast.success('Row deleted'); loadRows();
