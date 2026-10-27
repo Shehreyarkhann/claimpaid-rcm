@@ -8,8 +8,10 @@ import { useToast } from './ui';
 // Profile-picture menu (deploy #57): the professional account dropdown —
 // header with identity, profile/security shortcuts, log out everywhere,
 // log out. `placement` = 'up' (sidebar footer) or 'down' (mobile top bar).
-// In rail (collapsed) mode the parent opens the modal directly instead.
-export default function UserMenu({ placement = 'up', rail = false, compact = false }) {
+// In rail (collapsed) mode the click expands the sidebar (via onExpand)
+// and opens the account modal directly; the modal itself is portaled to
+// the app root by ui.jsx, so it is never clipped by the sidebar.
+export default function UserMenu({ placement = 'up', rail = false, compact = false, onExpand = null }) {
   const avatarOnly = rail || compact;
   const { user, logout, adoptToken } = useAuth();
   const toast = useToast();
@@ -43,7 +45,10 @@ export default function UserMenu({ placement = 'up', rail = false, compact = fal
   return (
     <div className="relative" ref={ref}>
       <button
-        onClick={() => (rail ? setModal('profile') : setOpen((o) => !o))}
+        onClick={() => {
+          if (rail) { onExpand?.(); setModal('profile'); }
+          else setOpen((o) => !o);
+        }}
         title="Account"
         className={`flex items-center ${avatarOnly ? 'justify-center' : 'gap-3 w-full'} rounded-xl hover:bg-white/5 transition p-1 -m-1`}
       >

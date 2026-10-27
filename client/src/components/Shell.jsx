@@ -163,6 +163,12 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
       return !c;
     });
   };
+  // One-directional expand (used by the rail account button: activating the
+  // account UI from the collapsed rail first restores the full sidebar).
+  const expand = () => {
+    setCollapsed(false);
+    try { localStorage.setItem('cp_sidebar', 'open'); } catch {}
+  };
 
   const tabs = [
     { id: 'work', label: 'My Work', icon: ICONS.work, badge: dueCount },
@@ -276,7 +282,7 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
             {!rail && <span className="text-xs font-medium">Collapse</span>}
           </button>
           <div className="rounded-xl bg-white/5 p-3">
-            <UserMenu placement="up" rail={rail} />
+            <UserMenu placement="up" rail={rail} onExpand={expand} />
           </div>
         </div>
       </aside>

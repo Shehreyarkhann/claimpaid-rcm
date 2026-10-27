@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 const ToastContext = createContext(null);
 export const useToast = () => useContext(ToastContext);
@@ -40,12 +41,19 @@ export function ToastProvider({ children }) {
 }
 
 export function Modal({ onClose, children, wide }) {
-  return (
+  // Portal to <body>: a plain fixed inset-0 render is laid out against the
+  // nearest TRANSFORMED ancestor, not the viewport — and the app sidebar
+  // always carries a Tailwind translate transform. Modals mounted inside the
+  // sidebar subtree (the account modal in the collapsed rail) were trapped
+  // inside the sidebar's box and clipped. Portaling makes every modal a
+  // true app-level overlay at any mount point.
+  return createPortal(
     <div className="modal-backdrop fixed inset-0 bg-stone-900/50 backdrop-blur-[2px] flex items-center justify-center z-50 p-2 sm:p-4" onClick={onClose}>
       <div className={`modal-panel bg-white rounded-2xl shadow-2xl w-full ${wide ? 'max-w-3xl' : 'max-w-lg'} max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
