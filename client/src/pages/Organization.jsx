@@ -332,14 +332,22 @@ function NotificationsTab({ isOwner }) {
 // ---------------- Security (owner only) ----------------
 function SecurityTab() {
   const toast = useToast();
-  const { settings, refresh } = useOrgSettings();
   const [mfaRequired, setMfaRequired] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // The flag must be read from GET /api/settings/security — NOT from the
+  // shared org-settings context, which is populated from GET /api/org, a
+  // payload that does not include mfa_required (the toggle used to read
+  // `settings.mfa_required` from there: always undefined, so it rendered
+  // OFF on load and snapped back OFF after every save + refresh).
   useEffect(() => {
-    if (settings) { setMfaRequired(!!settings.mfa_required); setLoaded(true); }
-  }, [settings]);
+    let alive = true;
+    api.securitySettings()
+      .then((r) => { if (alive) { setMfaRequired(!!r.mfa_required); setLoaded(true); } })
+      .catch((e) => { if (alive) { toast.error(e.message); setLoaded(true); } });
+    return () => { alive = false; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const flip = async (value) => {
     if (saving) return;
@@ -349,7 +357,6 @@ function SecurityTab() {
       // PUT /api/settings/security  { mfa_required: boolean }
       const r = await api.settings.saveSecurity(value);
       setMfaRequired(!!r.mfa_required);
-      await refresh();
       toast.success(value ? 'MFA enforcement is on for this workspace' : 'MFA enforcement is off');
     } catch (e) { toast.error(e.message); }
     finally { setSaving(false); }

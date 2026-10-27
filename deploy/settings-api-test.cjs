@@ -229,6 +229,31 @@ async function req(method, p, { token, body, form } = {}) {
     rdb.close();
     r = await req('GET', '/api/settings', { token: ownerToken });
     ok('flag cleared → owner unblocked', r.status === 200, `status=${r.status}`);
+
+    // --- MFA toggle read-back round-trip (Settings → Security switch) ---
+    // The switch reads GET /api/settings/security; assert that endpoint (and
+    // GET /api/settings) mirror exactly what PUT wrote, on AND off. While
+    // enforcement is ON the owner is API-blocked until enrolled (by design),
+    // so simulate the completed email-code enrollment (users.mfa_enabled = 1)
+    // to perform the read-back the UI does after the owner signs in.
+    r = await req('PUT', '/api/settings/security', { token: ownerToken, body: { mfa_required: true } });
+    ok('round-trip: PUT on → 200 {mfa_required:true}', r.status === 200 && r.json.mfa_required === true, `status=${r.status}`);
+    const edb = new (require('node:sqlite').DatabaseSync)(DB);
+    const stored = edb.prepare('SELECT mfa_required FROM orgs WHERE id = ?').get(orgId);
+    ok('round-trip: orgs.mfa_required stored as 1', !!stored && stored.mfa_required === 1, JSON.stringify(stored));
+    edb.prepare('UPDATE users SET mfa_enabled = 1 WHERE email = ?').run('owner@test.io');
+    edb.close();
+    r = await req('GET', '/api/settings/security', { token: ownerToken });
+    ok('round-trip: GET /api/settings/security returns ON after save', r.status === 200 && r.json.mfa_required === true,
+      `status=${r.status} ${JSON.stringify(r.json).slice(0, 120)}`);
+    r = await req('GET', '/api/settings', { token: ownerToken });
+    ok('round-trip: GET /api/settings embeds mfa_required=true', r.status === 200 && r.json.mfa_required === true, `status=${r.status}`);
+    r = await req('PUT', '/api/settings/security', { token: ownerToken, body: { mfa_required: false } });
+    ok('round-trip: PUT off → 200 {mfa_required:false}', r.status === 200 && r.json.mfa_required === false, `status=${r.status}`);
+    r = await req('GET', '/api/settings/security', { token: ownerToken });
+    ok('round-trip: GET /api/settings/security returns OFF after save', r.status === 200 && r.json.mfa_required === false, `status=${r.status}`);
+    r = await req('PUT', '/api/settings/security', { token: ownerToken, body: { mfa_required: 'yes' } });
+    ok('round-trip: non-boolean mfa_required rejected', r.status === 400, `status=${r.status}`);
   } finally {
     await kill();
   }
