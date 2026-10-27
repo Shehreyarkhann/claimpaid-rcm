@@ -75,3 +75,15 @@ In-depth, practical guides for medical billing teams (also at https://claimpaid.
 
 - Developer API: https://claimpaid.io/ai/ (API keys, POST /api/v1/query)
 - Book a demo: via the demo form at https://claimpaid.io/
+
+## Frequently asked questions
+
+- **What is ClaimPaid?** AI-powered revenue cycle management (RCM) software for medical billing teams and billing companies. It manages claims, denials, appeals, timely-filing deadlines, ERA posting, eligibility, and patient statements, plus a private AI assistant (ClaimPaid AI) grounded in payer policy documents.
+- **How much does ClaimPaid cost?** RCM Starter is $199/month, RCM Pro + AI is $499/month, ClaimPaid AI standalone is $99/month, and Enterprise is custom. Pricing is public and flat — no percentage of collections. Every paid plan starts with a real 30-day free trial, no credit card required.
+- **What are the timely filing limits for major payers?** Aetna 120 days, Cigna 180 days, UnitedHealthcare 90 days, Anthem 180 days, Medicare one calendar year, New York Medicaid 90 days, Humana 180 days. ClaimPaid tracks these deadlines per claim and ranks work by deadline risk.
+- **Does ClaimPaid sign a BAA?** Yes — BAA e-signing is built into onboarding.
+- **Where does the AI run?** ClaimPaid AI runs on private infrastructure with a local model. Customer documents and clinical notes are not sent to third-party AI APIs.
+- **How does the AI coding assistant avoid making up codes?** Every suggested code must quote the exact words in the clinical note that justify it, verified against the note server-side. Suggestions are marked Valid, Review, or Abstain — when nothing in a note supports a code, it abstains instead of guessing. A human coder accepts every code.
+- **Who is ClaimPaid for?** Medical billing companies, independent billers, and practice billing teams — especially small teams losing revenue to denials and missed filing deadlines.
+- **Where is ClaimPaid based?** Built and run on Long Island, New York, by a biller who works revenue cycle daily. Support: support@claimpaid.io.
+- **Is there a free resource for payer timely-filing rules?** Yes — the Payer Policy Handbook is publicly searchable in the ClaimPaid AI widget at https://claimpaid.io/ai/ (Ask the Handbook), and the deadline guide is at https://claimpaid.io/blog/timely-filing-limits-by-payer-2026/.
