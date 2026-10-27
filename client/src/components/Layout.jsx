@@ -8,7 +8,7 @@ export default function Layout({ page, setPage, children }) {
       <header className="bg-ink text-white shadow">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/app/claimpaid-icon.webp" alt="ClaimPaid" className="w-9 h-9 rounded-lg" />
+            <img src="/app/claimpaid-icon-reverse.webp" alt="ClaimPaid" className="w-9 h-9 rounded-lg" />
             <div>
               <div className="wordmark font-bold text-lg leading-tight">ClaimPaid RCM</div>
               <div className="text-xs text-stone-400">Revenue Cycle Analytics</div>

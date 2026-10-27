@@ -39,7 +39,7 @@ function Shell({ step, children, wide }) {
         <div className={`w-full ${wide ? 'max-w-3xl' : 'max-w-lg'}`}>
           {/* Brand */}
           <div className="flex items-center justify-center gap-2.5 mb-8">
-            <img src="/app/claimpaid-icon.webp" alt="ClaimPaid" className="w-9 h-9 rounded-xl" />
+            <img src="/app/claimpaid-icon-reverse.webp" alt="ClaimPaid" className="w-9 h-9 rounded-xl" />
             <span className="wordmark text-white font-extrabold text-lg tracking-tight">ClaimPaid</span>
           </div>
           {/* Progress */}

@@ -109,7 +109,7 @@ function AuthGate({ children }) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#17251F]">
         <div className="flex flex-col items-center gap-4">
-          <img src="/app/claimpaid-icon.webp" alt="ClaimPaid" className="w-12 h-12 rounded-2xl animate-pulse" />
+          <img src="/app/claimpaid-icon-reverse.webp" alt="ClaimPaid" className="w-12 h-12 rounded-2xl animate-pulse" />
           <div className="text-stone-400 text-sm">Loading ClaimPaid RCM…</div>
         </div>
       </div>

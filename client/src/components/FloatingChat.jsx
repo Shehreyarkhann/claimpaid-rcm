@@ -20,7 +20,7 @@ export default function FloatingChat() {
         <div className="fixed bottom-[168px] lg:bottom-24 right-4 lg:right-6 z-50 w-[calc(100vw-2rem)] sm:w-[380px] h-[560px] max-h-[70vh] rounded-2xl overflow-hidden shadow-2xl border border-stone-200 bg-white flex flex-col">
           <div className="flex items-center justify-between px-4 py-3 text-white" style={{ background: 'linear-gradient(135deg,#17251F,#24382E)' }}>
             <div className="flex items-center gap-2">
-              <img src="/app/claimpaid-icon.webp" alt="ClaimPaid" className="w-7 h-7 rounded-lg shrink-0" />
+              <img src="/app/claimpaid-icon-reverse.webp" alt="ClaimPaid" className="w-7 h-7 rounded-lg shrink-0" />
               <div>
                 <div className="wordmark font-bold text-sm leading-tight">ClaimPaid AI</div>
                 <div className="text-[11px] text-stone-300">Ask about payer policies</div>

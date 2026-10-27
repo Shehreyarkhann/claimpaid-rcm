@@ -68,8 +68,7 @@ function layout(innerHtml, note) {
     `<div style="margin:0;padding:24px 12px;background:#f1f5f9;font-family:system-ui,-apple-system,'Segoe UI',sans-serif">` +
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden">` +
     `<tr><td style="background:#0B1220;padding:20px 28px">` +
-    `<img src="https://claimpaid.io/claimpaid-icon.png" alt="ClaimPaid" width="40" height="40" style="border-radius:9px;vertical-align:middle">` +
-    `<span style="color:#ffffff;font-size:20px;font-weight:800;vertical-align:middle;margin-left:10px">ClaimPaid</span>` +
+    `<img src="https://claimpaid.io/claimpaid-logo-reverse.png" alt="ClaimPaid" width="239" height="60" style="vertical-align:middle">` +
     `</td></tr>` +
     `<tr><td style="padding:28px;color:#0f172a;font-size:15px;line-height:1.55">${innerHtml}</td></tr>` +
     `<tr><td style="padding:18px 28px;background:#f8fafc;border-top:1px solid #e2e8f0;color:#64748b;font-size:12px;line-height:1.5">` +
