@@ -64,7 +64,7 @@ async function partA() {
   const calls = {};
   const fakeStripe = {
     prices: { create: async (a) => { calls.price = a; return { id: 'price_x' }; } },
-    paymentLinks: { create: async (a) => { calls.link = a; return { id: 'plink_x', url: 'https://buy.stripe.com/test_x' }; } },
+    paymentLinks: { create: async (a, opts) => { calls.link = a; calls.linkOpts = opts; return { id: 'plink_x', url: 'https://buy.stripe.com/test_x' }; } },
   };
   const link = await core.createStripePaymentLink(fakeStripe,
     { id: 7, org_id: 3, statement_number: 'STMT-00007', amount_due: 100, amount_paid: 30 }, 'Test Practice');
@@ -72,6 +72,7 @@ async function partA() {
   check('link metadata carries statement + org', calls.link.metadata.statement_id === '7' && calls.link.metadata.org_id === '3', JSON.stringify(calls.link.metadata));
   check('link uses after_completion (not the rejected after_payment)', !!calls.link.after_completion && calls.link.after_completion.type === 'redirect' && !('after_payment' in calls.link), JSON.stringify(Object.keys(calls.link)));
   check('link opts out of Managed Payments (patient statements are never MoR-eligible)', !!calls.link.managed_payments && calls.link.managed_payments.enabled === false, JSON.stringify(calls.link.managed_payments));
+  check('link create pins the API version the opt-out exists in', !!calls.linkOpts && calls.linkOpts.apiVersion === '2026-03-25.preview', JSON.stringify(calls.linkOpts));
   check('link returns id + url', link.id === 'plink_x' && link.url.includes('buy.stripe.com'));
 
   // PDF: valid header, carries the statement number, multi-line content.

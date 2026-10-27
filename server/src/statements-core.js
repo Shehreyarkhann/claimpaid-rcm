@@ -163,6 +163,13 @@ async function createStripePaymentLink(stripe, stmt, orgName) {
     // Payments on by default otherwise reject the link for a missing product
     // tax code — so statement links always opt out explicitly.
     managed_payments: { enabled: false },
+  }, {
+    // The managed_payments opt-out on Payment Links only exists from the API
+    // version it launched in (Stripe changelog, dahlia 2026-03-25 preview);
+    // on the account's default version the parameter is silently ignored and
+    // the MoR tax-code rejection still fires (verified live, deploy #79).
+    // Pin the version for this one call only.
+    apiVersion: '2026-03-25.preview',
   });
   return { id: link.id, url: link.url };
 }
