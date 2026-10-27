@@ -404,7 +404,9 @@ function PaymentsTab() {
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const connect = async () => {
-    if (busy) return;
+    // FEATURE HOLD: never call the connect endpoint while the server
+    // reports the feature held (buttons are disabled too — belt and braces).
+    if (busy || (status && status.held)) return;
     setBusy(true);
     try {
       const r = await api.settings.connectPayments();
@@ -413,6 +415,8 @@ function PaymentsTab() {
   };
 
   const disconnect = async () => {
+    // FEATURE HOLD: never call the disconnect endpoint while held.
+    if (status && status.held) return;
     if (!(await confirmDialog({
       title: 'Disconnect Stripe?',
       body: 'New online pay links will stop working until a Stripe account is connected again. Your Stripe account itself is not deleted — only the connection to this workspace is removed.',
@@ -429,6 +433,19 @@ function PaymentsTab() {
 
   if (!status) return <div className="card p-6 max-w-2xl"><Skeleton className="h-40" /></div>;
 
+  // FEATURE HOLD (server truth from GET /api/settings/payments): while
+  // held, every action in this tab renders disabled and inert.
+  const held = !!status.held;
+  const heldTitle = 'Restricted access — patient payment links are on hold.';
+  const heldBanner = held ? (
+    <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 mb-5">
+      <div className="text-sm font-bold text-amber-900">Patient payments are on hold</div>
+      <p className="text-xs text-amber-900/80 mt-1">
+        Patient payments are on hold — restricted access during the current phase.
+      </p>
+    </div>
+  ) : null;
+
   if (!status.connected) {
     return (
       <div className="card p-6 max-w-2xl">
@@ -437,12 +454,13 @@ function PaymentsTab() {
           Patient payments settle directly to your practice's bank account through Stripe.
           ClaimPaid never holds your money.
         </p>
+        {heldBanner}
         <p className="text-sm text-stone-600 mb-5">
           Connect your Stripe account to put an online pay link on patient statements. Onboarding is
           hosted by Stripe and takes a few minutes — you'll need your business details and the bank
           account where payouts should land.
         </p>
-        <button className="btn btn-primary" onClick={connect} disabled={busy}>
+        <button className="btn btn-primary" onClick={connect} disabled={busy || held} title={held ? heldTitle : undefined}>
           {busy ? 'Opening Stripe…' : 'Connect Stripe'}
         </button>
       </div>
@@ -460,6 +478,7 @@ function PaymentsTab() {
         Patient payments settle directly to your practice's bank account through Stripe.
         ClaimPaid never holds your money.
       </p>
+      {heldBanner}
 
       {incomplete ? (
         <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 mb-5">
@@ -492,11 +511,11 @@ function PaymentsTab() {
 
       <div className="flex gap-2">
         {incomplete && (
-          <button className="btn btn-primary !text-sm" onClick={connect} disabled={busy}>
+          <button className="btn btn-primary !text-sm" onClick={connect} disabled={busy || held} title={held ? heldTitle : undefined}>
             {busy ? 'Opening Stripe…' : 'Continue setup'}
           </button>
         )}
-        <button className="btn btn-ghost !text-sm !text-rose-600" onClick={disconnect} disabled={busy}>
+        <button className="btn btn-ghost !text-sm !text-rose-600" onClick={disconnect} disabled={busy || held} title={held ? heldTitle : undefined}>
           Disconnect
         </button>
       </div>

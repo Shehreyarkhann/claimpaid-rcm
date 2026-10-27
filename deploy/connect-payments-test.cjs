@@ -14,6 +14,12 @@
 //     no-op; an event from a DIFFERENT connected account does not settle;
 //     a bad signature is rejected; without STRIPE_CONNECT_WEBHOOK_SECRET
 //     the endpoint answers 503 JSON instead of crashing.
+//   E (FEATURE HOLD): the feature ships HELD (server/src/featureFlags.js).
+//     Parts A-D boot with STATEMENT_PAYMENTS_HELD=0 (hold lifted — the
+//     re-enable path) and must behave exactly as before; Part E boots a
+//     third server with the hold ON and asserts connect/disconnect/
+//     payment-link all refuse with 403 FEATURE_HELD and zero Stripe calls,
+//     while GET /api/settings/payments reports held:true.
 'use strict';
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -33,11 +39,14 @@ const BASE = `http://127.0.0.1:${APP_PORT}`;
 const FAKE_PORT = 4121;
 const APP2_PORT = 4122;
 const BASE2 = `http://127.0.0.1:${APP2_PORT}`;
+const APP3_PORT = 4123;
+const BASE3 = `http://127.0.0.1:${APP3_PORT}`;
 const TMP = '/tmp/connect-pay-test';
 const DB = path.join(TMP, 'test.db');
 const DB2 = path.join(TMP, 'test2.db');
+const DB3 = path.join(TMP, 'test3.db');
 const CONNECT_SECRET = 'whsec_connect_test';
-let server, server2, fakeStripe;
+let server, server2, server3, fakeStripe;
 
 // Fake Stripe state: accounts keyed by id so the test can simulate
 // onboarding completion between calls.
@@ -145,7 +154,9 @@ async function postWebhook(base, payload, header) {
   fs.rmSync(TMP, { recursive: true, force: true });
   await startFakeStripe();
   try {
-    server = await bootServer(APP_PORT, DB, { STRIPE_CONNECT_WEBHOOK_SECRET: CONNECT_SECRET });
+    // Main server runs with the feature hold LIFTED (the documented
+    // re-enable path) so Parts A-D exercise the live Connect flow.
+    server = await bootServer(APP_PORT, DB, { STRIPE_CONNECT_WEBHOOK_SECRET: CONNECT_SECRET, STATEMENT_PAYMENTS_HELD: '0' });
 
     console.log('Part A — Connect onboarding + status (HTTP, fake Stripe)');
     const s = await api(BASE, 'POST', '/api/auth/signup', { orgName: 'Connect Org', name: 'Owner', email: 'connect@test.co', password: 'Test1234!' });
@@ -172,6 +183,7 @@ async function postWebhook(base, payload, header) {
 
     const st0 = await api(BASE, 'GET', '/api/settings/payments', null, t);
     check('status: not connected initially', st0.status === 200 && st0.data.connected === false, JSON.stringify(st0.data));
+    check('status reports held:false with the hold lifted (env override)', st0.data.held === false, JSON.stringify(st0.data));
 
     const c1 = await api(BASE, 'POST', '/api/settings/payments/connect', {}, t);
     check('connect returns a Stripe onboarding URL', c1.status === 200 && /connect\.stripe\.com/.test(c1.data.url || ''), `got ${c1.status} ${JSON.stringify(c1.data).slice(0, 160)}`);
@@ -340,6 +352,67 @@ async function postWebhook(base, payload, header) {
     console.log('  FAIL Part D threw:', e.stack || e.message);
   } finally {
     if (server2) server2.kill();
+  }
+
+  // FEATURE HOLD — the shipped state. Third server boots WITHOUT the
+  // lifting override ('1' and unset take the identical held code path).
+  // Every activation route must refuse with 403 FEATURE_HELD before any
+  // Stripe call, while status still answers and reports held:true.
+  try {
+    console.log('Part E — Feature hold (shipped state)');
+    server3 = await bootServer(APP3_PORT, DB3, { STRIPE_CONNECT_WEBHOOK_SECRET: CONNECT_SECRET, STATEMENT_PAYMENTS_HELD: '1' });
+    const hs = await api(BASE3, 'POST', '/api/auth/signup', { orgName: 'Held Org', name: 'Owner', email: 'held@test.co', password: 'Test1234!' });
+    check('held server: owner signup', hs.status === 201, JSON.stringify(hs.data).slice(0, 150));
+    const ht = hs.data.token;
+    const hOrg = hs.data.user.org_id;
+    const { DatabaseSync } = require('node:sqlite');
+    const raw3 = new DatabaseSync(DB3);
+
+    const hStatus = await api(BASE3, 'GET', '/api/settings/payments', null, ht);
+    check('held: status answers with held:true (client renders from this)',
+      hStatus.status === 200 && hStatus.data.connected === false && hStatus.data.held === true,
+      `got ${hStatus.status} ${JSON.stringify(hStatus.data)}`);
+
+    const snap = {
+      create: fake.calls.accountsCreate.length, links: fake.calls.accountLinks.length,
+      prices: fake.calls.prices.length, plinks: fake.calls.links.length,
+    };
+    const hConnect = await api(BASE3, 'POST', '/api/settings/payments/connect', {}, ht);
+    check('held: connect -> 403 FEATURE_HELD',
+      hConnect.status === 403 && hConnect.data.code === 'FEATURE_HELD'
+      && hConnect.data.error === 'Patient payment links are currently restricted.',
+      `got ${hConnect.status} ${JSON.stringify(hConnect.data)}`);
+    check('held: connect created NO Stripe account and NO onboarding link',
+      fake.calls.accountsCreate.length === snap.create && fake.calls.accountLinks.length === snap.links,
+      `creates ${snap.create}->${fake.calls.accountsCreate.length} links ${snap.links}->${fake.calls.accountLinks.length}`);
+    check('held: no account id stored by the refused connect',
+      !raw3.prepare('SELECT stripe_account_id FROM orgs WHERE id = ?').get(hOrg).stripe_account_id);
+
+    const hDisc = await api(BASE3, 'POST', '/api/settings/payments/disconnect', {}, ht);
+    check('held: disconnect -> 403 FEATURE_HELD',
+      hDisc.status === 403 && hDisc.data.code === 'FEATURE_HELD', `got ${hDisc.status} ${JSON.stringify(hDisc.data)}`);
+
+    raw3.prepare("INSERT INTO payers (name, type) VALUES ('Held Payer', 'commercial')").run();
+    const hPayer = raw3.prepare("SELECT id FROM payers WHERE name = 'Held Payer'").get().id;
+    raw3.prepare(`INSERT INTO claims (org_id, claim_number, patient_name, payer_id, service_date,
+      billed_amount, paid_amount, status, adjustment_amount, patient_resp_amount, member_id)
+      VALUES (?, 'CLM-H1', 'Held Pat', ?, '2026-08-01', 100, 40, 'paid', 10, 50, 'MBR-H1')`).run(hOrg, hPayer);
+    const hGen = await api(BASE3, 'POST', '/api/statements/generate', { patient_name: 'Held Pat', member_id: 'MBR-H1' }, ht);
+    check('held: statement generation itself is NOT held', hGen.status === 201, `got ${hGen.status}`);
+    const hLink = await api(BASE3, 'POST', `/api/statements/${hGen.data.id}/payment-link`, {}, ht);
+    check('held: payment-link -> 403 FEATURE_HELD',
+      hLink.status === 403 && hLink.data.code === 'FEATURE_HELD'
+      && hLink.data.error === 'Patient payment links are currently restricted.',
+      `got ${hLink.status} ${JSON.stringify(hLink.data)}`);
+    check('held: payment-link made ZERO Stripe calls (no price, no link)',
+      fake.calls.prices.length === snap.prices && fake.calls.links.length === snap.plinks,
+      `prices ${snap.prices}->${fake.calls.prices.length} links ${snap.plinks}->${fake.calls.links.length}`);
+    raw3.close();
+  } catch (e) {
+    failed++;
+    console.log('  FAIL Part E threw:', e.stack || e.message);
+  } finally {
+    if (server3) server3.kill();
     if (fakeStripe) fakeStripe.close();
   }
 

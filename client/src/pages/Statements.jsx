@@ -259,8 +259,16 @@ export default function Statements({ onConnectStripe } = {}) {
                         <button className="btn btn-ghost !py-1.5 !text-xs" onClick={() => setDetailId(s.id)}>View</button>
                         <button className="btn btn-ghost !py-1.5 !text-xs" onClick={() => downloadPdf(s.id, s.statement_number).catch((e) => toast.error(e.message))}>PDF</button>
                         {canWrite && s.status !== 'paid' && s.status !== 'void' && !s.payment_link_url && (
-                          <button className="btn btn-ghost !py-1.5 !text-xs" disabled={busyId === `link-${s.id}`} onClick={() => payLink(s)}>
-                            {busyId === `link-${s.id}` ? 'Creating…' : 'Pay link'}
+                          // FEATURE HOLD: pay links are restricted (server-enforced
+                          // 403 FEATURE_HELD — see server/src/featureFlags.js). The
+                          // button renders disabled until the hold is lifted; the
+                          // minting handler below stays in code, unreachable.
+                          <button
+                            className="btn btn-ghost !py-1.5 !text-xs"
+                            disabled
+                            title="Restricted access — patient payment links are on hold."
+                          >
+                            Pay link
                           </button>
                         )}
                         {canWrite && s.status !== 'paid' && s.status !== 'void' && s.payment_link_url && (

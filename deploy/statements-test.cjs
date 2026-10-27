@@ -127,7 +127,9 @@ async function partB() {
   fs.mkdirSync(TMP, { recursive: true });
   server = spawn('node', ['src/index.js'], {
     cwd: path.join(__dirname, '..', 'server'),
-    env: { ...process.env, PORT: String(PORT), DB_PATH: DB, JWT_SECRET: 'test-secret', EHR_AUTOPULL: 'off', STRIPE_SECRET_KEY: '' },
+    // STATEMENT_PAYMENTS_HELD=0: this suite exercises the LIVE pay-link flow;
+    // the shipped hold (featureFlags.js) is covered by connect-payments-test Part E.
+    env: { ...process.env, PORT: String(PORT), DB_PATH: DB, JWT_SECRET: 'test-secret', EHR_AUTOPULL: 'off', STRIPE_SECRET_KEY: '', STATEMENT_PAYMENTS_HELD: '0' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   server.stderr.on('data', (d) => process.stderr.write(`[server] ${d}`));
@@ -257,7 +259,7 @@ async function partC() {
     cwd: path.join(__dirname, '..', 'server'),
     env: {
       ...process.env, PORT: String(C_PORT), DB_PATH: C_DB, JWT_SECRET: 'test-secret', EHR_AUTOPULL: 'off',
-      STRIPE_SECRET_KEY: 'sk_test_fake', STRIPE_API_BASE: `http://127.0.0.1:${FAKE_PORT}`,
+      STRIPE_SECRET_KEY: 'sk_test_fake', STRIPE_API_BASE: `http://127.0.0.1:${FAKE_PORT}`, STATEMENT_PAYMENTS_HELD: '0',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });

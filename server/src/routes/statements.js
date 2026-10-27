@@ -2,6 +2,7 @@ const express = require('express');
 const { db } = require('../db');
 const { authRequired, roleRequired, requireProduct } = require('../auth');
 const core = require('../statements-core');
+const { statementPaymentsHeld, FEATURE_HELD_BODY } = require('../featureFlags');
 
 // Patient statements (deploy #50): balances from ERA patient
 // responsibility, statement generation, PDF, Stripe payment links, and
@@ -64,6 +65,9 @@ router.post('/generate', canWrite, (req, res) => {
 });
 
 router.post('/:id/payment-link', canWrite, async (req, res) => {
+  // FEATURE HOLD (featureFlags.js): refused before ANY Stripe/account
+  // logic — while held, no pay link can be minted by anyone.
+  if (statementPaymentsHeld()) return res.status(403).json(FEATURE_HELD_BODY);
   const stmt = core.getStatement(db, orgId(req), Number(req.params.id));
   if (!stmt) return res.status(404).json({ error: 'Statement not found' });
   if (stmt.status === 'paid' || stmt.status === 'void') return res.status(409).json({ error: `Statement is ${stmt.status}` });

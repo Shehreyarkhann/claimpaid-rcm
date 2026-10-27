@@ -8,6 +8,7 @@ const path = require('path');
 const multer = require('multer');
 const { db } = require('../db');
 const { authRequired, roleRequired, requireProduct } = require('../auth');
+const { statementPaymentsHeld, FEATURE_HELD_BODY } = require('../featureFlags');
 const { seatUsage } = require('../config/planLimits');
 const { sha256Hex } = require('../middleware/apiKeyAuth');
 
@@ -324,13 +325,16 @@ function stripeUnavailable(res) {
 router.get('/payments', roleRequired('owner'), async (req, res) => {
   const org = db.prepare('SELECT stripe_account_id FROM orgs WHERE id = ?').get(req.orgId);
   if (!org) return res.status(404).json({ error: 'Workspace not found' });
-  if (!org.stripe_account_id) return res.json({ connected: false });
+  // `held` is always reported so the client renders the Payments tab from
+  // server truth (featureFlags.js — the Connect/pay-link hold).
+  if (!org.stripe_account_id) return res.json({ connected: false, held: statementPaymentsHeld() });
   const stripe = getStripe();
   if (!stripe) return stripeUnavailable(res);
   try {
     const acct = await stripe.accounts.retrieve(org.stripe_account_id);
     res.json({
       connected: true,
+      held: statementPaymentsHeld(),
       account_id: acct.id,
       charges_enabled: !!acct.charges_enabled,
       payouts_enabled: !!acct.payouts_enabled,
@@ -344,6 +348,8 @@ router.get('/payments', roleRequired('owner'), async (req, res) => {
 });
 
 router.post('/payments/connect', roleRequired('owner'), async (req, res) => {
+  // FEATURE HOLD (featureFlags.js): no account creation while held.
+  if (statementPaymentsHeld()) return res.status(403).json(FEATURE_HELD_BODY);
   const stripe = getStripe();
   if (!stripe) return stripeUnavailable(res);
   const org = db.prepare('SELECT id, stripe_account_id FROM orgs WHERE id = ?').get(req.orgId);
@@ -383,6 +389,8 @@ router.post('/payments/connect', roleRequired('owner'), async (req, res) => {
 });
 
 router.post('/payments/disconnect', roleRequired('owner'), (req, res) => {
+  // FEATURE HOLD (featureFlags.js): no unlinking while held either.
+  if (statementPaymentsHeld()) return res.status(403).json(FEATURE_HELD_BODY);
   const org = db.prepare('SELECT stripe_account_id FROM orgs WHERE id = ?').get(req.orgId);
   if (!org) return res.status(404).json({ error: 'Workspace not found' });
   if (org.stripe_account_id) {
