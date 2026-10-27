@@ -8,17 +8,18 @@ router.use(authRequired, requireProduct('rcm'));
 const canWrite = roleRequired('owner', 'biller');
 const ownerOnly = roleRequired('owner');
 
-const ELIG_VENDORS = ['rest', 'availity'];
+const ELIG_VENDORS = ['rest', 'availity', 'stedi'];
 
 // Org's eligibility vendor config (columns on orgs; see db.js for the at-rest note)
 function orgEligConfig(orgId) {
   const o = db.prepare(
-    `SELECT eligibility_vendor, eligibility_endpoint, eligibility_api_key, eligibility_auth_scheme,
+    `SELECT name, eligibility_vendor, eligibility_endpoint, eligibility_api_key, eligibility_auth_scheme,
             eligibility_availity_client_id, eligibility_availity_client_secret,
             eligibility_availity_payer_map, eligibility_availity_env, billing_npi
      FROM orgs WHERE id = ?`
   ).get(orgId) || {};
   return {
+    org_name: o.name || '',
     vendor: ELIG_VENDORS.includes(o.eligibility_vendor) ? o.eligibility_vendor : null,
     endpoint: o.eligibility_endpoint || '',
     api_key: o.eligibility_api_key || '',
@@ -98,7 +99,7 @@ router.post('/check', canWrite, async (req, res) => {
 
   const cfg = orgEligConfig(req.orgId);
   if (!cfg.vendor) {
-    return res.status(400).json({ error: 'No eligibility vendor configured — connect Availity or a REST endpoint in Organization settings.' });
+    return res.status(400).json({ error: 'No eligibility vendor configured — connect Availity, Stedi, or a REST endpoint in Organization settings.' });
   }
   let result;
   try {
@@ -106,6 +107,8 @@ router.post('/check', canWrite, async (req, res) => {
       'SELECT eligibility_availity_client_secret FROM orgs WHERE id = ?'
     ).get(req.orgId) || {};
     result = await runCheck(cfg.vendor, {
+      org_id: req.orgId,
+      org_name: cfg.org_name,
       eligibility_endpoint: cfg.endpoint,
       eligibility_api_key: cfg.api_key,
       eligibility_auth_scheme: cfg.auth_scheme,

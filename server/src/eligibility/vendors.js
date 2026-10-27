@@ -357,6 +357,229 @@ async function availityCheck(orgConfig, input) {
   };
 }
 
+// ---- stedi vendor -------------------------------------------------------------
+// Real eligibility via Stedi, the API-first clearinghouse (Phase 1 of the
+// Stedi integration — see claimpilot/stedi-integration-scope-2026-10-27.md).
+//   Check:  POST https://healthcare.us.stedi.com/2024-04-01/change/medicalnetwork/eligibility/v3
+//           header Authorization: <api key, raw, no prefix>
+//           body: { controlNumber, tradingPartnerServiceId,
+//                   provider { organizationName, npi },
+//                   subscriber { memberId, firstName, lastName, dateOfBirth YYYYMMDD },
+//                   encounter { serviceTypeCodes: ["30"] } }
+//           -> synchronous JSON 271 (subscriber.benefitsInformation, AAA errors)
+//   Payers: GET  https://healthcare.us.stedi.com/2024-04-01/payers/search?name=<name>
+//           -> payer records { stediId, primaryPayerId, displayName, aliases }
+// Unlike Availity (per-org OAuth app in the DB), Stedi is a PLATFORM account:
+// the API key lives only in the server env (STEDI_API_KEY), never in org rows,
+// never in any settings payload. A key starting with "test_" is test mode
+// (Stedi's own convention) and reaches mock payers only.
+// Content-level payer rejections (AAA segments) come back as a mapped result
+// with coverage_active 0 — same semantics as an Availity "no coverage found";
+// transport/HTTP failures throw precise errors, exactly like the other vendors.
+
+const STEDI_ELIGIBILITY_URL = 'https://healthcare.us.stedi.com/2024-04-01/change/medicalnetwork/eligibility/v3';
+const STEDI_PAYERS_URL = 'https://healthcare.us.stedi.com/2024-04-01/payers/search';
+const STEDI_TIMEOUT_MS = 30000;
+const STEDI_PAYER_CACHE_TTL_MS = 6 * 3600 * 1000;
+// AAA codes Stedi does not bill for (payer-down class). 75 = subscriber not
+// found is still a completed (billable in production) transaction.
+const STEDI_NON_BILLABLE_AAA = ['42', '79', '80'];
+const stediPayerCache = new Map(); // lowercase payer name -> { id, stediId, displayName, expiresAt }
+
+function stediApiKey() {
+  return (process.env.STEDI_API_KEY || '').trim();
+}
+
+function fmtDate8(v) {
+  const s = String(v || '');
+  return /^\d{8}$/.test(s) ? `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}` : null;
+}
+
+// AAA errors can appear at the top level, on the subscriber, or on dependents.
+function collectStediAaaErrors(parsed) {
+  const out = [];
+  const push = (list) => {
+    if (!Array.isArray(list)) return;
+    for (const e of list) {
+      if (e && e.code) out.push({ code: String(e.code), description: e.description || null, followup_action: e.followupAction || null });
+    }
+  };
+  push(parsed?.errors);
+  push(parsed?.subscriber?.aaaErrors);
+  if (Array.isArray(parsed?.dependents)) for (const d of parsed.dependents) push(d?.aaaErrors);
+  return out;
+}
+
+function stediBenefitEntries(parsed) {
+  const lists = [
+    parsed?.subscriber?.benefitsInformation,
+    ...(Array.isArray(parsed?.dependents) ? parsed.dependents.map((d) => d?.benefitsInformation) : []),
+    parsed?.benefitsInformation,
+  ];
+  for (const l of lists) if (Array.isArray(l) && l.length) return l;
+  return [];
+}
+
+function stediEntryText(e) {
+  const msgs = Array.isArray(e?.messages) ? e.messages.map((m) => (typeof m === 'string' ? m : m?.message || '')).join(' ') : '';
+  return [e?.name, e?.codeName, e?.planCoverageDescription, e?.serviceTypes, msgs].flat().filter(Boolean).join(' ');
+}
+
+// The 271 JSON nests benefit data under the subscriber (or a dependent).
+// Extract defensively and ALWAYS keep the full body in raw_response.
+function mapStediCoverage(parsed) {
+  const out = {
+    coverage_active: 0, plan_name: null, plan_type: null, group_number: null,
+    copay_primary: null, copay_specialist: null,
+    deductible_individual: null, deductible_remaining: null,
+    oop_max: null, effective_date: null, term_date: null,
+  };
+  const entries = stediBenefitEntries(parsed);
+  if (!entries.length) return out;
+  const active = entries.find((e) => String(e?.code) === '1');
+  if (active) out.coverage_active = 1;
+  const src = active || entries[0];
+  out.plan_name = pickField(src, ['planCoverageDescription', 'planName', 'name', 'coverageName']) || pickField(parsed?.payer, ['name']);
+  out.plan_type = pickField(src, ['insuranceType', 'insuranceTypeCode', 'planType']);
+  for (const e of entries) {
+    const addl = e?.benefitsAdditionalInformation || {};
+    const g = pickField(addl, ['groupNumber', 'groupId', 'groupPolicyNumber']) || pickField(e, ['groupNumber']);
+    if (g && out.group_number === null) out.group_number = String(g);
+    const dates = e?.benefitsDateInformation || {};
+    if (out.effective_date === null) out.effective_date = fmtDate8(dates.benefitBegin || dates.eligibilityBegin || dates.benefitBeginDate);
+    if (out.term_date === null) out.term_date = fmtDate8(dates.benefitEnd || dates.eligibilityEnd || dates.benefitEndDate);
+  }
+  if (out.group_number === null) out.group_number = pickField(parsed?.planInformation, ['groupNumber', 'groupId']);
+  for (const e of entries) {
+    const code = String(e?.code || '');
+    const amt = numOrNull(e?.benefitAmount);
+    const text = stediEntryText(e);
+    const svc = Array.isArray(e?.serviceTypeCodes) ? e.serviceTypeCodes.map(String) : [];
+    if (code === 'C' && amt !== null) { // Deductible
+      if (/remain/i.test(text)) { if (out.deductible_remaining === null) out.deductible_remaining = amt; }
+      else if (out.deductible_individual === null && (svc.includes('30') || svc.length === 0 || out.deductible_individual === null)) out.deductible_individual = amt;
+    }
+    if (code === 'B' && amt !== null) { // Co-Payment
+      if (/special/i.test(text)) { if (out.copay_specialist === null) out.copay_specialist = amt; }
+      else if (/primary|pcp|office/i.test(text)) { if (out.copay_primary === null) out.copay_primary = amt; }
+      else if (out.copay_primary === null && (svc.includes('30') || svc.length === 0)) out.copay_primary = amt;
+    }
+    if (code === 'G' && amt !== null && out.oop_max === null) out.oop_max = amt; // Out of Pocket (Stop Loss)
+    if (code === 'F' && amt !== null && out.oop_max === null && /out of pocket|stop loss/i.test(text)) out.oop_max = amt;
+  }
+  return out;
+}
+
+// Payer ID resolution: the org's stored payer map carries the standard payer
+// ID family Stedi's tradingPartnerServiceId uses (their docs use 87726 for
+// UHC — the same IDs orgs already store for Availity). When the map has no
+// entry, resolve by name through the Payers API — exact displayName match
+// only, never a fuzzy guess — and cache the result in memory.
+async function resolveStediPayerId(orgConfig, payerName, apiKey) {
+  let payerMap = {};
+  try { payerMap = JSON.parse(orgConfig.eligibility_availity_payer_map || '{}') || {}; } catch { payerMap = {}; }
+  if (payerMap[payerName]) return { tradingPartnerServiceId: String(payerMap[payerName]), source: 'org_map' };
+  const cacheKey = String(payerName || '').toLowerCase();
+  const cached = stediPayerCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return { tradingPartnerServiceId: cached.id, source: 'payers_api_cache', stediId: cached.stediId };
+  let res;
+  try {
+    res = await fetch(`${STEDI_PAYERS_URL}?name=${encodeURIComponent(payerName)}`, {
+      headers: { Authorization: apiKey, Accept: 'application/json' },
+      signal: AbortSignal.timeout(STEDI_TIMEOUT_MS),
+    });
+  } catch (e) {
+    throw new Error(`Stedi payer lookup unreachable: ${e.message}`);
+  }
+  const text = await res.text();
+  let parsed = null;
+  try { parsed = text ? JSON.parse(text) : null; } catch { /* non-JSON */ }
+  if (!res.ok) {
+    const detail = parsed?.message || parsed?.error || text.slice(0, 200);
+    throw new Error(`Stedi payer lookup failed (HTTP ${res.status})${detail ? `: ${detail}` : ''}`);
+  }
+  const items = Array.isArray(parsed?.items) ? parsed.items : (Array.isArray(parsed) ? parsed : []);
+  const match = items.find((it) => String(it?.payer?.displayName || it?.displayName || '').toLowerCase() === cacheKey);
+  const rec = match?.payer || match;
+  const primaryId = rec?.primaryPayerId ? String(rec.primaryPayerId) : null;
+  if (!primaryId) {
+    throw new Error(`Could not resolve a Stedi payer ID for "${payerName}" — add the standard payer ID for this payer in Eligibility settings (payer map) and try again.`);
+  }
+  stediPayerCache.set(cacheKey, { id: primaryId, stediId: rec?.stediId || null, displayName: rec?.displayName || payerName, expiresAt: Date.now() + STEDI_PAYER_CACHE_TTL_MS });
+  return { tradingPartnerServiceId: primaryId, source: 'payers_api', stediId: rec?.stediId || null };
+}
+
+function buildStediRequest(orgConfig, input, tradingPartnerServiceId) {
+  return {
+    controlNumber: String(crypto.randomInt(100000000, 1000000000)),
+    tradingPartnerServiceId: String(tradingPartnerServiceId),
+    provider: {
+      organizationName: orgConfig.org_name || '',
+      npi: (orgConfig.billing_npi || '').trim(),
+    },
+    // Our eligibility input models the patient as the member (same as the
+    // Availity vendor), so the patient goes in `subscriber`, not dependents.
+    subscriber: {
+      memberId: input.member_id,
+      firstName: input.patient_first,
+      lastName: input.patient_last,
+      dateOfBirth: String(input.dob || '').replace(/-/g, ''),
+    },
+    encounter: { serviceTypeCodes: ['30'] },
+  };
+}
+
+async function stediCheck(orgConfig, input) {
+  const apiKey = stediApiKey();
+  if (!apiKey) {
+    throw new Error('Stedi is not configured — the STEDI_API_KEY server environment variable is not set. Add it to the server environment, then select Stedi as the eligibility vendor.');
+  }
+  const npi = (orgConfig.billing_npi || '').trim();
+  if (!/^\d{10}$/.test(npi)) {
+    throw new Error('Stedi checks need your 10-digit billing NPI — set it in Organization / EDI settings first.');
+  }
+  const testMode = apiKey.startsWith('test_');
+  const resolution = await resolveStediPayerId(orgConfig, input.payer, apiKey);
+  const body = buildStediRequest(orgConfig, input, resolution.tradingPartnerServiceId);
+  let res;
+  try {
+    res = await fetch(STEDI_ELIGIBILITY_URL, {
+      method: 'POST',
+      headers: { Authorization: apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(STEDI_TIMEOUT_MS),
+    });
+  } catch (e) {
+    throw new Error(`Stedi eligibility request unreachable: ${e.message}`);
+  }
+  const text = await res.text();
+  let parsed = null;
+  try { parsed = text ? JSON.parse(text) : null; } catch { /* non-JSON */ }
+  if (!res.ok) {
+    const detail = parsed?.message || parsed?.error || text.slice(0, 200);
+    throw new Error(`Stedi eligibility request failed (HTTP ${res.status})${detail ? `: ${detail}` : ''}`);
+  }
+  if (!parsed || typeof parsed !== 'object') throw new Error('Stedi returned a non-JSON response.');
+  const aaaErrors = collectStediAaaErrors(parsed);
+  const mapped = mapStediCoverage(parsed);
+  // Usage metering (Phase 0 hook): one structured line per completed check.
+  // Stedi does not bill test-mode checks or AAA 42/79/80 (payer-down) failures;
+  // the billable flag mirrors that so the future allowance system has the data.
+  const billable = !testMode && !aaaErrors.some((e) => STEDI_NON_BILLABLE_AAA.includes(e.code));
+  console.log('[stedi] ' + JSON.stringify({
+    event: 'eligibility_check', vendor: 'stedi',
+    org_id: orgConfig.org_id ?? null, payer: input.payer,
+    trading_partner_service_id: resolution.tradingPartnerServiceId,
+    mode: testMode ? 'test' : 'production', billable,
+    aaa_codes: aaaErrors.map((e) => e.code),
+  }));
+  return {
+    ...mapped,
+    raw_request: { vendor: 'stedi', mode: testMode ? 'test' : 'production', tradingPartnerServiceId: resolution.tradingPartnerServiceId, payer_resolution: resolution.source, body },
+    raw_response: { demo: false, http_status: res.status, test_mode: testMode, aaa_errors: aaaErrors, vendor_body: parsed },
+  };
+}
+
 // ---- entry point ------------------------------------------------------------
 
 async function runCheck(vendorName, orgConfig, input) {
@@ -369,11 +592,12 @@ async function runCheck(vendorName, orgConfig, input) {
   }
   if (vendorName === 'rest') return restCheck(orgConfig, clean);
   if (vendorName === 'availity') return availityCheck(orgConfig, clean);
+  if (vendorName === 'stedi') return stediCheck(orgConfig, clean);
   // No demo fallback (removed at market launch, deploy #52): an unconfigured
   // org gets a clear error, never synthetic data.
-  const e = new Error('No eligibility vendor configured — connect Availity or a REST endpoint in Organization settings.');
+  const e = new Error('No eligibility vendor configured — connect Availity, Stedi, or a REST endpoint in Organization settings.');
   e.status = 400;
   throw e;
 }
 
-module.exports = { runCheck, validateInput, restCheck, availityCheck, mapAvailityCoverage, DEFAULT_FIELD_MAP };
+module.exports = { runCheck, validateInput, restCheck, availityCheck, mapAvailityCoverage, stediCheck, mapStediCoverage, buildStediRequest, resolveStediPayerId, collectStediAaaErrors, _stediPayerCache: stediPayerCache, DEFAULT_FIELD_MAP };

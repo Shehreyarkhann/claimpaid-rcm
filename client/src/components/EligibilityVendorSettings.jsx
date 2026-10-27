@@ -82,9 +82,22 @@ export default function EligibilityVendorSettings() {
           <label className="label">Vendor</label>
           <select className="input" value={form.vendor} onChange={set('vendor')}>
             <option value="availity">Availity (Coverages API — free Essentials account)</option>
+            <option value="stedi">Stedi (clearinghouse API — platform key)</option>
             <option value="rest">Custom REST API (pVerify / Eligible / …)</option>
           </select>
         </div>
+        {form.vendor === 'stedi' && (
+          <div className="sm:col-span-2">
+            <p className="text-xs text-stone-400 leading-relaxed">
+              Stedi runs on a platform account — the API key lives in the server environment
+              (STEDI_API_KEY), not in these settings, and there is nothing to paste here. Checks use
+              your billing NPI from Organization / EDI settings. Payer IDs resolve automatically
+              from Stedi's payer network; when a payer also appears in the Availity payer map above,
+              that stored standard payer ID is used. If checks report that Stedi is not configured,
+              the server environment variable has not been set yet.
+            </p>
+          </div>
+        )}
         {form.vendor === 'availity' && (
           <>
             <div>
