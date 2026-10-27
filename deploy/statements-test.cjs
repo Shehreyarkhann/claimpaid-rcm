@@ -70,6 +70,7 @@ async function partA() {
     { id: 7, org_id: 3, statement_number: 'STMT-00007', amount_due: 100, amount_paid: 30 }, 'Test Practice');
   check('link charges the remaining balance ($70 -> 7000c)', calls.price.unit_amount === 7000, JSON.stringify(calls.price));
   check('link metadata carries statement + org', calls.link.metadata.statement_id === '7' && calls.link.metadata.org_id === '3', JSON.stringify(calls.link.metadata));
+  check('link uses after_completion (not the rejected after_payment)', !!calls.link.after_completion && calls.link.after_completion.type === 'redirect' && !('after_payment' in calls.link), JSON.stringify(Object.keys(calls.link)));
   check('link returns id + url', link.id === 'plink_x' && link.url.includes('buy.stripe.com'));
 
   // PDF: valid header, carries the statement number, multi-line content.

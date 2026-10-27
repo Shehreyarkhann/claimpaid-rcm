@@ -157,7 +157,7 @@ async function createStripePaymentLink(stripe, stmt, orgName) {
   const link = await stripe.paymentLinks.create({
     line_items: [{ price: price.id, quantity: 1 }],
     metadata: { statement_id: String(stmt.id), org_id: String(stmt.org_id), kind: 'patient_statement' },
-    after_payment: { type: 'redirect', redirect: { url: 'https://claimpaid.io/app/' } },
+    after_completion: { type: 'redirect', redirect: { url: 'https://claimpaid.io/app/' } },
   });
   return { id: link.id, url: link.url };
 }

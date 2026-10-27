@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy #76: rebrand mark swap — founder's new stamp logo replaces the old
+# Deploy #77: rebrand mark swap — founder's new stamp logo replaces the old
 # green-square icon everywhere in the product (palette/theme unchanged).
 # - New art: dark stamp + lime check (light surfaces), inverted lime stamp
 #   (dark surfaces), simplified favicon stamp, dark app-icon tile, full
@@ -21,5 +21,5 @@ export AI_REPO_URL=https://github.com/Shehreyarkhann/claimpaid-ai.git
 export BRANCH=main
 cd /tmp
 curl -fsSL https://raw.githubusercontent.com/Shehreyarkhann/claimpaid-rcm/main/deploy/vps-setup.sh -o vps-setup76.sh
-nohup bash vps-setup76.sh > /tmp/deploy76.log 2>&1 &
-echo "deploy76 started, log: /tmp/deploy76.log"
+nohup bash vps-setup76.sh > /tmp/deploy77.log 2>&1 &
+echo "deploy77 started, log: /tmp/deploy77.log"
