@@ -237,7 +237,7 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
             {settings?.logo_url ? (
               <img src={settings.logo_url} alt="Workspace logo" className="w-10 h-10 rounded-xl object-contain bg-white shrink-0" />
             ) : (
-              <button onClick={() => go('work')} title="ClaimPaid home" className="shrink-0 rounded-xl transition hover:opacity-90"><img src="/app/claimpaid-icon-reverse.webp" alt="ClaimPaid" className="w-10 h-10 rounded-xl shadow-[0_4px_16px_rgba(16,185,129,0.4)]" /></button>
+              <button onClick={() => go('work')} title="ClaimPaid home" className="shrink-0 rounded-xl transition hover:opacity-90"><img src="/app/claimpaid-icon-reverse.webp" alt="ClaimPaid" className="w-10 h-10 rounded-xl" /></button>
             )}
             {!rail && <WorkspaceSwitcher collapsed={rail} />}
             {!rail && (
@@ -294,7 +294,7 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
           <button onClick={() => setMobileOpen(true)} title="Open menu" className="p-1.5 -ml-1.5 rounded-lg hover:bg-white/10 transition">
             {MENU_ICON}
           </button>
-          <button onClick={() => go('work')} title="ClaimPaid home" className="shrink-0 rounded-lg transition hover:opacity-90"><img src={settings?.logo_url || '/app/claimpaid-icon-reverse.webp'} alt="ClaimPaid" className="w-8 h-8 rounded-lg object-contain bg-white/10" /></button>
+          <button onClick={() => go('work')} title="ClaimPaid home" className="shrink-0 rounded-lg transition hover:opacity-90"><img src={settings?.logo_url || '/app/claimpaid-icon-reverse.webp'} alt="ClaimPaid" className="w-8 h-8 rounded-lg object-contain" /></button>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-semibold leading-tight truncate">{currentLabel}</div>
             <div className="text-[11px] text-stone-400 leading-tight truncate">{user?.org_name || 'ClaimPaid'}</div>

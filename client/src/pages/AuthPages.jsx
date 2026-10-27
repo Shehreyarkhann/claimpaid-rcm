@@ -8,7 +8,7 @@ function BrandPanel() {
       <div className="absolute inset-0 opacity-40"
         style={{ background: 'radial-gradient(600px 400px at 20% 20%, rgba(16,185,129,0.25), transparent), radial-gradient(500px 400px at 80% 90%, rgba(217,119,6,0.14), transparent)' }} />
       <div className="relative flex items-center gap-3">
-        <img src="/app/claimpaid-icon-reverse.webp" alt="ClaimPaid" className="w-10 h-10 rounded-xl shadow-[0_4px_16px_rgba(16,185,129,0.4)]" />
+        <img src="/app/claimpaid-icon-reverse.webp" alt="ClaimPaid" className="w-10 h-10 rounded-xl" />
         <div>
           <div className="wordmark font-bold text-lg leading-tight">ClaimPaid RCM</div>
           <div className="text-xs text-stone-400">Revenue Cycle Analytics</div>
