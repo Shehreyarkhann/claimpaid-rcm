@@ -60,20 +60,38 @@ async function partA() {
   const claimPaid = raw.prepare('SELECT SUM(patient_paid_amount) t FROM claims').get().t;
   check('claims allocated exactly once (25 + 40)', claimPaid === 65, `got ${claimPaid}`);
 
-  // Payment link construction: one-off price for the REMAINING balance.
+  // Payment link construction: one-off price for the REMAINING balance,
+  // created ON the practice's connected Stripe account (Connect).
   const calls = {};
   const fakeStripe = {
-    prices: { create: async (a) => { calls.price = a; return { id: 'price_x' }; } },
+    prices: { create: async (a, opts) => { calls.price = a; calls.priceOpts = opts; return { id: 'price_x' }; } },
     paymentLinks: { create: async (a, opts) => { calls.link = a; calls.linkOpts = opts; return { id: 'plink_x', url: 'https://buy.stripe.com/test_x' }; } },
   };
   const link = await core.createStripePaymentLink(fakeStripe,
-    { id: 7, org_id: 3, statement_number: 'STMT-00007', amount_due: 100, amount_paid: 30 }, 'Test Practice');
+    { id: 7, org_id: 3, statement_number: 'STMT-00007', amount_due: 100, amount_paid: 30 }, 'Test Practice', 'acct_test');
   check('link charges the remaining balance ($70 -> 7000c)', calls.price.unit_amount === 7000, JSON.stringify(calls.price));
   check('link metadata carries statement + org', calls.link.metadata.statement_id === '7' && calls.link.metadata.org_id === '3', JSON.stringify(calls.link.metadata));
   check('link uses after_completion (not the rejected after_payment)', !!calls.link.after_completion && calls.link.after_completion.type === 'redirect' && !('after_payment' in calls.link), JSON.stringify(Object.keys(calls.link)));
   check('link opts out of Managed Payments (patient statements are never MoR-eligible)', !!calls.link.managed_payments && calls.link.managed_payments.enabled === false, JSON.stringify(calls.link.managed_payments));
   check('link create pins the API version the opt-out exists in', !!calls.linkOpts && calls.linkOpts.apiVersion === '2026-03-25.preview', JSON.stringify(calls.linkOpts));
+  check('price + link are created ON the connected account', calls.priceOpts?.stripeAccount === 'acct_test' && calls.linkOpts?.stripeAccount === 'acct_test',
+    JSON.stringify({ p: calls.priceOpts, l: calls.linkOpts }));
   check('link returns id + url', link.id === 'plink_x' && link.url.includes('buy.stripe.com'));
+
+  // Connect gate: no connected account -> structured refusal, ZERO Stripe calls.
+  const gateCalls = { n: 0 };
+  const gateStripe = {
+    prices: { create: async () => { gateCalls.n++; return { id: 'price_never' }; } },
+    paymentLinks: { create: async () => { gateCalls.n++; return { id: 'plink_never', url: 'x' }; } },
+  };
+  let gateErr = null;
+  try {
+    await core.createStripePaymentLink(gateStripe,
+      { id: 8, org_id: 3, statement_number: 'STMT-00008', amount_due: 50, amount_paid: 0 }, 'Test Practice', null);
+  } catch (e) { gateErr = e; }
+  check('no connected account -> STRIPE_NOT_CONNECTED, nothing created on Stripe',
+    !!gateErr && gateErr.code === 'STRIPE_NOT_CONNECTED' && gateCalls.n === 0,
+    JSON.stringify({ code: gateErr && gateErr.code, calls: gateCalls.n }));
 
   // PDF: valid header, carries the statement number, multi-line content.
   const out = core.statementPdf(db, 1, 1);
@@ -210,7 +228,7 @@ async function apiC(method, p, body, token) {
 async function partC() {
   console.log('Part C — payment link (HTTP, fake Stripe)');
   const http = require('http');
-  const seen = { prices: null, links: null };
+  const seen = { prices: null, links: null, priceAcct: null, linkAcct: null };
   fakeStripe = http.createServer((req, res) => {
     let body = '';
     req.on('data', (d) => { body += d; });
@@ -219,10 +237,12 @@ async function partC() {
       const params = new URLSearchParams(body);
       if (req.method === 'POST' && req.url === '/v1/prices') {
         seen.prices = Object.fromEntries(params.entries());
+        seen.priceAcct = req.headers['stripe-account'] || null;
         return res.end(JSON.stringify({ id: 'price_fake', object: 'price' }));
       }
       if (req.method === 'POST' && req.url === '/v1/payment_links') {
         seen.links = Object.fromEntries(params.entries());
+        seen.linkAcct = req.headers['stripe-account'] || null;
         return res.end(JSON.stringify({ id: 'plink_fake', object: 'payment_link', url: 'https://buy.stripe.com/fake_123', active: true }));
       }
       res.statusCode = 404;
@@ -253,6 +273,9 @@ async function partC() {
   const { DatabaseSync } = require('node:sqlite');
   const raw = new DatabaseSync(C_DB);
   const orgId = raw.prepare("SELECT id FROM orgs WHERE name = 'Link Org'").get().id;
+  // The org has connected its own Stripe account (Connect) — links must be
+  // created on THAT account (Stripe-Account header), never the platform's.
+  raw.prepare("UPDATE orgs SET stripe_account_id = 'acct_fake' WHERE id = ?").run(orgId);
   raw.prepare("INSERT INTO payers (name, type) VALUES ('Cigna', 'commercial')").run();
   const payerId = raw.prepare("SELECT id FROM payers WHERE name = 'Cigna'").get().id;
   raw.prepare(`INSERT INTO claims (org_id, claim_number, patient_name, payer_id, service_date,
@@ -274,6 +297,9 @@ async function partC() {
   check('Stripe price uses the created price + statement metadata',
     !!seen.links && seen.links['line_items[0][price]'] === 'price_fake' && seen.links['metadata[statement_id]'] === String(stmtId),
     JSON.stringify(seen.links));
+  check('price + link were created on the connected account (Stripe-Account header)',
+    seen.priceAcct === 'acct_fake' && seen.linkAcct === 'acct_fake',
+    JSON.stringify({ price: seen.priceAcct, link: seen.linkAcct }));
 
   const detail = await apiC('GET', `/api/statements/${stmtId}`, null, t);
   check('detail returns the stored pay link', detail.status === 200 && detail.data.payment_link_url === 'https://buy.stripe.com/fake_123');

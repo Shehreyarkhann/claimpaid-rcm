@@ -70,14 +70,20 @@ router.post('/:id/payment-link', canWrite, async (req, res) => {
   const stripe = getStripe();
   if (!stripe) return res.status(503).json({ error: 'Online payments are not configured yet (Stripe key missing). You can still record cash/check payments manually.' });
   try {
-    const org = db.prepare('SELECT name FROM orgs WHERE id = ?').get(orgId(req));
-    const link = await core.createStripePaymentLink(stripe, stmt, org?.name || 'Practice');
+    const org = db.prepare('SELECT name, stripe_account_id FROM orgs WHERE id = ?').get(orgId(req));
+    const link = await core.createStripePaymentLink(stripe, stmt, org?.name || 'Practice', org?.stripe_account_id || null);
     db.prepare(`UPDATE patient_statements SET payment_link_id = ?, payment_link_url = ?,
                 status = CASE WHEN status = 'draft' THEN 'open' ELSE status END,
                 sent_at = COALESCE(sent_at, datetime('now')) WHERE id = ?`)
       .run(link.id, link.url, stmt.id);
     res.json(core.getStatement(db, orgId(req), stmt.id));
   } catch (e) {
+    // Connect gate: the workspace hasn't connected its own Stripe account.
+    // The client turns this into a "connect Stripe" prompt — never a link
+    // on the platform account (see statements-core).
+    if (e.code === 'STRIPE_NOT_CONNECTED') {
+      return res.status(409).json({ code: 'STRIPE_NOT_CONNECTED', error: 'Connect a Stripe account to collect patient payments.' });
+    }
     console.error('Statement payment link failed:', e.message);
     res.status(502).json({ error: `Could not create the payment link: ${e.message}` });
   }

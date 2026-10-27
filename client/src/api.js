@@ -42,6 +42,7 @@ async function handle(res) {
     }
     const err = new Error((body.errors || [body.error || `API error: ${res.status}`]).join('; '));
     err.status = res.status;
+    err.code = body.code || null;
     err.limitInfo = body;
     throw err;
   }
@@ -240,6 +241,13 @@ export const api = {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ brand_color }),
       }).then(handle),
+    // Stripe Connect (Express) — patient statement payouts to the practice's
+    // own Stripe account (Settings → Payments).
+    payments: () => get('/api/settings/payments'),
+    connectPayments: () =>
+      authFetch('/api/settings/payments/connect', { method: 'POST' }).then(handle),
+    disconnectPayments: () =>
+      authFetch('/api/settings/payments/disconnect', { method: 'POST' }).then(handle),
   },
   billingPortal: () =>
     authFetch('/api/billing/portal', { method: 'POST' }).then(handle),

@@ -387,6 +387,123 @@ function SecurityTab() {
   );
 }
 
+// ---------------- Payments: Stripe Connect payouts (owner only) ----------------
+// Patient statement payments settle to the practice's OWN Stripe account
+// (Express, Stripe-hosted onboarding) — ClaimPaid never holds the money.
+// Status is always read fresh from GET /api/settings/payments on mount,
+// including when the browser returns from Stripe (?settings=payments).
+function PaymentsTab() {
+  const toast = useToast();
+  const [status, setStatus] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => {
+    try { setStatus(await api.settings.payments()); }
+    catch (e) { toast.error(e.message); setStatus({ connected: false }); }
+  };
+  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const connect = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const r = await api.settings.connectPayments();
+      window.location.href = r.url; // Stripe-hosted onboarding
+    } catch (e) { toast.error(e.message); setBusy(false); }
+  };
+
+  const disconnect = async () => {
+    if (!(await confirmDialog({
+      title: 'Disconnect Stripe?',
+      body: 'New online pay links will stop working until a Stripe account is connected again. Your Stripe account itself is not deleted — only the connection to this workspace is removed.',
+      confirmLabel: 'Disconnect',
+    }))) return;
+    setBusy(true);
+    try {
+      await api.settings.disconnectPayments();
+      toast.success('Stripe disconnected');
+      await load();
+    } catch (e) { toast.error(e.message); }
+    finally { setBusy(false); }
+  };
+
+  if (!status) return <div className="card p-6 max-w-2xl"><Skeleton className="h-40" /></div>;
+
+  if (!status.connected) {
+    return (
+      <div className="card p-6 max-w-2xl">
+        <h3 className="font-bold text-stone-900 mb-1">Patient payments</h3>
+        <p className="text-sm text-stone-500 mb-4">
+          Patient payments settle directly to your practice's bank account through Stripe.
+          ClaimPaid never holds your money.
+        </p>
+        <p className="text-sm text-stone-600 mb-5">
+          Connect your Stripe account to put an online pay link on patient statements. Onboarding is
+          hosted by Stripe and takes a few minutes — you'll need your business details and the bank
+          account where payouts should land.
+        </p>
+        <button className="btn btn-primary" onClick={connect} disabled={busy}>
+          {busy ? 'Opening Stripe…' : 'Connect Stripe'}
+        </button>
+      </div>
+    );
+  }
+
+  const due = status.requirements_due || [];
+  const incomplete = !status.details_submitted || due.length > 0;
+  const acctTail = status.account_id ? `…${status.account_id.slice(-4)}` : '';
+
+  return (
+    <div className="card p-6 max-w-2xl">
+      <h3 className="font-bold text-stone-900 mb-1">Patient payments</h3>
+      <p className="text-sm text-stone-500 mb-4">
+        Patient payments settle directly to your practice's bank account through Stripe.
+        ClaimPaid never holds your money.
+      </p>
+
+      {incomplete ? (
+        <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 mb-5">
+          <div className="text-sm font-bold text-amber-900">Stripe setup isn't finished yet</div>
+          <p className="text-xs text-amber-900/80 mt-1">
+            Stripe still needs a few details before this account can take payments
+            {due.length > 0 ? ` (${due.length} item${due.length === 1 ? '' : 's'} outstanding)` : ''}.
+            Continue setup to complete onboarding.
+          </p>
+        </div>
+      ) : status.charges_enabled ? (
+        <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 mb-5 flex items-start gap-3">
+          <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs shrink-0 mt-0.5">✓</span>
+          <div>
+            <div className="text-sm font-bold text-emerald-900">Connected — patient payments go to your Stripe account</div>
+            <p className="text-xs text-emerald-900/80 mt-1">
+              Stripe account {acctTail} · Payouts {status.payouts_enabled ? 'enabled' : 'not enabled yet'}.
+              Pay links on patient statements charge this account.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-xl bg-stone-50 border border-stone-200 px-4 py-3 mb-5">
+          <div className="text-sm font-bold text-stone-800">Connected — Stripe is reviewing your account</div>
+          <p className="text-xs text-stone-500 mt-1">
+            Onboarding details are in. Charges go live once Stripe finishes its review; check back shortly.
+          </p>
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        {incomplete && (
+          <button className="btn btn-primary !text-sm" onClick={connect} disabled={busy}>
+            {busy ? 'Opening Stripe…' : 'Continue setup'}
+          </button>
+        )}
+        <button className="btn btn-ghost !text-sm !text-rose-600" onClick={disconnect} disabled={busy}>
+          Disconnect
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ---------------- Customization (owner only) ----------------
 function CustomizationTab() {
   const toast = useToast();
@@ -556,18 +673,29 @@ function AdvancedTab({ org, isOwner, onDelete }) {
 }
 
 // ---------------- Page ----------------
-export default function Organization() {
+export default function Organization({ initialTab, onTabConsumed } = {}) {
   const { user } = useAuth();
   const toast = useToast();
   const { settings, refresh } = useOrgSettings();
   const [tab, setTab] = useState('general');
   const isOwner = user?.role === 'owner';
 
+  // Deep link (e.g. from the Statements pay-link prompt or returning from
+  // Stripe onboarding with ?settings=payments): open the requested tab once.
+  useEffect(() => {
+    if (initialTab && isOwner) {
+      setTab(initialTab);
+      if (onTabConsumed) onTabConsumed();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialTab]);
+
   const tabs = [
     { id: 'general', label: 'General' },
     ...(isOwner ? [{ id: 'api', label: 'API' }] : []),
     { id: 'notifications', label: 'Notifications' },
     ...(isOwner ? [{ id: 'security', label: 'Security' }] : []),
+    ...(isOwner ? [{ id: 'payments', label: 'Payments' }] : []),
     ...(isOwner ? [{ id: 'custom', label: 'Customization' }] : []),
     ...(isOwner ? [{ id: 'advanced', label: 'Advanced' }] : []),
   ];
@@ -613,6 +741,7 @@ export default function Organization() {
       {tab === 'api' && isOwner && <ApiTab />}
       {tab === 'notifications' && <NotificationsTab isOwner={isOwner} />}
       {tab === 'security' && isOwner && <SecurityTab />}
+      {tab === 'payments' && isOwner && <PaymentsTab />}
       {tab === 'custom' && isOwner && <CustomizationTab />}
       {tab === 'advanced' && isOwner && <AdvancedTab org={settings} isOwner={isOwner} onDelete={doDelete} />}
     </div>

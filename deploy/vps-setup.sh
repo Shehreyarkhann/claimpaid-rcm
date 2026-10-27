@@ -61,6 +61,10 @@ STRIPE_SECRET_KEY="${STRIPE_SECRET_KEY:-}"
 STRIPE_PRICE_STARTER="${STRIPE_PRICE_STARTER:-}"
 STRIPE_PRICE_PRO="${STRIPE_PRICE_PRO:-}"
 STRIPE_WEBHOOK_SECRET="${STRIPE_WEBHOOK_SECRET:-}"
+# Stripe Connect webhook (statement payments on connected accounts). EMPTY
+# default on purpose: it is set by hand in prod .env (dashboard signing
+# secret) and keep_or() must preserve it across .env regeneration.
+STRIPE_CONNECT_WEBHOOK_SECRET="${STRIPE_CONNECT_WEBHOOK_SECRET:-}"
 # Stedi clearinghouse platform key (empty = stedi eligibility vendor unconfigured;
 # empty top-level default so a hand-set prod value survives .env regeneration)
 STEDI_API_KEY="${STEDI_API_KEY:-}"
@@ -193,6 +197,7 @@ if [[ -f "${APP_DIR}/server/.env" ]]; then
   STRIPE_PRICE_PRO="$(keep_or STRIPE_PRICE_PRO "$(_get STRIPE_PRICE_PRO)")"
   STRIPE_PRICE_AI="$(keep_or STRIPE_PRICE_AI "$(_get STRIPE_PRICE_AI)")"
   STRIPE_WEBHOOK_SECRET="$(keep_or STRIPE_WEBHOOK_SECRET "$(_get STRIPE_WEBHOOK_SECRET)")"
+  STRIPE_CONNECT_WEBHOOK_SECRET="$(keep_or STRIPE_CONNECT_WEBHOOK_SECRET "$(_get STRIPE_CONNECT_WEBHOOK_SECRET)")"
   STEDI_API_KEY="$(keep_or STEDI_API_KEY "$(_get STEDI_API_KEY)")"
   APP_URL="$(keep_or APP_URL "$(_get APP_URL)")";             [[ -z "$APP_URL" ]] && APP_URL="https://${DOMAIN}"
   SUPERADMIN_EMAIL="$(keep_or SUPERADMIN_EMAIL "$(_get SUPERADMIN_EMAIL)")"
@@ -217,6 +222,7 @@ STRIPE_PRICE_STARTER=${STRIPE_PRICE_STARTER}
 STRIPE_PRICE_PRO=${STRIPE_PRICE_PRO}
 STRIPE_PRICE_AI=${STRIPE_PRICE_AI:-}
 STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+STRIPE_CONNECT_WEBHOOK_SECRET=${STRIPE_CONNECT_WEBHOOK_SECRET}
 # Stedi clearinghouse
 STEDI_API_KEY=${STEDI_API_KEY}
 APP_URL=${APP_URL}

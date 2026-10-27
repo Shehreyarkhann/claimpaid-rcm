@@ -217,12 +217,20 @@ function Workspace() {
       window.history.replaceState({}, '', '/app/');
       return 'billing';
     }
+    // Returning from Stripe Connect onboarding (?settings=payments) — land
+    // on Organization; the deepLink initializer below opens the Payments
+    // tab, which refetches connection status on mount. (No replaceState
+    // here: the deepLink initializer still needs to read the param.)
+    if (q.get('settings') === 'payments') return 'org';
     return 'work';
   });
   const [dueCount, setDueCount] = useState(0);
   const [authzAlertCount, setAuthzAlertCount] = useState(0);
-  // Cross-page deep links: { page, appealId, claimId, startAppealClaimId }
-  const [deepLink, setDeepLink] = useState(null);
+  // Cross-page deep links: { page, appealId, claimId, startAppealClaimId, settingsTab }
+  const [deepLink, setDeepLink] = useState(() => {
+    const q = new URLSearchParams(window.location.search);
+    return q.get('settings') === 'payments' ? { settingsTab: 'payments' } : null;
+  });
   // Plan-limit modal: api.js dispatches 'plan-limit' on 402 quota responses
   const [limitInfo, setLimitInfo] = useState(null);
   useEffect(() => {
@@ -266,11 +274,11 @@ function Workspace() {
       {page === 'elig' && <Eligibility initialPrefill={deepLink?.prefill} onConsumed={() => setDeepLink(null)} />}
       {page === 'transmit' && <Transmission />}
       {page === 'era' && <Era />}
-      {page === 'statements' && <Statements />}
+      {page === 'statements' && <Statements onConnectStripe={() => go('org', { settingsTab: 'payments' })} />}
       {page === 'ehr' && <Ehr onViewClaim={(claimId) => go('claims', { claimId })} />}
       {page === 'audit' && <AuditLog />}
       {page === 'billing' && <Billing onBaaRequired={() => go('compliance')} />}
-      {page === 'org' && <Organization />}
+      {page === 'org' && <Organization initialTab={deepLink?.settingsTab} onTabConsumed={() => setDeepLink(null)} />}
       {page === 'compliance' && <Compliance />}
       {page === 'letters' && <LetterTemplates />}
       {page === 'denials' && (

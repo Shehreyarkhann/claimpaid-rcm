@@ -151,7 +151,7 @@ function LoadingRows({ n = 3 }) {
   );
 }
 
-export default function Statements() {
+export default function Statements({ onConnectStripe } = {}) {
   const { user } = useAuth();
   const toast = useToast();
   const canWrite = ['owner', 'biller'].includes(user?.role);
@@ -159,6 +159,7 @@ export default function Statements() {
   const [list, setList] = useState(null);
   const [detailId, setDetailId] = useState(null);
   const [payStmt, setPayStmt] = useState(null);
+  const [needConnect, setNeedConnect] = useState(false);
   const [busyId, setBusyId] = useState(null);
 
   const load = () => {
@@ -178,7 +179,12 @@ export default function Statements() {
     setBusyId(`link-${s.id}`);
     api.statements.paymentLink(s.id)
       .then(() => { toast.success('Payment link created — open or copy it from the statements list'); load(); })
-      .catch((e) => toast.error(e.message))
+      .catch((e) => {
+        // Pay links run on the practice's own Stripe account — until an
+        // owner connects one, this is a setup prompt, not an error.
+        if (e.status === 409 && e.code === 'STRIPE_NOT_CONNECTED') { setNeedConnect(true); return; }
+        toast.error(e.message);
+      })
       .finally(() => setBusyId(null));
   };
   const voidStmt = (s) => {
@@ -285,6 +291,27 @@ export default function Statements() {
 
       {detailId && <DetailModal id={detailId} onClose={() => setDetailId(null)} refresh={load} />}
       {payStmt && <PayModal stmt={payStmt} onClose={() => setPayStmt(null)} onDone={() => { setPayStmt(null); load(); }} />}
+      {needConnect && (
+        <Modal onClose={() => setNeedConnect(false)}>
+          <div className="p-7">
+            <h3 className="text-xl font-bold tracking-tight mb-2">Connect Stripe to collect online payments</h3>
+            <p className="text-sm text-stone-600 mb-6">
+              Online pay links run on your practice's own Stripe account, so patient payments settle
+              directly to your bank — ClaimPaid never holds your money. A workspace owner connects the
+              account once in Settings → Payments, and then pay links work on any statement.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button className="btn btn-ghost" onClick={() => setNeedConnect(false)}>Not now</button>
+              <button
+                className="btn btn-primary"
+                onClick={() => { setNeedConnect(false); if (onConnectStripe) onConnectStripe(); }}
+              >
+                Go to Settings → Payments
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

@@ -548,4 +548,62 @@ async function handleWebhook(req, res) {
   }
 }
 
-module.exports = { billingRoutes: router, handleWebhook, PLANS, productsForPlan, productsForOrg, getEffectivePlanStatus, getTrialPeriodDays, billingStatusFor };
+// ---- Connect webhook handler (mounted with express.raw in index.js) ----
+// Patient statement payments settle on the PRACTICE's connected account,
+// so their checkout.session.completed events arrive on this separate
+// Connect endpoint with its own signing secret. event.account identifies
+// the connected account; the session metadata carries statement_id/org_id
+// (set at link creation in statements-core). Settlement goes through the
+// same recordPayment allocation as the manual-payment route and the
+// platform webhook; idempotency is recordPayment's external-id guard
+// (statement_payments.external_id is UNIQUE — a redelivered event finds
+// the existing `stripe:<payment_intent|session>` row and no-ops).
+async function handleConnectWebhook(req, res) {
+  const webhookSecret = process.env.STRIPE_CONNECT_WEBHOOK_SECRET;
+  if (!webhookSecret) return res.status(503).json({ error: 'connect webhook not configured' });
+  const stripe = getStripe();
+  if (!stripe) return res.status(503).send('Billing not configured');
+  const sig = req.headers['stripe-signature'];
+
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+  } catch (e) {
+    console.error('Stripe Connect webhook signature failed:', e.message);
+    return res.status(400).send('Invalid signature');
+  }
+
+  try {
+    if (event.type === 'checkout.session.completed' && event.data.object?.metadata?.statement_id) {
+      const session = event.data.object;
+      const stmtId = Number(session.metadata.statement_id);
+      const stmtOrgId = Number(session.metadata.org_id);
+      const amount = (Number(session.amount_total) || 0) / 100;
+      // Defense in depth: only settle when the event's connected account
+      // is the account this org actually linked — an event naming another
+      // account must never move this org's statements.
+      const org = stmtOrgId
+        ? db.prepare('SELECT stripe_account_id FROM orgs WHERE id = ?').get(stmtOrgId)
+        : null;
+      try {
+        const core = require('../statements-core');
+        const stmtRow = db.prepare('SELECT id FROM patient_statements WHERE id = ? AND org_id = ?').get(stmtId, stmtOrgId);
+        if (stmtRow && org && event.account && org.stripe_account_id === event.account && amount > 0) {
+          core.recordPayment(db, {
+            orgId: stmtOrgId, statementId: stmtId, amount, method: 'stripe',
+            externalId: `stripe:${session.payment_intent || session.id}`,
+          });
+          console.log(`Billing(Connect): statement ${stmtId} payment $${amount.toFixed(2)} via Stripe`);
+        }
+      } catch (e) {
+        console.error('Connect statement settle failed:', e.message);
+      }
+    }
+    res.json({ received: true });
+  } catch (e) {
+    console.error('Stripe Connect webhook handler error:', e.message);
+    res.status(500).send('Webhook handler failed');
+  }
+}
+
+module.exports = { billingRoutes: router, handleWebhook, handleConnectWebhook, PLANS, productsForPlan, productsForOrg, getEffectivePlanStatus, getTrialPeriodDays, billingStatusFor };

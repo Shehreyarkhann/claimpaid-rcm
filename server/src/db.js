@@ -208,6 +208,9 @@ function initSchema() {
   if (!columnExists('orgs', 'plan_status')) db.exec("ALTER TABLE orgs ADD COLUMN plan_status TEXT DEFAULT 'trialing'");
   if (!columnExists('orgs', 'stripe_customer_id')) db.exec('ALTER TABLE orgs ADD COLUMN stripe_customer_id TEXT');
   if (!columnExists('orgs', 'stripe_subscription_id')) db.exec('ALTER TABLE orgs ADD COLUMN stripe_subscription_id TEXT');
+  // Stripe Connect (Express): the practice's own connected account. Patient
+  // statement payments settle THERE, never to the platform account.
+  if (!columnExists('orgs', 'stripe_account_id')) db.exec('ALTER TABLE orgs ADD COLUMN stripe_account_id TEXT');
   if (!columnExists('orgs', 'current_period_end')) db.exec('ALTER TABLE orgs ADD COLUMN current_period_end TEXT');
   // Super-admin: subscription set to cancel at Stripe period end
   if (!columnExists('orgs', 'stripe_cancel_at_period_end')) db.exec('ALTER TABLE orgs ADD COLUMN stripe_cancel_at_period_end INTEGER NOT NULL DEFAULT 0');

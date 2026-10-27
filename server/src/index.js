@@ -19,7 +19,7 @@ const rulesRoutes = require('./routes/rules');
 const auditRoutes = require('./routes/audit');
 const eligibilityRoutes = require('./routes/eligibility');
 const orgRoutes = require('./routes/org');
-const { billingRoutes, handleWebhook } = require('./routes/billing');
+const { billingRoutes, handleWebhook, handleConnectWebhook } = require('./routes/billing');
 const demoRoutes = require('./routes/demo');
 const superRoutes = require('./routes/super');
 const supportRoutes = require('./routes/support');
@@ -37,6 +37,9 @@ const PORT = process.env.PORT || 4000;
 app.use(cors());
 // Stripe webhook needs the RAW body for signature verification — mount before express.json()
 app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), handleWebhook);
+// Connect webhook (events on connected accounts — statement payments) has
+// its own endpoint + signing secret; same raw-body requirement.
+app.post('/api/billing/webhook/connect', express.raw({ type: 'application/json' }), handleConnectWebhook);
 // 512kb: the avatar upload (deploy #57) sends a downscaled data URL in JSON.
 app.use(express.json({ limit: '512kb' }));
 

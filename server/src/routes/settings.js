@@ -293,6 +293,107 @@ router.put('/security', roleRequired('owner'), (req, res) => {
   res.json({ mfa_required });
 });
 
+// ---- Stripe Connect (Express) — patient statement payouts (owner only) ----
+// Money direction: patient payments must settle to the PRACTICE's own Stripe
+// account, never ClaimPaid's platform account. Each workspace connects its
+// own Express account (Stripe-hosted onboarding); statement pay links are
+// then created on that connected account (see statements-core). ClaimPaid
+// never holds practice funds and takes no application fee in v1.
+let _stripe = null;
+function getStripe() {
+  if (_stripe) return _stripe;
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) return null;
+  // STRIPE_API_BASE exists so tests can point the SDK at a fake Stripe
+  // (mirrors billing.js / statements.js).
+  let cfg;
+  if (process.env.STRIPE_API_BASE) {
+    try {
+      const u = new URL(process.env.STRIPE_API_BASE);
+      cfg = { protocol: u.protocol.replace(':', ''), host: u.hostname, port: u.port || undefined };
+    } catch {}
+  }
+  _stripe = require('stripe')(key, cfg);
+  return _stripe;
+}
+
+function stripeUnavailable(res) {
+  res.status(503).json({ error: 'Online payments are not configured yet (Stripe key missing).' });
+}
+
+router.get('/payments', roleRequired('owner'), async (req, res) => {
+  const org = db.prepare('SELECT stripe_account_id FROM orgs WHERE id = ?').get(req.orgId);
+  if (!org) return res.status(404).json({ error: 'Workspace not found' });
+  if (!org.stripe_account_id) return res.json({ connected: false });
+  const stripe = getStripe();
+  if (!stripe) return stripeUnavailable(res);
+  try {
+    const acct = await stripe.accounts.retrieve(org.stripe_account_id);
+    res.json({
+      connected: true,
+      account_id: acct.id,
+      charges_enabled: !!acct.charges_enabled,
+      payouts_enabled: !!acct.payouts_enabled,
+      details_submitted: !!acct.details_submitted,
+      requirements_due: (acct.requirements && acct.requirements.currently_due) || [],
+    });
+  } catch (e) {
+    console.error('Stripe Connect status failed:', e.message);
+    res.status(502).json({ error: 'Could not load your Stripe connection status. Please try again.' });
+  }
+});
+
+router.post('/payments/connect', roleRequired('owner'), async (req, res) => {
+  const stripe = getStripe();
+  if (!stripe) return stripeUnavailable(res);
+  const org = db.prepare('SELECT id, stripe_account_id FROM orgs WHERE id = ?').get(req.orgId);
+  if (!org) return res.status(404).json({ error: 'Workspace not found' });
+  try {
+    let accountId = org.stripe_account_id;
+    if (!accountId) {
+      const acct = await stripe.accounts.create({
+        type: 'express',
+        country: 'US',
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+        metadata: { org_id: String(org.id) },
+      });
+      accountId = acct.id;
+      db.prepare('UPDATE orgs SET stripe_account_id = ? WHERE id = ?').run(accountId, org.id);
+      auditLog(req, 'org.stripe_connect.connected', 'org', org.id, accountId);
+    }
+    // Stripe-hosted onboarding (also the "continue setup" path for an
+    // incomplete account — account links are single-use, so mint a fresh
+    // one on every call). Returns the browser to Settings → Payments,
+    // which refetches status on mount (?settings=payments is read by App).
+    const appUrl = (process.env.APP_URL || 'http://localhost:4000').replace(/\/$/, '');
+    const link = await stripe.accountLinks.create({
+      account: accountId,
+      refresh_url: `${appUrl}/app/?settings=payments`,
+      return_url: `${appUrl}/app/?settings=payments`,
+      type: 'account_onboarding',
+    });
+    res.json({ url: link.url });
+  } catch (e) {
+    console.error('Stripe Connect onboarding failed:', e.message);
+    res.status(502).json({ error: 'Could not start Stripe onboarding. Please try again.' });
+  }
+});
+
+router.post('/payments/disconnect', roleRequired('owner'), (req, res) => {
+  const org = db.prepare('SELECT stripe_account_id FROM orgs WHERE id = ?').get(req.orgId);
+  if (!org) return res.status(404).json({ error: 'Workspace not found' });
+  if (org.stripe_account_id) {
+    // Unlink only — NEVER delete the Stripe account: it belongs to the
+    // practice, holds their payout history, and may still hold funds.
+    db.prepare('UPDATE orgs SET stripe_account_id = NULL WHERE id = ?').run(req.orgId);
+    auditLog(req, 'org.stripe_connect.disconnected', 'org', req.orgId, org.stripe_account_id);
+  }
+  res.json({ connected: false });
+});
+
 // ---- Brand accent color (owner only) ----
 router.put('/brand', roleRequired('owner'), (req, res) => {
   const { brand_color } = req.body || {};

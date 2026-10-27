@@ -145,15 +145,31 @@ function recordPayment(db, { orgId, statementId, amount, method, externalId }) {
 
 // Stripe Payment Link for the statement's remaining balance. A one-off
 // Price is created per link (Payment Links require a Price id). Metadata
-// carries the statement id so the billing webhook can settle it.
-async function createStripePaymentLink(stripe, stmt, orgName) {
+// carries the statement id so the Connect webhook can settle it.
+//
+// CONNECT GATE: the price + link are created ON the practice's connected
+// Stripe account (stripeAccountId, from orgs.stripe_account_id) so patient
+// money settles to the practice — never to ClaimPaid's platform account.
+// No connected account = no link, no fallback, no exceptions: silently
+// minting the link on the platform account would put the practice's
+// revenue in ClaimPaid's Stripe balance.
+//
+// Deliberate product decision (v1): NO application fee — the practice
+// receives the full payment. ClaimPaid monetizes via subscription, not a
+// cut of patient payments.
+async function createStripePaymentLink(stripe, stmt, orgName, stripeAccountId) {
   const remaining = round2(stmt.amount_due - stmt.amount_paid);
   if (!(remaining > 0)) throw new Error('Statement has no balance to collect');
+  if (!stripeAccountId) {
+    const err = new Error('Connect a Stripe account to collect patient payments.');
+    err.code = 'STRIPE_NOT_CONNECTED';
+    throw err;
+  }
   const price = await stripe.prices.create({
     currency: 'usd',
     unit_amount: Math.round(remaining * 100),
     product_data: { name: `Patient statement ${stmt.statement_number} — ${orgName}` },
-  });
+  }, { stripeAccount: stripeAccountId });
   const link = await stripe.paymentLinks.create({
     line_items: [{ price: price.id, quantity: 1 }],
     metadata: { statement_id: String(stmt.id), org_id: String(stmt.org_id), kind: 'patient_statement' },
@@ -164,6 +180,7 @@ async function createStripePaymentLink(stripe, stmt, orgName) {
     // tax code — so statement links always opt out explicitly.
     managed_payments: { enabled: false },
   }, {
+    stripeAccount: stripeAccountId,
     // The managed_payments opt-out on Payment Links only exists from the API
     // version it launched in (Stripe changelog, dahlia 2026-03-25 preview);
     // on the account's default version the parameter is silently ignored and
