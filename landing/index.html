@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<script>
+/* Logged-in visitors skip the marketing page: if a valid session token is
+   present, go straight to the app. Logged out (or token expired) = landing. */
+(function(){try{var t=localStorage.getItem('pulse_token');if(!t)return;var b=t.split('.')[1];if(!b)return;var p=JSON.parse(decodeURIComponent(escape(atob(b.replace(/-/g,'+').replace(/_/g,'/')))));if(p.exp&&p.exp*1000>Date.now()){location.replace('/app/');}}catch(e){}})();
+</script>
 <title>ClaimPaid — AI-Powered Medical Billing & Denial Management Software | Get your claims paid.</title>
 <meta name="description" content="AI-powered medical billing & denial management software: denial appeals, timely-filing tracking, 837P/835 EDI and payer-policy AI. 30-day free trial, no card."/>
 <meta name="keywords" content="AI-powered medical billing software, denial management software, medical billing software for small practices, revenue cycle management software, claim scrubber, timely filing tracker, AI medical coding assistant, 835 ERA, 837P claims, automated appeal letters, payer policy AI, billing company software"/>
