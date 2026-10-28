@@ -177,3 +177,29 @@ if (process.env.EHR_AUTOPULL !== 'off' && typeof ehrRoutes.runSyncForOrg === 'fu
   setInterval(runAutopull, intervalMin * 60 * 1000).unref();
   console.log(`EHR auto-pull: every ${intervalMin} min for connected orgs (EHR_AUTOPULL=off to disable)`);
 }
+
+// ---- Agent watchdog digest scheduler (Phase 4) ----
+// Hourly sweep; watchdog.runDigestOnce enforces everything itself — the
+// org-local 6–10am window, the once-per-user-per-day dedupe, the
+// nothing-actionable no-send rule, plans-only/agent-disabled skips — so
+// this timer stays dumb, exactly like the auto-pull above. Disable with
+// AGENT_WATCHDOG=off.
+if (process.env.AGENT_WATCHDOG !== 'off') {
+  const watchdog = require('./agent/watchdog');
+  let watchdogRunning = false;
+  const runWatchdog = async () => {
+    if (watchdogRunning) return;
+    watchdogRunning = true;
+    try {
+      const s = await watchdog.runDigestOnce(new Date());
+      if (s.sent || s.failed) console.log(`[agent-watchdog] digests: ${s.sent} sent, ${s.failed} failed`);
+    } catch (e) {
+      console.log(`[agent-watchdog] sweep failed: ${e.message}`);
+    } finally {
+      watchdogRunning = false;
+    }
+  };
+  setTimeout(runWatchdog, 10 * 60 * 1000).unref();
+  setInterval(runWatchdog, 60 * 60 * 1000).unref();
+  console.log('Agent watchdog: hourly digest sweep (AGENT_WATCHDOG=off to disable)');
+}

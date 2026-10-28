@@ -117,4 +117,4 @@ async function sendPasswordReset(email, resetUrl, name) {
   return sendEmail({ to: email, subject, text, html });
 }
 
-module.exports = { sendEmail, sendMfaCode, sendPasswordReset, getProvider };
+module.exports = { sendEmail, sendMfaCode, sendPasswordReset, getProvider, layout };

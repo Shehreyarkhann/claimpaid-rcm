@@ -223,6 +223,51 @@ router.post('/actions/propose', async (req, res) => {
   }
 });
 
+// --- Watchdog alerts (Phase 4): today's actionable items for THIS user,
+// computed exactly as the digest computes them — reading never sends.
+const watchdog = require('../agent/watchdog');
+router.get('/alerts', (req, res) => {
+  try {
+    const org = db.prepare('SELECT id, timezone, name FROM orgs WHERE id = ?').get(req.orgId);
+    const items = watchdog.computeDigestItems(
+      org || { id: req.orgId, timezone: null },
+      { id: req.user.id, email: req.user.email, name: req.user.name, role: req.user.role },
+    );
+    res.json({ items });
+  } catch (e) {
+    console.error('[agent] alerts failed:', e.message);
+    res.status(500).json({ error: 'Alerts could not be computed right now.' });
+  }
+});
+
+// --- Run a read tool outside chat (Phase 4, WS3: the Rescue wizard) ---
+// The wizard's engine: the Phase 3 read tools through the SAME executor
+// the chat uses (same shared runners, same org scoping) — no tool logic
+// is duplicated. A run counts as one metered agent turn, like a chat turn.
+const RUNNABLE_TOOLS = new Set(['check_eligibility', 'scrub_claim', 'suggest_codes']);
+router.post('/tools/run', async (req, res) => {
+  const { tool, claim_id } = req.body || {};
+  if (!RUNNABLE_TOOLS.has(tool)) {
+    return res.status(400).json({ error: `Tool '${tool || ''}' cannot be run directly. Runnable: ${[...RUNNABLE_TOOLS].join(', ')}.` });
+  }
+  if (!Number.isInteger(claim_id)) return res.status(400).json({ error: 'claim_id (integer) is required.' });
+  try {
+    const execute = createExecutor({ orgId: req.orgId, user: req.user, convoId: null });
+    const result = await execute(tool, { claim_id });
+    recordAgentTurn(req.orgId, {});
+    return res.json({
+      tool,
+      is_error: !!result.isError,
+      output: result.output,
+      event: result.event || null,
+      action: result.action || null,
+    });
+  } catch (e) {
+    console.error('[agent] tools/run failed:', e.message);
+    return res.status(500).json({ error: 'That check could not be run right now.' });
+  }
+});
+
 // --- Chat: one user turn through the tool-use loop ---
 router.post('/chat', async (req, res) => {
   const { convo_id, message } = req.body || {};
