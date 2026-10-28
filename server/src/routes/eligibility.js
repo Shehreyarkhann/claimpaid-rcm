@@ -292,4 +292,63 @@ router.delete('/:id', canWrite, (req, res) => {
   res.json({ deleted: true });
 });
 
+// --- Shared check runner (agent Phase 3) -----------------------------------
+// The exact path POST /check runs — org vendor config -> vendors.runCheck ->
+// a stored row in eligibility_lookups — exposed for the agent's
+// check_eligibility tool so an agent-run check is indistinguishable from a
+// tab-run one. Throws errors carrying .status like the route's responses.
+async function runOrgEligibilityCheck(orgId, userId, input) {
+  const cfg = orgEligConfig(orgId);
+  if (!cfg.vendor) {
+    const e = new Error('No eligibility vendor configured — connect Availity, Stedi, or a REST endpoint in Organization settings.');
+    e.status = 400;
+    throw e;
+  }
+  const rawOrg = db.prepare('SELECT eligibility_availity_client_secret FROM orgs WHERE id = ?').get(orgId) || {};
+  const result = await runCheck(cfg.vendor, {
+    org_id: orgId,
+    org_name: cfg.org_name,
+    eligibility_endpoint: cfg.endpoint,
+    eligibility_api_key: cfg.api_key,
+    eligibility_auth_scheme: cfg.auth_scheme,
+    eligibility_availity_client_id: cfg.availity_client_id,
+    eligibility_availity_client_secret: rawOrg.eligibility_availity_client_secret || '',
+    eligibility_availity_payer_map: cfg.availity_payer_map,
+    eligibility_availity_env: cfg.availity_env,
+    billing_npi: cfg.billing_npi,
+  }, input);
+  const demo = !!(result.raw_response && result.raw_response.demo);
+  const id = Number(db.prepare(`
+    INSERT INTO eligibility_lookups
+      (org_id, patient_first, patient_last, dob, member_id, payer, date_of_service,
+       vendor, coverage_active, plan_name, plan_type, group_number,
+       copay_primary, copay_specialist, deductible_individual, deductible_remaining,
+       oop_max, effective_date, term_date, raw_request, raw_response, checked_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    orgId, String(input.patient_first || '').trim(), String(input.patient_last || '').trim(),
+    input.dob, String(input.member_id || '').trim(),
+    input.payer, input.date_of_service, cfg.vendor,
+    result.coverage_active, result.plan_name, result.plan_type, result.group_number,
+    result.copay_primary, result.copay_specialist, result.deductible_individual,
+    result.deductible_remaining, result.oop_max, result.effective_date, result.term_date,
+    JSON.stringify(result.raw_request), JSON.stringify(result.raw_response), userId,
+  ).lastInsertRowid);
+  const row = db.prepare('SELECT * FROM eligibility_lookups WHERE id = ?').get(id);
+  return { lookup: row, result, cfg, demo };
+}
+
+// Vendor mode for a completed check: test-mode credentials/environments
+// must never be presented as a live payer answer.
+function eligibilityMode(cfg, result) {
+  const raw = (result && result.raw_response) || {};
+  if (raw.demo) return 'demo';
+  if (cfg.vendor === 'stedi') return raw.test_mode ? 'test' : 'live';
+  if (cfg.vendor === 'availity') return (cfg.availity_env === 'demo-tst' || cfg.availity_env === 'demo-qua') ? 'test' : 'live';
+  return 'live';
+}
+
 module.exports = router;
+module.exports.orgEligConfig = orgEligConfig;
+module.exports.runOrgEligibilityCheck = runOrgEligibilityCheck;
+module.exports.eligibilityMode = eligibilityMode;

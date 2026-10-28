@@ -224,3 +224,6 @@ router.post('/jobs/:id/decide', ...canWrite, (req, res) => {
 });
 
 module.exports = router;
+// Shared with the agent's apply_codes executor (Phase 3): approving an
+// agent-proposed code set applies through this exact merge path.
+module.exports.applyToClaim = applyToClaim;

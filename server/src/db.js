@@ -892,6 +892,27 @@ function initSchema() {
       PRIMARY KEY (org_id, month)
     );
   `);
+  // ---- In-app agent (Phase 3) ----
+  // agent_outcome_stats: the org's OWN decided agent-drafted appeal
+  // outcomes, aggregated by payer + denial reason — the training substrate
+  // predict.js reads for overturn likelihood. Rebuilt wholesale per org by
+  // agent/outcomes.js (idempotent), never pooled across tenants.
+  // agent_reconcile_log: once-per-org-per-day guard for that rebuild.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS agent_outcome_stats (
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      payer_id INTEGER,
+      denial_reason TEXT NOT NULL DEFAULT '',
+      appeals INTEGER NOT NULL DEFAULT 0,
+      overturned INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (org_id, payer_id, denial_reason)
+    );
+    CREATE TABLE IF NOT EXISTS agent_reconcile_log (
+      org_id INTEGER PRIMARY KEY REFERENCES orgs(id),
+      last_run_date TEXT NOT NULL
+    );
+  `);
   if (!columnExists('claims', 'patient_paid_amount')) db.exec('ALTER TABLE claims ADD COLUMN patient_paid_amount REAL NOT NULL DEFAULT 0');
   // ---- Market-launch cleanup (deploy #52, one-time) ----
   // Removes pre-launch demo/junk data: the seeded Demo Billing Co. org, the
