@@ -31,7 +31,7 @@ const model = require(path.join(REPO, 'server/src/agent/model.js'));
 {
   const c1 = model.resolveProviderConfig({ ANTHROPIC_API_KEY: 'k1' });
   check('config: native provider by default', c1.provider === 'anthropic' && c1.baseUrl === null);
-  check("config: native default model is 'claude-sonnet-5'", c1.model === 'claude-sonnet-5', c1.model);
+  check("config: native default model is 'claude-sonnet-5-5'", c1.model === 'claude-sonnet-5-5', c1.model);
   check('config: ANTHROPIC_API_KEY used natively', c1.apiKey === 'k1');
   const c2 = model.resolveProviderConfig({ AGENT_API_KEY: 'g', ANTHROPIC_API_KEY: 'k1' });
   check('config: AGENT_API_KEY wins over ANTHROPIC_API_KEY', c2.apiKey === 'g');

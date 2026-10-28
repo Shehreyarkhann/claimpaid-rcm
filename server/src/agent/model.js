@@ -9,7 +9,7 @@
 //      any OpenAI-shaped endpoint drops in by configuration, no code change.
 //
 // Config surface (env ONLY; keys are never logged, never hardcoded):
-//   AGENT_MODEL    model id. Defaults: 'claude-sonnet-5' (native) or
+//   AGENT_MODEL    model id. Defaults: 'claude-sonnet-5-5' (native) or
 //                  'deepseek-chat' (when AGENT_BASE_URL is set). NOTE: the
 //                  native default must name a model the account can call at
 //                  enable time — override via AGENT_MODEL when it can't.
@@ -37,7 +37,7 @@ const MAX_TOOL_ITERATIONS = 6;
 function resolveProviderConfig(env = process.env) {
   const baseUrl = String(env.AGENT_BASE_URL || '').trim().replace(/\/+$/, '');
   const apiKey = String(env.AGENT_API_KEY || env.ANTHROPIC_API_KEY || '').trim();
-  const model = String(env.AGENT_MODEL || '').trim() || (baseUrl ? 'deepseek-chat' : 'claude-sonnet-5');
+  const model = String(env.AGENT_MODEL || '').trim() || (baseUrl ? 'deepseek-chat' : 'claude-sonnet-5-5');
   return {
     provider: baseUrl ? 'openai-compatible' : 'anthropic',
     baseUrl: baseUrl || null,
