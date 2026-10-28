@@ -78,6 +78,45 @@ const mocks = [
     }],
   }],
   ['/api/agent/conversations', { conversations: [{ ...agentConvo, pending_actions: 1 }] }],
+  // Phase 3 surfaces: dashboard insights card + claim analysis panel.
+  ['/api/agent/insights', {
+    filing_risk_14d: { claims: 3, amount: 12400 },
+    expected_collections_30d: { amount: 8200, claims_with_estimate: 9, open_claims: 12, sample_size: 4, label: 'early estimate', note: "Open A/R balances weighted by each payer's historical paid-rate in this workspace. An estimate, not a guarantee." },
+    denial_trend_watch: [{ payer: 'Aetna', current_rate: 0.31, prior_rate: 0.18, delta_points: 13, sample_size: 16, label: 'established' }],
+    exception_backlog: { count: 6, amount: 675 },
+  }],
+  ['/api/agent/claims/5/analysis', {
+    claim: { id: 5, claim_number: 'CLM-9001', patient_name: 'Pat Smoke', payer: 'Aetna', status: 'denied', billed_amount: 900, paid_amount: 0, denial_reason: 'CO-50' },
+    filing_risk: { filing_deadline: '2026-11-07', days_left: 9, filing_days: 90, state: 'critical' },
+    appeal_overturn: { value: 0.75, sampleSize: 4, basis: 'payer + denial reason', label: 'early estimate' },
+    pay_likelihood: null,
+    era_exceptions: [],
+    scrub: { score: 92, status: 'warnings', band: 'ready', band_label: 'Ready to submit', errors: 0, warnings: 1 },
+    recommendations: [{ kind: 'draft_appeal', spawnable: true, label: 'Draft an appeal for this denial', detail: 'Appeals like this overturn 75% of the time here (n=4, early estimate).' }],
+  }],
+  ['/api/analytics/kpis', { totalBilled: 50000, totalClaims: 40, totalCollected: 30000, totalAR: 20000, avgDaysInAR: 33, cleanClaimRate: 91, denialRate: 12 }],
+  ['/api/analytics/ar-aging', []],
+  ['/api/analytics/revenue-trend', []],
+  ['/api/analytics/denials-by-reason', []],
+  ['/api/analytics/payer-mix', []],
+  ['/api/analytics/appeal-stats', { byStatus: {}, winRate: 40 }],
+  ['/api/analytics/claim-quality', { total_claims: 0, by_payer: [], first_pass_rate: null, denial_rate: null, avg_readiness: null, scrubbed_claims: 0 }],
+  ['/api/filing/risk', { expired: 0, critical: 0, warning: 0, expiredAmount: 0, criticalAmount: 0 }],
+  ['/api/claims/meta/payers', [{ id: 1, name: 'Aetna' }]],
+  ['/api/claims/5', {
+    id: 5, claim_number: 'CLM-9001', patient_name: 'Pat Smoke', payer: 'Aetna', service_date: '2026-10-20',
+    billed_amount: 900, paid_amount: 0, status: 'denied', denial_reason: 'CO-50', readiness_score: 92,
+    days_until_filing: 9, days_in_ar: 8, cpt_codes: '99213', icd_codes: 'M54.5', rendering_npi: '', rendering_provider: '',
+    activity: [],
+  }],
+  ['/api/claims', {
+    total: 1,
+    claims: [{
+      id: 5, claim_number: 'CLM-9001', patient_name: 'Pat Smoke', payer: 'Aetna', service_date: '2026-10-20',
+      billed_amount: 900, paid_amount: 0, status: 'denied', denial_reason: 'CO-50', readiness_score: 92,
+      days_until_filing: 9, days_in_ar: 8,
+    }],
+  }],
   ['/api/auth/me', fakeUser],
   ['/api/auth/orgs', [{ id: 1, name: 'Gate Test Co.', role: 'owner' }]],
   ['/api/billing/status', { plan: 'pro', plan_status: 'active', products: { rcm: true, ai: true }, access: 'full' }],
@@ -119,6 +158,13 @@ function makeDom() {
   for (const k of ['window', 'document', 'navigator', 'localStorage', 'sessionStorage', 'location', 'history']) {
     global[k] = dom.window[k];
   }
+  // jsdom lacks these; Recharts (Dashboard) needs them. Same polyfill as
+  // deploy/rcm-tabs-era.cjs — a harness shim, not app behavior.
+  dom.window.matchMedia = dom.window.matchMedia || (() => ({ matches: false, addListener: () => {}, removeListener: () => {} }));
+  if (!dom.window.ResizeObserver) {
+    dom.window.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
+  }
+  global.ResizeObserver = dom.window.ResizeObserver;
   const errs = [];
   dom.window.console.error = (...a) => { errs.push(a.map((x) => String(x).slice(0, 150)).join(' ')); };
   return { dom, errs };
@@ -145,6 +191,39 @@ async function render({ loggedIn }) {
     const doc = app.dom.window.document;
     await until(() => doc.getElementById('root').childElementCount > 0 && doc.body.textContent.includes('My Work'), 9000, 'logged-in shell');
     console.log('  PASS logged-in render non-empty with app shell');
+
+    // Dashboard (Phase 3): the Agent insights card renders from the
+    // mocked /api/agent/insights in its real shape.
+    const dashTab = await until(() => [...doc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Dashboard'), 9000, 'Dashboard sidebar tab');
+    dashTab.dispatchEvent(new app.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await until(() => doc.body.textContent.includes('Agent insights'), 9000, 'dashboard agent insights card');
+    const dashText = doc.body.textContent;
+    if (!dashText.includes('At filing risk')) fail('insights card filing-risk tile missing');
+    if (!dashText.includes('$12,400')) fail('insights card filing-risk amount missing');
+    if (!dashText.includes('Expected collections')) fail('insights card expected-collections tile missing');
+    if (!dashText.includes('early estimate')) fail('insights card thin-data label missing');
+    if (!dashText.includes('ERA exceptions open')) fail('insights card exception backlog tile missing');
+    if (!dashText.includes('Aetna')) fail('insights card denial-watch payer missing');
+    console.log('  PASS Dashboard agent insights card renders (risk + expected + watch + backlog, thin-data labeled)');
+
+    // Claims (Phase 3): open the claim modal — the Agent analysis panel
+    // renders predictions + a spawnable recommendation.
+    const claimsTab = await until(() => [...doc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Claims'), 9000, 'Claims sidebar tab');
+    claimsTab.dispatchEvent(new app.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await until(() => doc.body.textContent.includes('CLM-9001'), 9000, 'claims list row');
+    const editBtn = await until(() => [...doc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Edit'), 9000, 'claim Edit button');
+    editBtn.dispatchEvent(new app.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await until(() => doc.body.textContent.includes('Agent analysis'), 9000, 'claim agent analysis panel');
+    const panelText = doc.body.textContent;
+    if (!panelText.includes('Appeal overturn')) fail('claim panel overturn prediction missing');
+    if (!panelText.includes('75%')) fail('claim panel overturn value missing');
+    if (!panelText.includes('Scrub readiness')) fail('claim panel scrub summary missing');
+    if (!panelText.includes('Draft an appeal for this denial')) fail('claim panel recommendation missing');
+    if (!panelText.includes('Create draft')) fail('claim panel spawn button missing');
+    console.log('  PASS Claim agent analysis panel renders (predictions + scrub + spawnable recommendation)');
+    const cancelBtn = [...doc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Cancel');
+    if (cancelBtn) cancelBtn.dispatchEvent(new app.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await sleep(300);
 
     const agentTab = await until(() => [...doc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Agent'), 9000, 'Agent sidebar tab');
     agentTab.dispatchEvent(new app.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
@@ -190,6 +269,15 @@ async function render({ loggedIn }) {
     await until(() => ddoc.body.textContent.includes("isn't enabled on this workspace yet"), 9000, 'AGENT_DISABLED page state');
     console.log('  PASS AGENT_DISABLED renders the clean not-enabled state');
     if (dis.errs.length) fail('React errors during disabled render: ' + dis.errs.slice(0, 3).join(' || ').slice(0, 400));
+
+    // Disabled mode: the Dashboard must render WITHOUT the agent card.
+    const disDash = await until(() => [...ddoc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Dashboard'), 9000, 'Dashboard tab (disabled mode)');
+    disDash.dispatchEvent(new dis.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await until(() => ddoc.body.textContent.includes('Revenue cycle at a glance'), 9000, 'disabled-mode dashboard');
+    await sleep(1500); // let the insights fetch fail + settle
+    if (ddoc.body.textContent.includes('Agent insights')) fail('agent insights card must be hidden when the agent is disabled');
+    console.log('  PASS Dashboard hides the agent insights card when disabled');
+    if (dis.errs.length) fail('React errors during disabled dashboard render: ' + dis.errs.slice(0, 3).join(' || ').slice(0, 400));
 
     pass(`bundle ${entrySrc} renders logged-out, logged-in, the full Agent page, and the disabled state`);
   } catch (e) {
