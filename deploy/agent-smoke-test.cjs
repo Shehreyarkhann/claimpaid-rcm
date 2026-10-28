@@ -104,6 +104,12 @@ const mocks = [
     pay_likelihood: null,
     era_exceptions: [],
     scrub: { score: 92, status: 'warnings', band: 'ready', band_label: 'Ready to submit', errors: 0, warnings: 1 },
+    // Phase 5: payer-call history inside the analysis payload.
+    call_history: [{
+      id: 1, outcome: 'promised_payment', outcome_label: 'Payment promised', agent_name: 'Rep Dana',
+      reference_number: 'RF-9', promised_date: '2026-11-10', follow_up_date: '2026-11-10',
+      notes: 'Will reprocess', created_at: '2026-10-27 09:00:00', user_name: 'Gate User',
+    }],
     recommendations: [{ kind: 'draft_appeal', spawnable: true, label: 'Draft an appeal for this denial', detail: 'Appeals like this overturn 75% of the time here (n=4, early estimate).' }],
   }],
   ['/api/analytics/kpis', { totalBilled: 50000, totalClaims: 40, totalCollected: 30000, totalAR: 20000, avgDaysInAR: 33, cleanClaimRate: 91, denialRate: 12 }],
@@ -137,6 +143,93 @@ const mocks = [
   ['/api/appeals/due', []],
   ['/api/worklist', { items: [], summary: { total: 0, totalAtStake: 0 } }],
 ];
+// Phase 5 mocks (real endpoint shapes).
+const intakeDocSummary = {
+  id: 3, filename: 'eob-oct.pdf', media_type: 'application/pdf', size_bytes: 4321,
+  kind: 'remittance', status: 'needs_review',
+  problems: ['Line 2: no claim in this workspace matches "CLM-999" — pick the right claim, or it will be held unmatched in the ERA inbox.'],
+  action_id: null, era_id: null, created_at: '2026-10-28 09:00:00', updated_at: '2026-10-28 09:00:00',
+  payer: 'Aetna', line_count: 2, matched_count: 1,
+};
+const intakeDocDetail = {
+  ...intakeDocSummary,
+  action: null,
+  extracted: {
+    payer: 'Aetna', check_number: 'CHK-9', pay_date: '2026-10-20', payment_amount: 180,
+    lines: [
+      { claim_number: 'CLM-9001', patient: 'Pat Smoke', service_date: '2026-10-20', billed: 200, paid: 150, adjustments: [{ group: 'CO', code: '45', text: 'Contractual adjustment', amount: 50 }], patient_resp: 0, matched_claim_id: 5, suggested_claim_id: null, match_method: 'control_number' },
+      { claim_number: 'CLM-999', patient: 'Ghost Pat', service_date: '2026-10-21', billed: 100, paid: 30, adjustments: [{ group: 'CO', code: '45', text: 'Contractual adjustment', amount: 70 }], patient_resp: 0, matched_claim_id: null, suggested_claim_id: null, match_method: null },
+    ],
+  },
+};
+const intakeAction = {
+  id: 41, kind: 'apply_intake', title: 'Apply intake — remittance (eob-oct.pdf)', status: 'pending',
+  preview: 'Document intake — remittance from Aetna · check/EFT CHK-9 · paid 2026-10-20\nFile: eob-oct.pdf · 2 lines · billed $300.00 · paid $180.00',
+  payload: { document_id: 3, doc_kind: 'remittance', filename: 'eob-oct.pdf', payer: 'Aetna' },
+  result: null, created_at: '2026-10-28 12:00:00', decided_at: null, executed_at: null,
+};
+const teamInsightsMock = {
+  users: [{
+    user_id: 1, name: 'Gate User', email: 'gate@smoke.local', role: 'owner',
+    open_worklist_items: 4, overdue_followups: 1, overdue_amount: 900, pending_approvals: 2,
+    appeals_decided: 10, appeals_won: 7, win_rate: 0.7, agent_drafts_approved: 3, agent_drafts_rejected: 1,
+  }],
+  stalled: [{ claim_id: 9, claim_number: 'CLM-2005', patient_name: 'Pat', payer: 'Aetna', status: 'denied', balance: 900, idle_days: 12, owner_id: 1, owner_name: 'Gate User' }],
+  suggestions: [],
+};
+const callBriefMock = {
+  claim: { id: 5, claim_number: 'CLM-9001', patient_name: 'Pat Smoke', payer: 'Aetna', status: 'denied', denial_reason: 'CO-50', billed_amount: 900, paid_amount: 0 },
+  family: 'medical_necessity', family_label: 'Medical necessity',
+  opening_line: "I'm calling about claim CLM-9001 for Pat Smoke, date of service 2026-10-20, denied for: CO-50.",
+  have_ready: [{ label: 'Claim number', value: 'CLM-9001' }, { label: 'Patient', value: 'Pat Smoke' }],
+  questions: [
+    'Which clinical criteria set was applied to this denial, and which element did the documentation fail to meet?',
+    'Can we schedule a peer-to-peer review? What is the direct number for the reviewing clinician?',
+    'Please confirm your name and a reference number for this call that I can cite.',
+  ],
+  good_outcome: 'A peer-to-peer is scheduled — with a reference number.',
+  escalation: 'If the rep cannot resolve it: "Please transfer me to a claims supervisor or the provider-relations escalation line."',
+  playbook: [],
+  filing_risk: { filing_deadline: '2026-11-07', days_left: 9, filing_days: 90, state: 'critical' },
+  open_appeal: null, recent_calls: [],
+};
+const importPreviewMock = {
+  id: 9, filename: 'claims.csv',
+  headers: ['Claim ID', 'Patient', 'Insurance', 'DOS', 'Charges'],
+  mapping: { claim_number: 'Claim ID', patient_name: 'Patient', payer: 'Insurance', service_date: 'DOS', billed_amount: 'Charges' },
+  fields: [
+    { key: 'claim_number', label: 'Claim number', required: true },
+    { key: 'patient_name', label: 'Patient name', required: true },
+    { key: 'payer', label: 'Payer', required: true },
+    { key: 'service_date', label: 'Service date', required: true },
+    { key: 'billed_amount', label: 'Billed amount', required: true },
+    { key: 'paid_amount', label: 'Paid amount', required: false },
+  ],
+  row_count: 1,
+  validation: {
+    rows: [{
+      row: 2, payer_status: 'existing', duplicate: false, errors: [], warnings: [], valid: true,
+      values: { claim_number: 'CLM-7001', patient_name: 'Pat New', payer: 'Aetna', service_date: '2026-10-01', billed_amount: 250, paid_amount: 0, denial_reason: null, patient_dob: null, member_id: null, cpt_codes: null, icd_codes: null },
+    }],
+    summary: { total: 1, valid: 1, with_warnings: 0, with_errors: 0, duplicates: 0, new_payers: [] },
+  },
+  created_at: '2026-10-28 09:00:00',
+};
+const auditMock = {
+  id: 5, source: 'workspace', source_label: 'This workspace', created_at: '2026-10-28 14:00:00',
+  result: {
+    source: 'workspace', source_label: 'This workspace', workspace: 'Gate Test Co.',
+    generated_at: '2026-10-28T14:00:00.000Z',
+    horizons: { d14: { days: 14, count: 2, amount: 5000 }, d30: { days: 30, count: 3, amount: 8300 }, d60: { days: 60, count: 4, amount: 10400 } },
+    expired: { count: 0, amount: 0 },
+    by_payer: [{ payer: 'Aetna', count: 4, amount: 10400, earliest_days: 6 }],
+    top: [{ claim_number: 'CLM-9001', patient: 'Pat Smoke', payer: 'Aetna', status: 'denied', balance: 900, deadline: '2026-11-03', days_left: 6 }],
+    audited_claims: 4, skipped_rows: 0,
+  },
+};
+let teamMode = 'owner';
+let intakeProposed = false;
+
 let disabledMode = false;
 const fakeFetch = (url, options) => {
   const u = String(url);
@@ -154,6 +247,40 @@ const fakeFetch = (url, options) => {
       ok: true, status: 201,
       json: () => Promise.resolve({ action: { id: 31, kind: 'draft_appeal', status: 'pending', title: 'Draft appeal — claim CLM-9001', preview: 'Dear Aetna — appeal letter.', payload: { claim_id: 5, claim_number: 'CLM-9001', category: 'medical_necessity', angle_source: 'learned', angle_stat: { value: 0.833, sampleSize: 6 } }, result: null, created_at: '2026-10-28 12:05:00', decided_at: null, executed_at: null } }),
     });
+  }
+  // Phase 5 endpoints (stateful where the flow depends on it).
+  if (!disabledMode && u.includes('/api/agent/documents/3/propose-apply')) {
+    intakeProposed = true;
+    return Promise.resolve({ ok: true, status: 201, json: () => Promise.resolve({ action: intakeAction }) });
+  }
+  if (!disabledMode && u.includes('/api/agent/documents/3')) {
+    const doc = { ...intakeDocDetail, action: intakeProposed ? intakeAction : null, action_id: intakeProposed ? 41 : null };
+    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ document: doc }) });
+  }
+  if (!disabledMode && u.includes('/api/agent/documents')) {
+    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ documents: [intakeDocSummary] }) });
+  }
+  if (!disabledMode && u.includes('/api/agent/team-insights')) {
+    if (teamMode === 'member') {
+      return Promise.resolve({ ok: false, status: 403, json: () => Promise.resolve({ error: 'Owner access required' }) });
+    }
+    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(teamInsightsMock) });
+  }
+  if (!disabledMode && u.includes('/api/agent/claims/5/call-brief')) {
+    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ brief: callBriefMock }) });
+  }
+  if (!disabledMode && u.includes('/api/agent/import/preview')) {
+    // Covers the preview upload AND the /mapping revalidation (same shape).
+    return Promise.resolve({ ok: true, status: 201, json: () => Promise.resolve({ preview: importPreviewMock }) });
+  }
+  if (!disabledMode && u.includes('/api/agent/import/commit')) {
+    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ result: { created: 1, skipped: 0, errors: [], created_claim_ids: [77], payers_created: [] } }) });
+  }
+  if (!disabledMode && u.includes('/api/agent/audit/run')) {
+    return Promise.resolve({ ok: true, status: 201, json: () => Promise.resolve({ audit: auditMock }) });
+  }
+  if (!disabledMode && u.includes('/api/agent/audit')) {
+    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ audits: [] }) });
   }
   if (disabledMode && u.includes('/api/agent/')) {
     return Promise.resolve({
@@ -246,6 +373,24 @@ async function render({ loggedIn }) {
     if (!dashText.includes('3 overturned appeals')) fail('insights card recovered appeal count missing (Phase 4)');
     console.log('  PASS Dashboard agent insights card renders (recovered band + risk + expected + watch + backlog, thin-data labeled)');
 
+    // Deadline audit (Phase 5): the insights card button opens the
+    // runner; the workspace run renders the branded leave-behind report.
+    const auditBtn = await until(() => [...doc.querySelectorAll('button')].find((b) => b.textContent.includes('Run deadline audit')), 9000, 'Run deadline audit button');
+    auditBtn.dispatchEvent(new app.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await until(() => doc.body.textContent.includes('How much money dies at a filing deadline'), 9000, 'audit runner modal');
+    const runWsBtn = await until(() => [...doc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Audit this workspace'), 9000, 'audit workspace button');
+    runWsBtn.dispatchEvent(new app.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await until(() => doc.body.textContent.includes('Expiring in 14 days'), 9000, 'audit report horizons');
+    const auditText = doc.body.textContent;
+    if (!auditText.includes("We don't replace your system. We collect what it leaves behind.")) fail('audit report standing line missing');
+    if (!auditText.includes('$5,000')) fail('audit report 14-day total missing');
+    if (!auditText.includes('By payer')) fail('audit report payer table missing');
+    if (!auditText.includes('The work list')) fail('audit report ranked list missing');
+    console.log('  PASS deadline audit report renders (standing line + horizon totals + payer table + ranked list)');
+    const auditClose = [...doc.querySelectorAll('button')].filter((b) => b.textContent.trim() === 'Close').pop();
+    auditClose.dispatchEvent(new app.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await sleep(300);
+
     // Claims (Phase 3): open the claim modal — the Agent analysis panel
     // renders predictions + a spawnable recommendation.
     const claimsTab = await until(() => [...doc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Claims'), 9000, 'Claims sidebar tab');
@@ -261,6 +406,28 @@ async function render({ loggedIn }) {
     if (!panelText.includes('Draft an appeal for this denial')) fail('claim panel recommendation missing');
     if (!panelText.includes('Create draft')) fail('claim panel spawn button missing');
     console.log('  PASS Claim agent analysis panel renders (predictions + scrub + spawnable recommendation)');
+
+    // Payer-call copilot (Phase 5): history inside the panel, then the
+    // brief -> log modal in the Rescue language.
+    if (!panelText.includes('Payer calls')) fail('claim panel payer-calls block missing');
+    if (!panelText.includes('Payment promised')) fail('claim panel call history outcome missing');
+    if (!panelText.includes('ref RF-9')) fail('claim panel call history reference missing');
+    console.log('  PASS claim panel renders payer-call history');
+    const callBtn = await until(() => [...doc.querySelectorAll('button')].find((b) => b.textContent.includes('Call payer')), 9000, 'Call payer button');
+    callBtn.dispatchEvent(new app.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await until(() => doc.body.textContent.includes('Open with'), 9000, 'call brief step');
+    const callText = doc.body.textContent;
+    if (!callText.includes('peer-to-peer')) fail('call brief family question missing');
+    if (!callText.includes('A good outcome looks like')) fail('call brief good-outcome block missing');
+    if (!callText.includes('claims supervisor')) fail('call brief escalation line missing');
+    console.log('  PASS payer-call brief renders (opening + family questions + good outcome + escalation)');
+    const logStepBtn = await until(() => [...doc.querySelectorAll('button')].find((b) => b.textContent.includes('Log the outcome')), 9000, 'log outcome button');
+    logStepBtn.dispatchEvent(new app.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await until(() => doc.body.textContent.includes('Save call log'), 9000, 'call log form');
+    console.log('  PASS call-log form renders (outcome pills + promised date + notes)');
+    const callClose = [...doc.querySelectorAll('button')].filter((b) => b.textContent.trim() === 'Close').pop();
+    callClose.dispatchEvent(new app.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await sleep(300);
 
     // Denial Rescue wizard (Phase 4): launched from the claim modal,
     // walks all five steps against the mocked tools/run + propose
@@ -327,6 +494,31 @@ async function render({ loggedIn }) {
     if (!doc.body.textContent.includes('$410 at filing risk')) fail('alerts strip filing-risk part missing');
     console.log('  PASS watchdog alerts strip renders (approvals + filing risk)');
 
+    // Document intake (Phase 5): the section lists the document, the
+    // review shows problems + matched highlight + the unmatched claim
+    // picker, and Propose apply renders the standard approval card.
+    await until(() => doc.body.textContent.includes('Document intake'), 9000, 'document intake section');
+    const docRow = await until(() => [...doc.querySelectorAll('button')].find((b) => b.textContent.includes('eob-oct.pdf')), 9000, 'intake document row');
+    docRow.dispatchEvent(new app.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await until(() => doc.body.textContent.includes('Check before applying'), 9000, 'intake review problems');
+    const intakeText = doc.body.textContent;
+    if (!intakeText.includes('CLM-999')) fail('intake review unmatched line missing');
+    if (!intakeText.includes('Matched')) fail('intake review matched badge missing');
+    if (!intakeText.includes('Not matched — pick a claim')) fail('intake review claim picker missing');
+    console.log('  PASS document intake review renders (problems + matched highlight + unmatched picker)');
+    const proposeBtn = await until(() => [...doc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Propose apply'), 9000, 'propose apply button');
+    proposeBtn.dispatchEvent(new app.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await until(() => doc.body.textContent.includes('Apply intake — remittance (eob-oct.pdf)'), 9000, 'apply_intake card');
+    if (!doc.body.textContent.includes('Approve & apply')) fail('apply_intake approve button missing');
+    console.log('  PASS apply_intake proposal renders as the standard approval card');
+
+    // Team section (Phase 5): the owner sees it because the owner-gated
+    // endpoint succeeds for this user.
+    await until(() => doc.body.textContent.includes('Computed from the worklist, appeals'), 9000, 'team section');
+    if (!doc.body.textContent.includes('Win rate')) fail('team table win-rate column missing');
+    if (!doc.body.textContent.includes('Stalled — no activity in 7+ days')) fail('team stalled list missing');
+    console.log('  PASS team section renders for the owner (per-user table + stalled list)');
+
     await until(() => doc.body.textContent.includes('What is on my worklist?'), 9000, 'conversation list');
     const convoBtn = [...doc.querySelectorAll('button')].find((b) => b.textContent.includes('What is on my worklist?'));
     convoBtn.dispatchEvent(new app.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
@@ -340,6 +532,35 @@ async function render({ loggedIn }) {
     console.log('  PASS thread + tool chip + pending approval card + composer all render');
 
     if (app.errs.length) fail('React errors during agent render: ' + app.errs.slice(0, 3).join(' || ').slice(0, 400));
+
+    // Import wizard (Phase 5): launched from My Work, walks source ->
+    // upload -> mapping -> validation -> commit summary against the
+    // mocked preview/commit endpoints.
+    const workTab = await until(() => [...doc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'My Work'), 9000, 'My Work sidebar tab');
+    workTab.dispatchEvent(new app.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    const importBtn = await until(() => [...doc.querySelectorAll('button')].find((b) => b.textContent.includes('Import claims')), 9000, 'Import claims button');
+    importBtn.dispatchEvent(new app.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await until(() => doc.body.textContent.includes('CSV spreadsheet'), 9000, 'import wizard source step');
+    const csvStart = await until(() => [...doc.querySelectorAll('button')].find((b) => b.textContent.includes('Start with CSV')), 9000, 'start CSV button');
+    csvStart.dispatchEvent(new app.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await until(() => doc.body.textContent.includes('Drop the CSV here'), 9000, 'import wizard upload step');
+    const fileInput = await until(() => doc.querySelector('input[type="file"]'), 9000, 'wizard file input');
+    const csvFile = new app.dom.window.File(['Claim ID,Patient\nCLM-7001,Pat New\n'], 'claims.csv', { type: 'text/csv' });
+    Object.defineProperty(fileInput, 'files', { value: [csvFile], configurable: true });
+    fileInput.dispatchEvent(new app.dom.window.Event('change', { bubbles: true }));
+    await until(() => doc.body.textContent.includes('Column mapping'), 9000, 'import wizard mapping step');
+    const validateBtn = await until(() => [...doc.querySelectorAll('button')].find((b) => b.textContent.includes('Validate rows')), 9000, 'validate rows button');
+    validateBtn.dispatchEvent(new app.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await until(() => doc.body.textContent.includes('Validation — what will happen'), 9000, 'import wizard validation step');
+    if (!doc.body.textContent.includes('CLM-7001')) fail('wizard validation row missing');
+    const commitBtn = await until(() => [...doc.querySelectorAll('button')].find((b) => b.textContent.includes('Import 1 valid claim')), 9000, 'wizard commit button');
+    commitBtn.dispatchEvent(new app.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await until(() => doc.body.textContent.includes('Import complete'), 9000, 'import wizard done step');
+    console.log('  PASS import wizard advances source -> upload -> mapping -> validation -> commit summary');
+    const wizDone = await until(() => [...doc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Done'), 9000, 'wizard Done button');
+    wizDone.dispatchEvent(new app.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await sleep(300);
+    if (app.errs.length) fail('React errors during import wizard render: ' + app.errs.slice(0, 3).join(' || ').slice(0, 400));
 
     // Disabled mode (what production shows until the flag + key land): the
     // Agent page must render its clean "not enabled" state, not an error.
@@ -361,6 +582,22 @@ async function render({ loggedIn }) {
     if (ddoc.body.textContent.includes('Agent insights')) fail('agent insights card must be hidden when the agent is disabled');
     console.log('  PASS Dashboard hides the agent insights card when disabled');
     if (dis.errs.length) fail('React errors during disabled dashboard render: ' + dis.errs.slice(0, 3).join(' || ').slice(0, 400));
+
+    // Member pass (Phase 5): team-insights refuses (403), so the Team
+    // section must never render — while the rest of the Agent page
+    // (intake included) works normally.
+    disabledMode = false;
+    teamMode = 'member';
+    const mem = await render({ loggedIn: true });
+    const mdoc = mem.dom.window.document;
+    await until(() => mdoc.getElementById('root').childElementCount > 0 && mdoc.body.textContent.includes('My Work'), 9000, 'member shell');
+    const memTab = await until(() => [...mdoc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Agent'), 9000, 'Agent tab (member)');
+    memTab.dispatchEvent(new mem.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await until(() => mdoc.body.textContent.includes('Document intake'), 9000, 'member agent page (intake renders)');
+    await sleep(1500); // let the team-insights fetch refuse + settle
+    if (mdoc.body.textContent.includes('Computed from the worklist, appeals')) fail('team section must be hidden when team-insights refuses');
+    console.log('  PASS team section hidden for members (endpoint-gated, not role-guessed)');
+    if (mem.errs.length) fail('React errors during member render: ' + mem.errs.slice(0, 3).join(' || ').slice(0, 400));
 
     pass(`bundle ${entrySrc} renders logged-out, logged-in, the full Agent page, and the disabled state`);
   } catch (e) {
