@@ -68,6 +68,13 @@ STRIPE_CONNECT_WEBHOOK_SECRET="${STRIPE_CONNECT_WEBHOOK_SECRET:-}"
 # Stedi clearinghouse platform key (empty = stedi eligibility vendor unconfigured;
 # empty top-level default so a hand-set prod value survives .env regeneration)
 STEDI_API_KEY="${STEDI_API_KEY:-}"
+# ClaimPaid Agent (Anthropic). EMPTY defaults on purpose: the key is set on
+# the server by deploy/set-agent-key.sh and keep_or() must preserve all three
+# across .env regeneration — deploy #84 dropped them and the agent answered
+# AGENT_DISABLED until the setter was re-run.
+ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}"
+AGENT_ENABLED="${AGENT_ENABLED:-}"
+AGENT_MODEL="${AGENT_MODEL:-}"
 APP_URL="${APP_URL:-https://${DOMAIN}}"
 # Google Sign-In (GIS ID-token flow). Leave empty to hide the Google button.
 GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID:-}"
@@ -199,6 +206,9 @@ if [[ -f "${APP_DIR}/server/.env" ]]; then
   STRIPE_WEBHOOK_SECRET="$(keep_or STRIPE_WEBHOOK_SECRET "$(_get STRIPE_WEBHOOK_SECRET)")"
   STRIPE_CONNECT_WEBHOOK_SECRET="$(keep_or STRIPE_CONNECT_WEBHOOK_SECRET "$(_get STRIPE_CONNECT_WEBHOOK_SECRET)")"
   STEDI_API_KEY="$(keep_or STEDI_API_KEY "$(_get STEDI_API_KEY)")"
+  ANTHROPIC_API_KEY="$(keep_or ANTHROPIC_API_KEY "$(_get ANTHROPIC_API_KEY)")"
+  AGENT_ENABLED="$(keep_or AGENT_ENABLED "$(_get AGENT_ENABLED)")"
+  AGENT_MODEL="$(keep_or AGENT_MODEL "$(_get AGENT_MODEL)")"
   APP_URL="$(keep_or APP_URL "$(_get APP_URL)")";             [[ -z "$APP_URL" ]] && APP_URL="https://${DOMAIN}"
   SUPERADMIN_EMAIL="$(keep_or SUPERADMIN_EMAIL "$(_get SUPERADMIN_EMAIL)")"
   GOOGLE_CLIENT_ID="$(keep_or GOOGLE_CLIENT_ID "$(_get GOOGLE_CLIENT_ID)")"
@@ -225,6 +235,10 @@ STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
 STRIPE_CONNECT_WEBHOOK_SECRET=${STRIPE_CONNECT_WEBHOOK_SECRET}
 # Stedi clearinghouse
 STEDI_API_KEY=${STEDI_API_KEY}
+# ClaimPaid Agent (Anthropic)
+ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+AGENT_ENABLED=${AGENT_ENABLED}
+AGENT_MODEL=${AGENT_MODEL}
 APP_URL=${APP_URL}
 SUPERADMIN_EMAIL=${SUPERADMIN_EMAIL:-}
 GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
