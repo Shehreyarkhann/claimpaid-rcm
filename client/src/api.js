@@ -421,6 +421,58 @@ export const api = {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       }).then(handle),
+    // Phase 5 — document intake (WS1): upload, review, match, propose.
+    uploadDocument: (file) => {
+      const fd = new FormData();
+      fd.append('file', file);
+      return authFetch('/api/agent/documents', { method: 'POST', body: fd }).then(handle);
+    },
+    documents: () => get('/api/agent/documents'),
+    document: (id) => get(`/api/agent/documents/${id}`),
+    documentFile: (id) => authFetch(`/api/agent/documents/${id}/file`),
+    matchDocument: (id, data) =>
+      authFetch(`/api/agent/documents/${id}/match`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      }).then(handle),
+    dismissDocument: (id) =>
+      authFetch(`/api/agent/documents/${id}/dismiss`, { method: 'POST' }).then(handle),
+    proposeApplyDocument: (id) =>
+      authFetch(`/api/agent/documents/${id}/propose-apply`, { method: 'POST' }).then(handle),
+    // Phase 5 — payer-call copilot (WS2).
+    callBrief: (claimId) => get(`/api/agent/claims/${claimId}/call-brief`),
+    logCall: (claimId, data) =>
+      authFetch(`/api/agent/claims/${claimId}/call-log`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      }).then(handle),
+    // Phase 5 — manager's agent (WS3). 403s for members; callers hide.
+    teamInsights: () => get('/api/agent/team-insights'),
+    // Phase 5 — CSV import wizard (WS4).
+    importPreview: (file) => {
+      const fd = new FormData();
+      fd.append('file', file);
+      return authFetch('/api/agent/import/preview', { method: 'POST', body: fd }).then(handle);
+    },
+    importRemap: (id, mapping) =>
+      authFetch(`/api/agent/import/preview/${id}/mapping`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mapping }),
+      }).then(handle),
+    importCommit: (previewId) =>
+      authFetch('/api/agent/import/commit', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ preview_id: previewId }),
+      }).then(handle),
+    importTemplate: () => authFetch('/api/agent/import/template'),
+    // Phase 5 — deadline audit (WS5).
+    runAudit: (data) =>
+      authFetch('/api/agent/audit/run', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      }).then(handle),
+    audits: () => get('/api/agent/audit'),
+    audit: (id) => get(`/api/agent/audit/${id}`),
   },
 };
 

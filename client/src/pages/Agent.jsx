@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { api } from '../api';
+import { api, fmtMoney2 } from '../api';
 import { PageHeader, EmptyState, Skeleton, useToast } from '../components/ui';
+import DocumentIntake from '../components/DocumentIntake';
+import AuditRunner from '../components/AuditReport';
 
 // ClaimPaid Agent (Phase 1) — the in-app RCM agent. It reads the queue with
 // tools, drafts work, and proposes actions as approval cards; nothing is
@@ -55,9 +57,18 @@ const KIND_META = {
       ? `Posted to the claim — the claim is now ${a.result.new_status || 'updated'}.`
       : a.result?.ignored ? 'Line written off (ignored) — the remittance is updated.' : null),
   },
+  apply_intake: {
+    pendingNote: 'A person reviewed this extracted document and proposed applying it. The numbers were transcribed from the paper and checked deterministically — approving performs exactly what the preview says; rejecting dismisses the document and creates nothing.',
+    approveLabel: 'Approve & apply',
+    executedNote: (a) => (a.result?.kind === 'remittance'
+      ? `Held remittance created in the ERA inbox (${a.result.lines || 0} lines, ${a.result.matched || 0} matched) — nothing has posted; the ERA tab takes it from there.`
+      : a.result?.kind === 'denial_letter'
+        ? `Denial recorded on claim ${a.result.claim_number || ''}${a.result.draft_action_id ? ' and an appeal draft was proposed as its own card.' : ''}`
+        : null),
+  },
 };
 
-function ActionCard({ action, busy, onDecide }) {
+export function ActionCard({ action, busy, onDecide }) {
   const meta = STATUS_META[action.status] || STATUS_META.pending;
   const kind = KIND_META[action.kind] || KIND_META.draft_appeal;
   const decided = action.status !== 'pending';
@@ -191,6 +202,89 @@ function BriefSection({ brief, actions, decidingId, onDecide }) {
   );
 }
 
+// Manager's agent (Phase 5, WS3) — rendered ONLY when the owner-gated
+// endpoint succeeds. Members get a 403 and this section never mounts;
+// there is no client-side role check to get wrong.
+function TeamSection() {
+  const [data, setData] = useState(null);
+  useEffect(() => {
+    let live = true;
+    api.agent.teamInsights()
+      .then((d) => { if (live) setData(d); })
+      .catch(() => { /* members + failures: section stays hidden */ });
+    return () => { live = false; };
+  }, []);
+  if (!data) return null;
+  return (
+    <div className="card p-5 mt-5">
+      <div className="flex items-baseline gap-3 flex-wrap">
+        <div className="font-display font-semibold text-stone-900 text-lg">Team</div>
+        <div className="text-xs text-stone-400">Computed from the worklist, appeals, and the agent's approval ledger — no estimates</div>
+      </div>
+      <div className="overflow-x-auto mt-4 rounded-xl border border-stone-200">
+        <table className="w-full text-[13px]">
+          <thead>
+            <tr className="bg-stone-50 text-left text-[11px] uppercase tracking-wide text-stone-500">
+              <th className="px-3 py-2">Teammate</th><th className="px-3 py-2 text-right">Open items</th>
+              <th className="px-3 py-2 text-right">Overdue follow-ups</th><th className="px-3 py-2 text-right">Approvals waiting</th>
+              <th className="px-3 py-2 text-right">Appeals decided</th><th className="px-3 py-2 text-right">Win rate</th>
+              <th className="px-3 py-2 text-right">Agent drafts ✓ / ✗</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(data.users || []).map((u) => (
+              <tr key={u.user_id} className="border-t border-stone-100">
+                <td className="px-3 py-2">
+                  <span className="font-medium text-stone-800">{u.name}</span>
+                  <span className="badge badge-slate ml-2">{u.role}</span>
+                </td>
+                <td className="px-3 py-2 text-right">{u.open_worklist_items}</td>
+                <td className={`px-3 py-2 text-right ${u.overdue_followups > 0 ? 'text-rose-700 font-medium' : ''}`}>
+                  {u.overdue_followups}{u.overdue_amount > 0 ? ` · ${fmtMoney2(u.overdue_amount)}` : ''}
+                </td>
+                <td className="px-3 py-2 text-right">{u.pending_approvals}</td>
+                <td className="px-3 py-2 text-right">{u.appeals_decided}</td>
+                <td className="px-3 py-2 text-right">{u.win_rate != null ? `${Math.round(u.win_rate * 100)}%` : '—'}</td>
+                <td className="px-3 py-2 text-right">{u.agent_drafts_approved} / {u.agent_drafts_rejected}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {(data.suggestions || []).length > 0 && (
+        <div className="mt-4">
+          <div className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-2">Reassignment suggestions</div>
+          <div className="space-y-2">
+            {data.suggestions.map((s) => (
+              <div key={s.claim_id} className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm">
+                <span className="font-medium text-stone-800">Move claim {s.claim_number}</span>
+                <span className="text-stone-600"> ({fmtMoney2(s.balance)}, filing deadline in {s.days_left}d) from <b>{s.from_name}</b> to <b>{s.to_name}</b> — {s.reason}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-stone-400 mt-1.5">Suggestions only — reassign the appeal on the claim when you're ready; the agent never moves work itself.</p>
+        </div>
+      )}
+
+      {(data.stalled || []).length > 0 && (
+        <div className="mt-4">
+          <div className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-2">Stalled — no activity in 7+ days</div>
+          <div className="space-y-1.5">
+            {data.stalled.slice(0, 10).map((c) => (
+              <div key={c.claim_id} className="flex items-baseline gap-2 text-sm">
+                <span className="font-medium text-stone-800">{c.claim_number}</span>
+                <span className="text-stone-500 truncate">{c.patient_name} · {c.payer} · idle {c.idle_days}d{c.owner_name ? ` · with ${c.owner_name}` : ' · unassigned'}</span>
+                <span className="ml-auto shrink-0 font-medium text-stone-700">{fmtMoney2(c.balance)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Agent() {
   const toast = useToast();
   const [disabled, setDisabled] = useState(false);
@@ -205,6 +299,7 @@ export default function Agent() {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [decidingId, setDecidingId] = useState(null);
+  const [showAudit, setShowAudit] = useState(false);
   const threadRef = useRef(null);
 
   const scrollDown = () => {
@@ -363,7 +458,12 @@ export default function Agent() {
       <PageHeader
         title="Agent"
         subtitle="Reads your queue, drafts the work, and never saves anything without your approval."
-        actions={<button className="btn btn-dark" onClick={newChat}>+ New chat</button>}
+        actions={(
+          <span className="flex gap-2">
+            <button className="btn btn-outline" onClick={() => setShowAudit(true)}>⏰ Deadline audit</button>
+            <button className="btn btn-dark" onClick={newChat}>+ New chat</button>
+          </span>
+        )}
       />
       {alerts && alerts.total > 0 && (
         <div className="motion-fade-slide mb-5 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-amber-300 bg-amber-50/80 px-4 py-3 text-sm text-amber-900">
@@ -375,6 +475,7 @@ export default function Agent() {
         </div>
       )}
       {brief && <BriefSection brief={brief} actions={briefActions} decidingId={decidingId} onDecide={decideBrief} />}
+      <DocumentIntake ActionCard={ActionCard} />
       <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)] items-start">
         {/* Conversation list */}
         <div className="card p-3 lg:sticky lg:top-5">
@@ -452,6 +553,8 @@ export default function Agent() {
           </div>
         </div>
       </div>
+      <TeamSection />
+      {showAudit && <AuditRunner onClose={() => setShowAudit(false)} />}
     </div>
   );
 }
