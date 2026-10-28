@@ -82,6 +82,11 @@ const ICONS = {
       <rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 9h.01M15 9h.01M9 13a3 3 0 0 0 3 3 3 3 0 0 0 3-3"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/>
     </svg>
   ),
+  agent: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5l-1.9-4.6L5.5 9l4.6-1.4L12 3z"/><path d="M18.5 15.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1z"/><path d="M5 16l.7 1.8L7.5 18.5l-1.8.7L5 21l-.7-1.8L2.5 18.5l1.8-.7L5 16z"/>
+    </svg>
+  ),
   org: (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-4h6v4"/>
@@ -185,6 +190,7 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
     { id: 'reports', label: 'Reports', icon: ICONS.reports },
     { id: 'playbook', label: 'Playbook', icon: ICONS.playbook },
     { id: 'ai', label: 'AI Assistant', icon: ICONS.ai },
+    { id: 'agent', label: 'Agent', icon: ICONS.agent },
   ];
   const settingsTabs = [
     { id: 'org', label: 'Organization', icon: ICONS.org },

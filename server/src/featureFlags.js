@@ -34,4 +34,28 @@ const FEATURE_HELD_BODY = Object.freeze({
   error: 'Patient payment links are currently restricted.',
 });
 
-module.exports = { statementPaymentsHeld, FEATURE_HELD_BODY };
+// ---------------------------------------------------------------------------
+// IN-APP AGENT (Phase 1, dark-shipped): the OpenDuet-pattern agent (panel +
+// tools + human-approval actions) exists in code but is OFF unless BOTH:
+//   - AGENT_ENABLED=1 (or 'true'), AND
+//   - a model provider key is configured: AGENT_API_KEY or ANTHROPIC_API_KEY
+//     (env only — see server/src/agent/model.js for the provider config
+//     surface, incl. the OpenAI-compatible AGENT_BASE_URL mode).
+// While off, every /api/agent/* endpoint answers 403 AGENT_DISABLED and the
+// client renders a clean "not enabled" state. Read at request time like the
+// hold above: env change + restart flips it, no code change.
+// ---------------------------------------------------------------------------
+function agentEnabled() {
+  const v = String(process.env.AGENT_ENABLED || '').trim().toLowerCase();
+  if (v !== '1' && v !== 'true') return false;
+  const key = String(process.env.AGENT_API_KEY || process.env.ANTHROPIC_API_KEY || '').trim();
+  return key.length > 0;
+}
+
+// The one 403 body every disabled agent endpoint returns.
+const AGENT_DISABLED_BODY = Object.freeze({
+  code: 'AGENT_DISABLED',
+  error: 'The ClaimPaid agent is not enabled on this server yet.',
+});
+
+module.exports = { statementPaymentsHeld, FEATURE_HELD_BODY, agentEnabled, AGENT_DISABLED_BODY };

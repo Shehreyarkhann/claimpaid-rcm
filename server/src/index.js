@@ -27,6 +27,7 @@ const { legalRoutes } = require('./routes/legal');
 const transmissionRoutes = require('./routes/transmission');
 const ehrRoutes = require('./routes/ehr');
 const codingRoutes = require('./routes/coding');
+const agentRoutes = require('./routes/agent');
 const onboardingRoutes = require('./routes/onboarding');
 const settingsRoutes = require('./routes/settings');
 const apiV1Routes = require('./routes/apiV1');
@@ -78,6 +79,7 @@ app.use('/api/legal', legalRoutes);
 app.use('/api/transmission', transmissionRoutes);
 app.use('/api/ehr', ehrRoutes);
 app.use('/api/coding', codingRoutes);
+app.use('/api/agent', agentRoutes);
 app.use('/api/statements', require('./routes/statements'));
 app.use('/api/settings', settingsRoutes);
 app.use('/api', apiV1Routes); // /api/v1/* — developer API keys only

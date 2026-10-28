@@ -21,6 +21,7 @@ import Ehr from './pages/Ehr';
 import AuditLog from './pages/AuditLog';
 import LetterTemplates from './pages/LetterTemplates';
 import AIAssistant from './pages/AIAssistant';
+import Agent from './pages/Agent';
 import Billing from './pages/Billing';
 import Organization from './pages/Organization';
 import { Login, Signup, ForgotPassword, ResetPassword, OrgMfaRequiredScreen } from './pages/AuthPages';
@@ -291,6 +292,7 @@ function Workspace() {
       {page === 'filing' && <FilingRules />}
       {page === 'team' && <Team />}
       {page === 'ai' && <AIAssistant />}
+      {page === 'agent' && <Agent />}
       </ErrorBoundary>
     </Shell>
     <FloatingChat />

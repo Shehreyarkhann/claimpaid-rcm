@@ -825,6 +825,47 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_stmt_lines_stmt ON statement_lines(statement_id);
     CREATE INDEX IF NOT EXISTS idx_stmt_pay_stmt ON statement_payments(statement_id);
   `);
+  // ---- In-app agent (Phase 1) ----
+  // Conversations + messages are per-user within an org; actions are the
+  // human-approval queue (the agent proposes, a person decides). Tables are
+  // created unconditionally (cheap, empty) — the FEATURE is gated by
+  // agentEnabled() in featureFlags.js, not by schema presence.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS agent_conversations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      title TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS agent_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      convo_id INTEGER NOT NULL REFERENCES agent_conversations(id),
+      role TEXT NOT NULL,
+      content TEXT,
+      tool_events TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS agent_actions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      convo_id INTEGER REFERENCES agent_conversations(id),
+      kind TEXT NOT NULL,
+      payload TEXT,
+      preview TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      result TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      decided_at TEXT,
+      executed_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_agent_convo_org ON agent_conversations(org_id, user_id, updated_at);
+    CREATE INDEX IF NOT EXISTS idx_agent_msg_convo ON agent_messages(convo_id, id);
+    CREATE INDEX IF NOT EXISTS idx_agent_action_org ON agent_actions(org_id, status, created_at);
+    CREATE INDEX IF NOT EXISTS idx_agent_action_convo ON agent_actions(convo_id, id);
+  `);
   if (!columnExists('claims', 'patient_paid_amount')) db.exec('ALTER TABLE claims ADD COLUMN patient_paid_amount REAL NOT NULL DEFAULT 0');
   // ---- Market-launch cleanup (deploy #52, one-time) ----
   // Removes pre-launch demo/junk data: the seeded Demo Billing Co. org, the

@@ -390,6 +390,20 @@ export const api = {
     decide: (id, data) =>
       authFetch(`/api/coding/jobs/${id}/decide`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(handle),
   },
+  // ---- In-app agent (Phase 1; dark-shipped behind AGENT_ENABLED + key) ----
+  agent: {
+    conversations: () => get('/api/agent/conversations'),
+    conversation: (id) => get(`/api/agent/conversations/${id}`),
+    chat: (convoId, message) =>
+      authFetch('/api/agent/chat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ convo_id: convoId ?? undefined, message }),
+      }).then(handle),
+    approveAction: (id) =>
+      authFetch(`/api/agent/actions/${id}/approve`, { method: 'POST' }).then(handle),
+    rejectAction: (id) =>
+      authFetch(`/api/agent/actions/${id}/reject`, { method: 'POST' }).then(handle),
+  },
 };
 
 export const csvUrl = (path) => path; // auth via cookie-less; use fetch for authed CSV
