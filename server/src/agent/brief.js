@@ -23,6 +23,8 @@ const { computeWorklist } = require('../worklistCore');
 const { createExecutor } = require('./tools');
 const { getAction, serializeAction } = require('./actions');
 const { recordAgentTurn } = require('../usage');
+const { reconcileOutcomes } = require('./outcomes');
+const predict = require('./predict');
 const model = require('./model');
 
 const MAX_PROPOSED_DRAFTS = 3;
@@ -190,6 +192,12 @@ async function getOrCreateBrief({ orgId, user }) {
   const existing = findBrief(orgId, user.id, today);
   if (existing) return presentBrief(existing);
 
+  // Phase 3 (WS5): refresh the org's appeal-outcome stats from decided
+  // agent-drafted appeals before composing — once per org per day
+  // (guarded inside), so today's predictions read yesterday's outcomes.
+  // A reconciliation failure must never sink the brief.
+  try { reconcileOutcomes(orgId); } catch (e) { console.error('[agent brief] outcome reconciliation failed:', e.message); }
+
   // Window: since the user's previous brief, else the last 24 hours.
   const prev = db.prepare(
     'SELECT created_at FROM agent_briefs WHERE org_id = ? AND user_id = ? AND brief_date < ? ORDER BY brief_date DESC LIMIT 1'
@@ -197,11 +205,33 @@ async function getOrCreateBrief({ orgId, user }) {
   const sinceIso = prev ? prev.created_at : utcStamp(new Date(Date.now() - 24 * 3600 * 1000));
 
   const worklist = computeWorklist(orgId, user.id, 'all');
+  // Phase 3: plan items carry their prediction basis when the org's own
+  // data supports one (e.g. "appeals to UHC on CO-172 overturn 58% of the
+  // time here (n=24)") — structured field plus a suffix on the reason.
+  const planRows = worklist.items.slice(0, PLAN_ITEMS_SHOWN);
+  const planClaimIds = [...new Set(planRows.map((i) => i.claim_id).filter(Boolean))];
+  const planClaims = new Map();
+  if (planClaimIds.length) {
+    for (const c of db.prepare(`
+      SELECT c.*, p.name AS payer FROM claims c LEFT JOIN payers p ON p.id = c.payer_id
+      WHERE c.org_id = ? AND c.id IN (${planClaimIds.map(() => '?').join(',')})
+    `).all(orgId, ...planClaimIds)) planClaims.set(c.id, c);
+  }
+  const plan = planRows.map((item, i) => {
+    const slim = slimPlanItem(item, i + 1);
+    const claim = item.claim_id ? planClaims.get(item.claim_id) : null;
+    const pred = claim ? predict.predictionForClaim(orgId, claim) : null;
+    if (pred) {
+      slim.prediction = pred;
+      slim.reason = `${slim.reason} · ${pred.detail}`;
+    }
+    return slim;
+  });
   const content = {
     timezone,
     summary: null,
     while_away: buildWhileAway(orgId, sinceIso),
-    plan: worklist.items.slice(0, PLAN_ITEMS_SHOWN).map((item, i) => slimPlanItem(item, i + 1)),
+    plan,
     proposed_draft_action_ids: [],
   };
 

@@ -3,6 +3,8 @@ const { db } = require('../db');
 const { authRequired, roleRequired, requireProduct } = require('../auth');
 const { logActivity } = require('../activity');
 const { computeWorklist } = require('../worklistCore');
+const { agentEnabled } = require('../featureFlags');
+const { predictionsForClaimIds } = require('../agent/predict');
 
 const router = express.Router();
 router.use(authRequired, requireProduct('rcm'));
@@ -13,7 +15,19 @@ const canWrite = roleRequired('owner', 'biller');
 // shared with the agent's get_worklist tool.)
 router.get('/', (req, res) => {
   const { scope = 'all' } = req.query; // all | mine
-  res.json(computeWorklist(req.orgId, req.user.id, scope));
+  const result = computeWorklist(req.orgId, req.user.id, scope);
+  // Agent Phase 3: while the agent is enabled, items carry a compact
+  // prediction (overturn likelihood for denial work, pay likelihood for
+  // open claims) computed server-side by agent/predict.js from the org's
+  // own data. Disabled -> the response is exactly the pre-Phase-3 shape.
+  if (agentEnabled()) {
+    const preds = predictionsForClaimIds(req.orgId, result.items.map((i) => i.claim_id));
+    for (const item of result.items) {
+      const p = item.claim_id ? preds.get(item.claim_id) : null;
+      if (p) item.prediction = p;
+    }
+  }
+  res.json(result);
 });
 
 // --- Mark a claim as touched (biller worked it) ---
