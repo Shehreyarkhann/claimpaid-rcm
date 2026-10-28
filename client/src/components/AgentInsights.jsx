@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, fmtMoney } from '../api';
+import AuditRunner from './AuditReport';
 
 // Agent insights card (Phase 3) — renders /api/agent/insights: filing-risk
 // dollars, expected collections, denial-trend watch, exception backlog.
@@ -41,6 +42,7 @@ function useCountUp(target, duration = 850) {
 export default function AgentInsights() {
   const [data, setData] = useState(null);
   const [hidden, setHidden] = useState(false);
+  const [showAudit, setShowAudit] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -66,7 +68,9 @@ export default function AgentInsights() {
         <span className="text-xl">🤖</span>
         <h3 className="font-display font-semibold text-stone-900 text-lg">Agent insights</h3>
         <span className="text-xs text-stone-400">Predictions from this workspace's own decided claims and remittances</span>
+        <button className="btn btn-dark btn-sm ml-auto" onClick={() => setShowAudit(true)}>⏰ Run deadline audit</button>
       </div>
+      {showAudit && <AuditRunner onClose={() => setShowAudit(false)} />}
       <div className="rounded-xl bg-emerald-700 px-4 py-3.5 mb-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
         <span className="motion-count-up font-display text-2xl font-semibold text-white">{fmtMoney(recoveredAmount)}</span>
         <span className="text-sm font-medium text-emerald-50">Recovered via agent-assisted appeals</span>

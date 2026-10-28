@@ -124,3 +124,16 @@ body {
 @keyframes wiz-draw { to { stroke-dashoffset: 0; } }
 .wiz-check-path { stroke-dasharray: 60; stroke-dashoffset: 60; animation: wiz-draw 0.45s 0.3s ease-out forwards; }
 .wiz-progress-fill { transition: width 0.4s cubic-bezier(0.32, 0.72, 0, 1); }
+
+/* Deadline-audit leave-behind (Phase 5): printing isolates the branded
+   .audit-report — everything else on the page (app chrome, modal
+   backdrop, buttons) drops out, brand colors stay exact. */
+@media print {
+  body * { visibility: hidden !important; }
+  .audit-report, .audit-report * { visibility: visible !important; }
+  .audit-report {
+    position: fixed; inset: 0; padding: 24px; overflow: visible;
+    background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .audit-report .no-print { display: none !important; }
+}
