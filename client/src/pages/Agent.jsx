@@ -285,7 +285,7 @@ function TeamSection() {
   );
 }
 
-export default function Agent() {
+export default function Agent({ onUpgrade }) {
   const toast = useToast();
   const [disabled, setDisabled] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -300,7 +300,17 @@ export default function Agent() {
   const [sending, setSending] = useState(false);
   const [decidingId, setDecidingId] = useState(null);
   const [showAudit, setShowAudit] = useState(false);
+  // Deploy #89: the 402 AI-use cap gets a persistent in-page upgrade
+  // notice (the server's plan-limit body), not a vanishing error toast.
+  const [quotaNotice, setQuotaNotice] = useState(null);
   const threadRef = useRef(null);
+  const threadCardRef = useRef(null);
+  const composerRef = useRef(null);
+
+  const goBilling = () => {
+    if (onUpgrade) onUpgrade();
+    else window.location.href = '/app/?billing=open';
+  };
 
   const scrollDown = () => {
     requestAnimationFrame(() => {
@@ -378,11 +388,23 @@ export default function Agent() {
     }
   };
 
+  // Deploy #89: the state reset was always correct — but on mobile the
+  // brief + intake sections sit between this header button and the thread,
+  // so the tap changed nothing on screen and read as broken. Now the tap
+  // also brings the fresh thread into view and focuses the composer.
   const newChat = () => {
     setActiveId(null);
     setMessages([]);
     setActions([]);
     setInput('');
+    setQuotaNotice(null);
+    requestAnimationFrame(() => {
+      const card = threadCardRef.current;
+      if (card && typeof card.scrollIntoView === 'function') {
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      if (composerRef.current) composerRef.current.focus();
+    });
   };
 
   const send = async () => {
@@ -390,7 +412,9 @@ export default function Agent() {
     if (!text || sending) return;
     setInput('');
     setSending(true);
-    setMessages((m) => [...m, { id: `tmp-${Date.now()}`, role: 'user', content: text, tool_events: [] }]);
+    setQuotaNotice(null);
+    const tmpId = `tmp-${Date.now()}`;
+    setMessages((m) => [...m, { id: tmpId, role: 'user', content: text, tool_events: [] }]);
     scrollDown();
     try {
       const r = await api.agent.chat(activeId, text);
@@ -403,6 +427,16 @@ export default function Agent() {
       scrollDown();
     } catch (e) {
       if (e.code === 'AGENT_DISABLED') { setDisabled(true); return; }
+      if (e.status === 402 && e.limitInfo && e.limitInfo.error === 'ai_query_limit_reached') {
+        // The quota gate fired BEFORE the turn ran — the server never
+        // saved this message. Drop the optimistic bubble, restore the
+        // words to the composer, and show the upgrade notice instead of
+        // a raw error toast.
+        setMessages((m) => m.filter((x) => x.id !== tmpId));
+        setInput(text);
+        setQuotaNotice(e.limitInfo);
+        return;
+      }
       toast.error(e.message || 'The agent could not answer — try again');
       // The server saved the user's message; resync the thread to show the
       // true state instead of a phantom reply.
@@ -500,7 +534,7 @@ export default function Agent() {
         </div>
 
         {/* Thread */}
-        <div className="card flex flex-col overflow-hidden">
+        <div ref={threadCardRef} className="card flex flex-col overflow-hidden">
           <div ref={threadRef} className="flex-1 overflow-auto p-4 sm:p-5 space-y-4 max-h-[560px] min-h-[320px]">
             {messages.length === 0 && actions.length === 0 && (
               <div className="h-full flex flex-col items-center justify-center text-center py-10">
@@ -535,9 +569,23 @@ export default function Agent() {
               </div>
             )}
           </div>
+          {quotaNotice && (
+            <div className="border-t border-amber-300 bg-amber-50 px-4 py-3 sm:px-5">
+              <div className="text-sm font-semibold text-amber-900">
+                You've used this month's {Number(quotaNotice.limit).toLocaleString()} AI uses on {quotaNotice.planLabel || 'your plan'}
+              </div>
+              <p className="text-[13px] text-amber-800 mt-0.5">
+                {quotaNotice.message || 'The agent pauses here until the quota resets on the 1st — or an upgrade raises it.'}{' '}
+                <button onClick={goBilling} className="font-semibold text-emerald-800 underline hover:text-emerald-950">
+                  See plans &amp; upgrade →
+                </button>
+              </p>
+            </div>
+          )}
           <div className="border-t border-stone-200 p-3 sm:p-4 bg-[#FFFDF8]">
             <div className="flex gap-2 items-end">
               <textarea
+                ref={composerRef}
                 className="input flex-1 resize-none"
                 rows={2}
                 placeholder="Ask the agent — e.g. “Draft an appeal for claim HV-1013”"

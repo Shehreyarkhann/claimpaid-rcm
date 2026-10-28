@@ -62,6 +62,69 @@ function UsageBar({ label, used, limit, unknown, included, onUpgrade }) {
   );
 }
 
+const fmtEntLimit = (v) => (v === null || v === undefined ? 'Unlimited' : Number(v).toLocaleString('en-US'));
+
+// "What your plan includes" (deploy #89) — rendered from the server's
+// entitlements payload (planLimits + productsForPlan via /api/billing),
+// never hardcoded plan numbers. Included rows carry LIVE used/limit from
+// /api/billing/usage; not-included rows wire into the plan picker below
+// (the existing switch/checkout flow).
+function PlanIncludes({ ent, usage, onUpgrade }) {
+  if (!ent) return null;
+  const used = (k) => (usage && usage[k] ? usage[k].used : null);
+  const usedOf = (k, limit) => {
+    const u = used(k);
+    if (u === null || u === undefined) return '';
+    return limit === null || limit === undefined
+      ? ` — ${Number(u).toLocaleString('en-US')} used this month`
+      : ` — ${Number(u).toLocaleString('en-US')} of ${fmtEntLimit(limit)} used this month`;
+  };
+  const included = [];
+  if (ent.rcm) included.push('RCM app — smart worklist, eligibility checks, ERA auto-posting, patient statements, document intake, deadline audit, watchdog digest');
+  if (ent.agent) included.push('ClaimPaid agent — morning brief, approval-gated drafts, predictions from your own data');
+  if (ent.ai) included.push('ClaimPaid AI app — Payer Policy Handbook answers with citations + quote-verified coding');
+  if (ent.rcm) included.push(`Claims${usedOf('claims', ent.claimsPerMonth)} (${fmtEntLimit(ent.claimsPerMonth)} / month)`);
+  included.push(`Team seats${usedOf('seats', ent.seats)} (${fmtEntLimit(ent.seats)})`);
+  included.push(`AI uses${usedOf('aiQueries', ent.aiUsesPerMonth)} (${fmtEntLimit(ent.aiUsesPerMonth)} / month — agent + AI app, counted together)`);
+
+  const notIncluded = [];
+  if (ent.rcm && !ent.ai) notIncluded.push({ label: 'ClaimPaid AI app — the standalone knowledge layer', cta: 'Included with RCM Pro + AI' });
+  if (!ent.rcm) {
+    notIncluded.push({ label: 'RCM app — claims, denials, ERA, statements', cta: 'See the RCM plans' });
+    notIncluded.push({ label: 'ClaimPaid agent — it works inside the RCM app', cta: 'See the RCM plans' });
+  }
+
+  return (
+    <div className="card p-6">
+      <div className="text-[11px] uppercase tracking-widest text-stone-500 mb-1">What your plan includes</div>
+      <p className="text-sm text-stone-500 mb-4">
+        {ent.rcm
+          ? 'Every workflow feature is in every RCM plan — plans differ by volume and AI uses.'
+          : 'ClaimPaid AI is the standalone knowledge layer — the RCM platform is a separate plan.'}
+      </p>
+      <div className="text-[11px] font-semibold uppercase tracking-widest text-emerald-700 mb-2">Included</div>
+      <ul className="space-y-1.5 mb-5">
+        {included.map((f) => (
+          <li key={f} className="text-sm text-stone-700 flex gap-2"><span className="text-emerald-600 font-bold">✓</span><span>{f}</span></li>
+        ))}
+      </ul>
+      <div className="text-[11px] font-semibold uppercase tracking-widest text-stone-400 mb-2">Not included</div>
+      {notIncluded.length === 0 ? (
+        <p className="text-sm text-stone-500">Nothing is held back on this plan — every ClaimPaid product is included.</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {notIncluded.map((f) => (
+            <li key={f.label} className="text-sm text-stone-500 flex items-center gap-2 flex-wrap">
+              <span className="text-stone-400 font-bold">✕</span><span>{f.label}</span>
+              <button onClick={onUpgrade} className="text-xs font-semibold text-emerald-700 hover:text-emerald-900 hover:underline">{f.cta} →</button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function statusLabel(s) {
   if (s.plan_status === 'trialing') {
     return s.trial_days_left > 0 ? `Free trial · ${s.trial_days_left} day${s.trial_days_left === 1 ? '' : 's'} left` : 'Free trial';
@@ -240,7 +303,9 @@ export default function Billing({ onBaaRequired }) {
         <div className="text-xs text-stone-500 mt-0.5">{tagline}</div>
         <div className="text-3xl font-extrabold mt-3 tracking-tight">{price}</div>
         <ul className="text-[13px] text-stone-600 mt-4 space-y-1.5 flex-1">
-          {features.map((f) => <li key={f}>✓ {f}</li>)}
+          {features.map((f) => (f.startsWith('✕ ')
+            ? <li key={f} className="text-stone-400">✕ {f.slice(2)}</li>
+            : <li key={f}>✓ {f}</li>))}
         </ul>
         <div className="mt-5">
           {isCurrent ? (
@@ -463,7 +528,7 @@ export default function Billing({ onBaaRequired }) {
               onUpgrade={() => plansRef.current?.scrollIntoView({ behavior: 'smooth' })}
             />
             <UsageBar
-              label="AI queries"
+              label="AI uses"
               used={usage.aiQueries.used}
               limit={usage.aiQueries.limit}
               unknown={usage.aiQueries.unknown}
@@ -473,6 +538,13 @@ export default function Billing({ onBaaRequired }) {
           </div>
         </div>
       )}
+
+      {/* ── What your plan includes (deploy #89: from the entitlements payload) ── */}
+      <PlanIncludes
+        ent={status?.entitlements || usage?.entitlements}
+        usage={usage}
+        onUpgrade={() => plansRef.current?.scrollIntoView({ behavior: 'smooth' })}
+      />
 
       {/* ── Plan picker ── */}
       {(
@@ -490,17 +562,17 @@ export default function Billing({ onBaaRequired }) {
           </div>
           <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
             {planCard('starter', 'RCM Starter', 'For small billing teams', <><>$199</><span className="text-sm font-normal text-stone-500">/mo</span></>,
-              ['Full RCM platform', '1,000 claims/month', 'Timely filing radar + 13-rule scrubber', 'Auto appeal letters (8 categories)', '835 import / 837P export', 'Up to 3 team seats'])}
+              ['RCM app — every workflow feature', '1,000 claims/month', 'ClaimPaid agent included', '100 AI uses/month', 'Up to 3 team seats', '✕ ClaimPaid AI app not included'])}
             {planCard('pro', 'RCM Pro + AI', 'For teams serious about denial recovery', <><>$499</><span className="text-sm font-normal text-stone-500">/mo</span></>,
-              ['Everything in Starter', '10,000 claims/month', 'ClaimPaid AI — embedded tab + quick-chat', '2,000 AI queries/month', 'Payer Policy Handbook, pre-loaded', 'Autopilot crawling + Teach-it loop', 'Denial pattern analytics', 'Up to 15 team seats'])}
+              ['Everything in Starter', '10,000 claims/month', '2,000 AI uses/month', 'ClaimPaid AI app included', 'Up to 15 team seats'])}
             {planCard('ai', 'ClaimPaid AI', 'Just the AI assistant', <><>$99</><span className="text-sm font-normal text-stone-500">/mo</span></>,
-              ['Private AI chat over your documents', '1,000 AI queries/month', 'Cited answers, grounded in your KB', 'Unlimited knowledge bases', 'Public share links + embed widget', 'Up to 5 team seats', 'Your data never leaves our servers'])}
+              ['ClaimPaid AI app — handbook + verified coding', 'Cited answers over your own documents', '1,000 AI uses/month', 'Public share links + embed widget', 'Up to 5 team seats', '✕ RCM app not included'])}
             <div className="card p-6 flex flex-col">
               <div className="font-bold">Enterprise</div>
               <div className="text-xs text-stone-500 mt-0.5">For large billing companies & MSOs</div>
               <div className="text-3xl font-extrabold mt-3 tracking-tight">Custom</div>
               <ul className="text-[13px] text-stone-600 mt-4 space-y-1.5 flex-1">
-                {['Everything in Pro + AI', 'Multi-org management + SSO', 'Custom KB training on your contracts', 'Dedicated success manager', 'SLA + priority support'].map((f) => <li key={f}>✓ {f}</li>)}
+                {['Everything in Pro + AI', 'Unlimited claims, seats & AI uses', 'Custom annual agreement'].map((f) => <li key={f}>✓ {f}</li>)}
               </ul>
               <div className="mt-5">
                 <button className="btn btn-ghost w-full"

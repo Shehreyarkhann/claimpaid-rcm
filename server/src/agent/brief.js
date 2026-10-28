@@ -22,7 +22,7 @@ const { db } = require('../db');
 const { computeWorklist } = require('../worklistCore');
 const { createExecutor } = require('./tools');
 const { getAction, serializeAction } = require('./actions');
-const { recordAgentTurn } = require('../usage');
+const { recordAgentTurn, checkAiQueryQuota } = require('../usage');
 const { reconcileOutcomes } = require('./outcomes');
 const predict = require('./predict');
 const model = require('./model');
@@ -184,7 +184,8 @@ function presentBrief(row) {
 }
 
 // Get today's brief, generating + persisting it on first read of the day.
-async function getOrCreateBrief({ orgId, user }) {
+// isSuperAdmin mirrors the chat route's quota exemption (deploy #89).
+async function getOrCreateBrief({ orgId, user, isSuperAdmin = false }) {
   const org = db.prepare('SELECT timezone FROM orgs WHERE id = ?').get(orgId);
   const timezone = (org && org.timezone) || 'America/New_York';
   const today = orgLocalDate(timezone);
@@ -259,10 +260,12 @@ async function getOrCreateBrief({ orgId, user }) {
   }
   content.proposed_draft_action_ids = actionIds;
 
-  // One narrative model call, only when there is something to summarize.
-  // Failure (or a disabled/odd model setup) leaves summary null — the
-  // structured brief is complete without it.
-  if (hasAnythingToSummarize(content)) {
+  // One narrative model call, only when there is something to summarize —
+  // and only within the plan's AI-use allowance (deploy #89): at the cap
+  // the narrative is skipped and the brief still ships, deterministic
+  // sections complete, exactly as on a model failure.
+  const narrativeAllowed = isSuperAdmin || !checkAiQueryQuota(orgId);
+  if (hasAnythingToSummarize(content) && narrativeAllowed) {
     try {
       const slim = {
         while_away: content.while_away,

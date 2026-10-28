@@ -63,7 +63,7 @@ function serializeMessage(row) {
 // --- Morning brief (Phase 2): lazy per-day generation, then stored ---
 router.get('/brief', async (req, res) => {
   try {
-    const { brief, actions } = await getOrCreateBrief({ orgId: req.orgId, user: req.user });
+    const { brief, actions } = await getOrCreateBrief({ orgId: req.orgId, user: req.user, isSuperAdmin: !!req.isSuperAdmin });
     res.json({ brief, actions });
   } catch (e) {
     console.error('[agent] brief failed:', e.message);
@@ -253,7 +253,10 @@ router.get('/alerts', (req, res) => {
 // --- Run a read tool outside chat (Phase 4, WS3: the Rescue wizard) ---
 // The wizard's engine: the Phase 3 read tools through the SAME executor
 // the chat uses (same shared runners, same org scoping) — no tool logic
-// is duplicated. A run counts as one metered agent turn, like a chat turn.
+// is duplicated. A run counts as one metered agent turn, like a chat turn,
+// so it respects the same AI-use quota gate (deploy #89): suggest_codes
+// spends a model-backed code-assist call, and a metered path must not be
+// an unmetered way around the cap. Super-admin exempt, like chat.
 const RUNNABLE_TOOLS = new Set(['check_eligibility', 'scrub_claim', 'suggest_codes']);
 router.post('/tools/run', async (req, res) => {
   const { tool, claim_id } = req.body || {};
@@ -261,6 +264,10 @@ router.post('/tools/run', async (req, res) => {
     return res.status(400).json({ error: `Tool '${tool || ''}' cannot be run directly. Runnable: ${[...RUNNABLE_TOOLS].join(', ')}.` });
   }
   if (!Number.isInteger(claim_id)) return res.status(400).json({ error: 'claim_id (integer) is required.' });
+  if (!req.isSuperAdmin) {
+    const gate = checkAiQueryQuota(req.orgId);
+    if (gate) return quotaExceeded(res, 'ai_query_limit_reached', gate.plan, gate.limit, gate.used);
+  }
   try {
     const execute = createExecutor({ orgId: req.orgId, user: req.user, convoId: null });
     const result = await execute(tool, { claim_id });
@@ -285,11 +292,11 @@ router.post('/chat', async (req, res) => {
   if (!text) return res.status(400).json({ error: 'A message is required' });
   if (text.length > MAX_MESSAGE_CHARS) return res.status(400).json({ error: `Message is too long (max ${MAX_MESSAGE_CHARS} characters)` });
 
-  // AI-query quota gate (Phase 2 metering): BEFORE the turn runs. Fires
-  // only for plans carrying a positive finite AI allowance (Pro/AI);
-  // plans without one (Starter 0, Enterprise null) are counted, never
-  // blocked — see checkAiQueryQuota in usage.js. Super-admin exempt,
-  // mirroring checkClaimQuota.
+  // AI-use quota gate (Phase 2 metering; policy decided 2026-10-28):
+  // BEFORE the turn runs. Fires for every plan carrying a positive finite
+  // AI allowance — Starter 100, Pro 2,000, AI 1,000 — against merged usage;
+  // Enterprise / grandfathered (null) never blocks. See checkAiQueryQuota
+  // in usage.js. Super-admin exempt, mirroring checkClaimQuota.
   if (!req.isSuperAdmin) {
     const gate = checkAiQueryQuota(req.orgId);
     if (gate) return quotaExceeded(res, 'ai_query_limit_reached', gate.plan, gate.limit, gate.used);

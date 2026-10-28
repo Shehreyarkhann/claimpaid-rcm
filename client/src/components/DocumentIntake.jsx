@@ -75,7 +75,9 @@ export default function DocumentIntake({ ActionCard }) {
       await loadDocs();
       setDetail(r.document);
     } catch (e) {
-      toast.error(e.message || 'Upload failed');
+      // A 402 AI-use cap carries its friendly explanation in the body's
+      // message field; e.message would be the raw 'ai_query_limit_reached'.
+      toast.error((e.limitInfo && e.limitInfo.message) || e.message || 'Upload failed');
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = '';

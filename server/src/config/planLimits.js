@@ -7,10 +7,19 @@
 //   - askbase (loads this file by path, see askbase/server/src/planLimits.js)
 //
 // Launch numbers (owner-adjustable here — everything else derives from this):
-//   Starter    $199/mo : 1,000 claims/month,   3 seats, NO AI product
+//   Starter    $199/mo : 1,000 claims/month,   3 seats, 100 AI uses/month
 //   Pro        $499/mo : 10,000 claims/month, 15 seats, AI w/ 2,000 AI queries/month
 //   AI          $99/mo : 1,000 AI queries/month, 5 seats, RCM app not included
 //   Enterprise custom : unlimited everything
+//
+// AI-use policy (founder decision, 2026-10-28): the in-app AGENT is included
+// on every RCM plan and draws on the plan's AI-use allowance — Starter gets
+// 100 AI uses/month (agent turns + any merged AI usage), then the 402
+// upgrade gate fires. The standalone ClaimPaid AI APP is a separate product:
+// NOT included on Starter (product-gated in routes/billing.js
+// productsForPlan — starter ai:false), included on Pro / AI / Enterprise.
+// The agent lives inside the RCM app, so the AI plan (no RCM app) has no
+// agent; its 1,000 uses are spent in the AI app.
 // Trial orgs get the same limits as their chosen plan (trial inherits plan).
 // Legacy orgs with no plan value are grandfathered unlimited — never lock out
 // an existing org by accident.
@@ -22,7 +31,7 @@ const PLAN_LIMITS = {
     price: 199,
     claimsPerMonth: 1000,
     seats: 3,
-    aiQueriesPerMonth: 0, // no AI product on Starter
+    aiQueriesPerMonth: 100, // agent included (100 AI uses/mo); the standalone AI app is NOT (product gate)
   },
   pro: {
     price: 499,

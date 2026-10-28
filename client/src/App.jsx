@@ -292,7 +292,7 @@ function Workspace() {
       {page === 'filing' && <FilingRules />}
       {page === 'team' && <Team />}
       {page === 'ai' && <AIAssistant />}
-      {page === 'agent' && <Agent />}
+      {page === 'agent' && <Agent onUpgrade={() => go('billing')} />}
       </ErrorBoundary>
     </Shell>
     <FloatingChat />

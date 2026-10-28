@@ -176,13 +176,13 @@ function checkSeatQuota(req, res, next) {
   }
 }
 
-// Agent-turn quota gate for POST /api/agent/chat. Returns { plan, limit,
-// used } when the org is at/over its plan AI-query allowance, else null.
-// Phase-2 policy (founder decision pending — see the Phase 2 report): the
-// gate fires ONLY when the plan carries a positive finite allowance (Pro
-// 2,000, AI 1,000). A 0 allowance (Starter: "no AI product") does NOT block
-// the agent in this phase — those turns are counted and surfaced instead,
-// and null (enterprise / legacy-grandfathered) never blocks.
+// Agent-turn quota gate for the agent's AI-consumption paths (chat,
+// document extraction, tools/run, the brief's narrative call). Returns
+// { plan, limit, used } when the org is at/over its plan AI-use allowance,
+// else null. Decided policy (founder, 2026-10-28): the gate fires whenever
+// the plan carries a positive finite allowance — Starter 100, Pro 2,000,
+// AI 1,000 — counted against MERGED usage (agent turns + AskBase queries).
+// null (enterprise / legacy-grandfathered) never blocks.
 function checkAiQueryQuota(orgId) {
   const plan = orgPlan(orgId);
   const limit = limitsForPlan(plan).aiQueriesPerMonth;

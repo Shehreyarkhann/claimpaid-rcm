@@ -14,8 +14,10 @@
 //          Handbook" chip; AI service down -> graceful result, turn completes.
 //   (metering) completed chat turns increment agent_usage with token totals;
 //          usageForOrg merges AskBase + agent counts; the 402 gate fires at
-//          the limit for a plan WITH an allowance (Pro) in the existing
-//          error shape, and does NOT fire for Starter (allowance 0).
+//          the limit in the existing error shape — Pro at 2,000 and, since
+//          the 2026-10-28 founder decision (deploy #89), Starter at its
+//          100-AI-use allowance: 99 passes, 100 blocks, blocked turns are
+//          not metered, and the brief's narrative call is skipped at cap.
 'use strict';
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -278,7 +280,7 @@ async function main() {
     check('handbook: tool chip label', Array.isArray(chatHb.data.tool_events) && chatHb.data.tool_events[0] && chatHb.data.tool_events[0].label === 'Searched the Payer Policy Handbook', JSON.stringify(chatHb.data.tool_events || []));
     check('handbook: service JWT was sent to the AI service', typeof lastServiceToken === 'string' && lastServiceToken.split('.').length === 3);
 
-    // ---- Metering: Pro cap fires; Starter never blocks ----
+    // ---- Metering: caps fire per plan (Pro 2,000; Starter 100) ----
     console.log('— quota gate —');
     raw.prepare("UPDATE orgs SET plan = 'pro' WHERE id = ?").run(orgA);
     raw.prepare('UPDATE agent_usage SET turns = 2000 WHERE org_id = ? AND month = ?').run(orgA, MONTH);
@@ -286,12 +288,49 @@ async function main() {
     check('quota: Pro at the limit -> 402', capped.status === 402, `got ${capped.status} ${JSON.stringify(capped.data).slice(0, 160)}`);
     check('quota: error shape matches plan-limit responses', capped.data.error === 'ai_query_limit_reached' && capped.data.limit === 2000 && typeof capped.data.used === 'number' && capped.data.used >= 2000 && typeof capped.data.message === 'string' && capped.data.message.includes('AI queries') && 'upgrade' in capped.data, JSON.stringify(capped.data).slice(0, 220));
 
+    // Starter allowance (founder decision 2026-10-28, deploy #89): 100 AI
+    // uses/month. At 99 merged uses the gate passes and the turn counts;
+    // at 100 the chat 402s in the plan-limit shape and is NOT metered.
     raw.prepare("UPDATE orgs SET plan = 'starter' WHERE id = ?").run(orgB);
-    raw.prepare('INSERT INTO agent_usage (org_id, month, turns, input_tokens, output_tokens) VALUES (?, ?, 9999, 0, 0)').run(orgB, MONTH);
-    const starterChat = await api(base, 'POST', '/api/agent/chat', { message: 'Hello there' }, tokB);
-    check('quota: Starter (allowance 0) is NOT hard-blocked', starterChat.status === 200 && starterChat.data.reply === 'OK.', `got ${starterChat.status}`);
-    const usageB = raw.prepare('SELECT turns FROM agent_usage WHERE org_id = ? AND month = ?').get(orgB, MONTH);
-    check('quota: Starter turns are still counted', !!usageB && usageB.turns === 10000, JSON.stringify(usageB || {}));
+    raw.prepare('INSERT INTO agent_usage (org_id, month, turns, input_tokens, output_tokens) VALUES (?, ?, 99, 0, 0)').run(orgB, MONTH);
+    const starterOk = await api(base, 'POST', '/api/agent/chat', { message: 'Hello there' }, tokB);
+    check('quota: Starter at 99 of 100 -> chat passes', starterOk.status === 200 && starterOk.data.reply === 'OK.', `got ${starterOk.status} ${JSON.stringify(starterOk.data).slice(0, 120)}`);
+    let usageB = raw.prepare('SELECT turns FROM agent_usage WHERE org_id = ? AND month = ?').get(orgB, MONTH);
+    check('quota: Starter turn counted up to the cap (100)', !!usageB && usageB.turns === 100, JSON.stringify(usageB || {}));
+    const starterCapped = await api(base, 'POST', '/api/agent/chat', { message: 'Hello there' }, tokB);
+    check('quota: Starter at 100 -> 402 ai_query_limit_reached (limit 100)',
+      starterCapped.status === 402 && starterCapped.data.error === 'ai_query_limit_reached' && starterCapped.data.limit === 100 && starterCapped.data.used >= 100,
+      `got ${starterCapped.status} ${JSON.stringify(starterCapped.data).slice(0, 160)}`);
+    usageB = raw.prepare('SELECT turns FROM agent_usage WHERE org_id = ? AND month = ?').get(orgB, MONTH);
+    check('quota: blocked Starter turn is NOT metered', !!usageB && usageB.turns === 100, JSON.stringify(usageB || {}));
+
+    // ---- Entitlements payload (deploy #89) ----
+    const statusB = await api(base, 'GET', '/api/billing/status', null, tokB);
+    const entB = statusB.data.entitlements || {};
+    check('entitlements: Starter = RCM + agent, NO AI app, 100 AI uses / 1,000 claims / 3 seats',
+      entB.rcm === true && entB.ai === false && entB.agent === true && entB.aiUsesPerMonth === 100 && entB.claimsPerMonth === 1000 && entB.seats === 3,
+      JSON.stringify(entB));
+    check('entitlements: by-plan table (Pro 2,000; AI plan has no agent; Enterprise unlimited)',
+      !!statusB.data.entitlements_by_plan && statusB.data.entitlements_by_plan.pro.aiUsesPerMonth === 2000
+        && statusB.data.entitlements_by_plan.ai.agent === false && statusB.data.entitlements_by_plan.ai.rcm === false
+        && statusB.data.entitlements_by_plan.enterprise.aiUsesPerMonth === null,
+      JSON.stringify(statusB.data.entitlements_by_plan || {}).slice(0, 200));
+
+    // ---- Brief narrative respects the same cap (deploy #89) ----
+    console.log('— brief at cap —');
+    const sD = await api(base, 'POST', '/api/auth/signup', { orgName: 'P2 Org D', name: 'Dee Owner', email: 'd@p2.test', password: 'Test1234!' });
+    const orgD = raw.prepare("SELECT id FROM orgs WHERE name = 'P2 Org D'").get().id;
+    const payerD = raw.prepare("SELECT id FROM payers WHERE org_id = ? AND name = 'Aetna'").get(orgD).id;
+    raw.prepare("UPDATE orgs SET plan = 'starter' WHERE id = ?").run(orgD);
+    raw.prepare('INSERT INTO agent_usage (org_id, month, turns, input_tokens, output_tokens) VALUES (?, ?, 100, 0, 0)').run(orgD, MONTH);
+    insClaim.run(orgD, 'CLM-9001', 'Pat CLM-9001', payerD, 400, 'CO-50 not medically necessary');
+    const bD = await api(base, 'GET', '/api/agent/brief', null, sD.data.token);
+    check('brief at cap: brief still renders with deterministic sections',
+      bD.status === 200 && !!bD.data.brief && bD.data.brief.while_away.new_denials.count === 1, JSON.stringify(bD.data).slice(0, 200));
+    check('brief at cap: narrative SKIPPED at the AI cap (summary null)',
+      !!bD.data.brief && bD.data.brief.summary === null, String(bD.data.brief && bD.data.brief.summary));
+    const usageD = raw.prepare('SELECT turns FROM agent_usage WHERE org_id = ? AND month = ?').get(orgD, MONTH);
+    check('brief at cap: no narrative turn metered', !!usageD && usageD.turns === 100, JSON.stringify(usageD || {}));
     raw.close();
 
     // ---- Handbook: AI service down -> graceful ----

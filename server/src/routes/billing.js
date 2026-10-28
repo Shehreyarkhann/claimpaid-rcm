@@ -2,6 +2,7 @@ const express = require('express');
 const { db } = require('../db');
 const { authRequired, roleRequired } = require('../auth');
 const { baaSignedForOrg } = require('./legal');
+const { limitsForPlan } = require('../config/planLimits');
 
 const router = express.Router();
 
@@ -97,6 +98,32 @@ function getTrialPeriodDays(org) {
   return Math.max(1, Math.ceil(msLeft / 86400000));
 }
 
+// ---- Entitlements (deploy #89): the plan truth table the dashboard
+// renders from — built ONLY from planLimits (quotas) + productsForPlan
+// (product access), never restated numbers. The agent lives inside the
+// RCM app, so `agent` is true exactly where the RCM product is; the AI
+// plan has no agent because it has no RCM app. null limit = unlimited.
+const ENTITLEMENT_PLANS = ['starter', 'pro', 'ai', 'enterprise'];
+function entitlementsForPlan(plan) {
+  const limits = limitsForPlan(plan);
+  const products = productsForPlan(plan);
+  return {
+    plan: plan || 'trial',
+    price: limits.price,
+    rcm: products.rcm,
+    ai: products.ai,
+    agent: products.rcm,
+    claimsPerMonth: limits.claimsPerMonth,
+    seats: limits.seats,
+    aiUsesPerMonth: limits.aiQueriesPerMonth,
+  };
+}
+function allEntitlements() {
+  const out = {};
+  for (const p of ENTITLEMENT_PLANS) out[p] = entitlementsForPlan(p);
+  return out;
+}
+
 function planFromPriceId(priceId) {
   if (priceId && priceId === process.env.STRIPE_PRICE_STARTER) return 'starter';
   if (priceId && priceId === process.env.STRIPE_PRICE_PRO) return 'pro';
@@ -153,6 +180,10 @@ function billingStatusFor(org) {
     // the server's plans-only backstop — 'plans_only' when nothing is
     // unlocked (trial over or canceled past its window, nothing paid).
     access: products.rcm || products.ai ? 'full' : 'plans_only',
+    // Deploy #89: entitlements for THIS org's plan (as chosen; the /status
+    // handler overrides to enterprise for the super-admin) + the full table.
+    entitlements: entitlementsForPlan(org.plan || 'trial'),
+    entitlements_by_plan: allEntitlements(),
     plans: {
       starter: { name: PLANS.starter.name, amount: PLANS.starter.amount, available: !!PLANS.starter.priceId },
       pro: { name: PLANS.pro.name, amount: PLANS.pro.amount, available: !!PLANS.pro.priceId },
@@ -173,6 +204,7 @@ router.get('/status', authRequired, (req, res) => {
     out.is_trialing = false;
     out.trial_days_left = 0;
     out.products = { rcm: true, ai: true };
+    out.entitlements = entitlementsForPlan('enterprise');
     out.unlimited = true;
   }
   res.json(out);
@@ -181,7 +213,12 @@ router.get('/status', authRequired, (req, res) => {
 // ---- GET /api/billing/usage — plan usage vs limits (powers usage bars + 80% banner) ----
 router.get('/usage', authRequired, (req, res) => {
   const { usageForOrg } = require('../usage');
-  res.json(usageForOrg(req.orgId));
+  const out = usageForOrg(req.orgId);
+  // Deploy #89: the same entitlements payload as /status rides along so
+  // the Billing page renders included / not-included from one source.
+  const org = getOrg(req.orgId);
+  out.entitlements = entitlementsForPlan(req.isSuperAdmin ? 'enterprise' : ((org && org.plan) || 'trial'));
+  res.json(out);
 });
 
 // ---- POST /api/billing/checkout — create a Checkout session (owner only) ----
@@ -606,4 +643,4 @@ async function handleConnectWebhook(req, res) {
   }
 }
 
-module.exports = { billingRoutes: router, handleWebhook, handleConnectWebhook, PLANS, productsForPlan, productsForOrg, getEffectivePlanStatus, getTrialPeriodDays, billingStatusFor };
+module.exports = { billingRoutes: router, handleWebhook, handleConnectWebhook, PLANS, productsForPlan, productsForOrg, getEffectivePlanStatus, getTrialPeriodDays, billingStatusFor, entitlementsForPlan, allEntitlements };
