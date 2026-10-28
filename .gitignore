@@ -11,3 +11,6 @@ dist/
 # produced media assets — kept locally, out of the repo
 landing-snapshots/
 video-training/
+
+# agent document intake uploads (PHI documents — never in the repo)
+server/src/agent-documents/
