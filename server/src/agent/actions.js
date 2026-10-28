@@ -39,6 +39,8 @@ function serializeAction(row) {
       claim_number: payload.claim_number ?? null,
       payer: payload.payer ?? null,
       category: payload.category ?? null,
+      angle_source: payload.angle_source ?? null,
+      angle_stat: payload.angle_stat ?? null,
       subject: payload.subject ?? null,
       codes: Array.isArray(payload.codes) ? payload.codes.map((c) => ({ code: c.code, type: c.type })) : null,
       disposition: payload.disposition ?? null,

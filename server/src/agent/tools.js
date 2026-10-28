@@ -11,7 +11,8 @@
 const { db } = require('../db');
 const { computeWorklist } = require('../worklistCore');
 const { FILING_SELECT, FILING_JOIN } = require('../routes/filing');
-const { generateLetter } = require('../appealLetters');
+const { generateLetter, CATEGORY_LABELS } = require('../appealLetters');
+const predict = require('./predict');
 const { AI_SERVICE_URL, serviceToken, callCodeAssist, sanitizeSuggestions, assessJob } = require('../coding/lib');
 const { scrubClaim: runScrub } = require('../scrub');
 const eligibilityRoute = require('../routes/eligibility');
@@ -65,7 +66,7 @@ const TOOL_DEFS = [
   },
   {
     name: 'draft_appeal',
-    description: 'PROPOSE an appeal letter for a DENIED claim. This creates a pending approval card for the user with the full letter — it does NOT save anything to the claim and never submits or files anything. Only the user can approve it. Use only when the user asks to draft/write an appeal.',
+    description: 'PROPOSE an appeal letter for a DENIED claim. This creates a pending approval card for the user with the full letter — it does NOT save anything to the claim and never submits or files anything. Only the user can approve it. Use only when the user asks to draft/write an appeal. When this workspace\'s decided appeals support a historically best-performing angle for the payer + denial reason, the tool picks it and returns the stat — state it in your reply exactly as given.',
     input_schema: {
       type: 'object',
       properties: {
@@ -279,7 +280,21 @@ function draftAppeal(ctx, input) {
     SELECT * FROM auth_requests WHERE linked_claim_id = ? AND org_id = ?
     ORDER BY created_at DESC LIMIT 1
   `).get(claim.id, ctx.orgId);
-  const letter = generateLetter({ claim, appeal: appealForLetter, org, auth });
+
+  // Winning-argument learning (Phase 4, WS1): when this payer + denial
+  // reason pair has decided history and one angle's own record clears the
+  // sample threshold, argue THAT angle — deterministically chosen here,
+  // from this org's own outcomes; the model only narrates the stat.
+  // Below threshold there is no guidance and no claim.
+  const learned = predict.bestAngle(ctx.orgId, claim.payer_id, claim.denial_reason || null);
+  const letter = generateLetter({
+    claim, appeal: appealForLetter, org, auth,
+    ...(learned ? { category: learned.angle } : {}),
+  });
+  const angleLabel = CATEGORY_LABELS[letter.category] || letter.category;
+  const angleStat = learned
+    ? `Angle: ${angleLabel} — overturns ${Math.round(learned.value * 100)}% here (n=${learned.sampleSize}).`
+    : null;
 
   const action = createAction({
     orgId: ctx.orgId,
@@ -293,16 +308,26 @@ function draftAppeal(ctx, input) {
       category: letter.category,
       subject: letter.subject,
       letter: letter.text,
+      angle_source: learned ? 'learned' : 'default',
+      angle_stat: learned ? { value: learned.value, sampleSize: learned.sampleSize } : null,
     },
-    preview: letter.text,
+    // The learned-angle stat rides at the top of the card preview so the
+    // approver sees WHY this angle was chosen; the letter itself is the
+    // payload the executor saves.
+    preview: angleStat ? `${angleStat}\n\n${letter.text}` : letter.text,
   });
   return {
     output: {
       action_id: action.id,
       claim_number: claim.claim_number,
       category: letter.category_label || letter.category,
+      angle: learned
+        ? { category: letter.category, label: angleLabel, source: 'learned', overturn_rate: learned.value, sample_size: learned.sampleSize, statement: angleStat }
+        : { category: letter.category, label: angleLabel, source: 'default' },
       status: 'pending',
-      note: 'The draft appeal letter is now shown to the user as an approval card. NOTHING has been saved to the claim. It is saved as a draft appeal only if the user approves; it is never submitted to the payer by the system.',
+      note: learned
+        ? `The draft appeal letter is now shown to the user as an approval card. NOTHING has been saved to the claim. The letter argues the ${angleLabel} angle because this workspace's own decided appeals support it — state this in your reply exactly: "${angleStat}" It is saved as a draft appeal only if the user approves; it is never submitted to the payer by the system.`
+        : 'The draft appeal letter is now shown to the user as an approval card. NOTHING has been saved to the claim. It is saved as a draft appeal only if the user approves; it is never submitted to the payer by the system.',
     },
     event: { tool: 'draft_appeal', label: `Drafted appeal · ${claim.claim_number} — awaiting approval` },
     action: serializeAction(action),

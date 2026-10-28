@@ -178,8 +178,17 @@ function listTemplates(orgId) {
   });
 }
 
-function generateLetter({ claim, appeal, org, auth }) {
-  const category = categorizeReason(claim.denial_reason);
+function generateLetter({ claim, appeal, org, auth, category: categoryOverride }) {
+  // The category (the letter's argument angle) defaults to the one derived
+  // from the denial reason. Callers may pass an explicit category — the
+  // agent's winning-argument learning (Phase 4) chooses the historically
+  // best-performing angle for a payer + reason pair when its decided
+  // history clears the sample threshold. Unknown categories fall back to
+  // the derived one, so the override can never produce a template-less
+  // letter.
+  const category = categoryOverride && DEFAULT_TEMPLATES[categoryOverride]
+    ? categoryOverride
+    : categorizeReason(claim.denial_reason);
   const tpl = getTemplate(org.id, category);
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 

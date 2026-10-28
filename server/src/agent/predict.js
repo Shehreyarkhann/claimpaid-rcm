@@ -32,12 +32,55 @@ function packRate(hits, sampleSize, basis) {
   };
 }
 
+// ---- Winning-argument learning (Phase 4, WS1) ----
+// The stats carry the letter category (angle) each decided appeal argued.
+// An angle only earns the right to steer a draft once its OWN decided
+// sample for the pair clears ANGLE_MIN_SAMPLE — below that, no guidance
+// and no claim. Selection is deterministic: highest overturn rate, ties
+// broken by the larger sample.
+const ANGLE_MIN_SAMPLE = 5;
+
+function bestAngle(orgId, payerId, denialReason) {
+  if (payerId == null || !denialReason) return null;
+  const rows = db.prepare(
+    'SELECT angle, appeals, overturned FROM agent_outcome_stats WHERE org_id = ? AND payer_id = ? AND denial_reason = ? AND appeals >= ?'
+  ).all(orgId, payerId, denialReason, ANGLE_MIN_SAMPLE);
+  if (!rows.length) return null;
+  rows.sort((a, b) => (b.overturned / b.appeals) - (a.overturned / a.appeals) || b.appeals - a.appeals);
+  const top = rows[0];
+  return {
+    angle: top.angle,
+    value: Math.round((top.overturned / top.appeals) * 1000) / 1000,
+    sampleSize: top.appeals,
+    overturned: top.overturned,
+  };
+}
+
 // ---- Appeal-overturn likelihood (from WS5's agent_outcome_stats) ----
-// Fallback chain: payer + denial reason -> payer overall -> org overall.
-function appealOverturn(orgId, payerId, denialReason) {
+// Fallback chain: angle-conditioned rate (Phase 4 — the best angle's own
+// record for this pair, once it clears the sample threshold; or an
+// explicitly requested angle) -> payer + denial reason (summed across
+// angles) -> payer overall -> org overall.
+function appealOverturn(orgId, payerId, denialReason, angle = null) {
   if (payerId != null && denialReason) {
+    if (angle) {
+      const row = db.prepare(
+        'SELECT appeals, overturned FROM agent_outcome_stats WHERE org_id = ? AND payer_id = ? AND denial_reason = ? AND angle = ?'
+      ).get(orgId, payerId, denialReason, angle);
+      if (row && row.appeals > 0) {
+        return { ...packRate(row.overturned, row.appeals, 'payer + denial reason + angle'), angle };
+      }
+    } else {
+      const best = bestAngle(orgId, payerId, denialReason);
+      if (best) {
+        return {
+          ...packRate(best.overturned, best.sampleSize, 'payer + denial reason + angle'),
+          angle: best.angle,
+        };
+      }
+    }
     const row = db.prepare(
-      'SELECT appeals, overturned FROM agent_outcome_stats WHERE org_id = ? AND payer_id = ? AND denial_reason = ?'
+      'SELECT COALESCE(SUM(appeals), 0) AS appeals, COALESCE(SUM(overturned), 0) AS overturned FROM agent_outcome_stats WHERE org_id = ? AND payer_id = ? AND denial_reason = ?'
     ).get(orgId, payerId, denialReason);
     if (row && row.appeals > 0) return packRate(row.overturned, row.appeals, 'payer + denial reason');
   }
@@ -216,7 +259,23 @@ function insights(orgId) {
     WHERE org_id = ? AND post_status = 'pending' AND flags IS NOT NULL AND flags != '[]'
   `).get(orgId);
 
+  // Recovered via agent-assisted appeals (Phase 4): dollars actually
+  // collected on claims whose agent-drafted appeal was approved AND
+  // reached an overturned outcome — the same outcome definition
+  // outcomes.js reconciles (appeal won, or claim paid with money in
+  // after the appeal). Counted from paid_amount only: money in the door,
+  // never billed amounts or projections.
+  const recovered = db.prepare(`
+    SELECT COUNT(*) AS n, COALESCE(SUM(c.paid_amount), 0) AS amt
+    FROM agent_actions a
+    JOIN appeals ap ON ap.id = CAST(json_extract(a.result, '$.appeal_id') AS INTEGER)
+    JOIN claims c ON c.id = ap.claim_id
+    WHERE a.org_id = ? AND a.kind = 'draft_appeal' AND a.status = 'executed' AND a.result IS NOT NULL
+      AND (ap.status = 'won' OR (c.status = 'paid' AND c.paid_amount > 0))
+  `).get(orgId);
+
   return {
+    recovered_via_agent_appeals: { amount: round2(recovered.amt), appeals: recovered.n },
     filing_risk_14d: { claims: risk.n, amount: round2(risk.amt) },
     expected_collections_30d: {
       amount: round2(expected),
@@ -232,6 +291,6 @@ function insights(orgId) {
 }
 
 module.exports = {
-  THIN_SAMPLE, labelFor, appealOverturn, payLikelihood, filingRisk,
+  THIN_SAMPLE, ANGLE_MIN_SAMPLE, labelFor, appealOverturn, bestAngle, payLikelihood, filingRisk,
   predictionForClaim, predictionsForClaimIds, insights, cptFamily,
 };

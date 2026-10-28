@@ -898,19 +898,42 @@ function initSchema() {
   // predict.js reads for overturn likelihood. Rebuilt wholesale per org by
   // agent/outcomes.js (idempotent), never pooled across tenants.
   // agent_reconcile_log: once-per-org-per-day guard for that rebuild.
+  // ---- Phase 4: the stats gain the ANGLE dimension (the letter category
+  // the decided appeal argued) so overturn rates exist per
+  // (payer, denial reason, angle) — the winning-argument substrate. The
+  // table is a derived cache rebuilt wholesale by reconciliation, so a
+  // pre-Phase-4 shape is simply dropped and recreated empty; the next
+  // brief-triggered reconciliation repopulates it from the action rows.
+  // agent_digest_log: watchdog digest dedupe — one row per user per
+  // org-local day, written only when a digest is attempted (sent/failed).
+  if (columnExists('agent_outcome_stats', 'org_id') && !columnExists('agent_outcome_stats', 'angle')) {
+    db.exec('DROP TABLE agent_outcome_stats');
+  }
   db.exec(`
     CREATE TABLE IF NOT EXISTS agent_outcome_stats (
       org_id INTEGER NOT NULL REFERENCES orgs(id),
       payer_id INTEGER,
       denial_reason TEXT NOT NULL DEFAULT '',
+      angle TEXT NOT NULL DEFAULT '',
       appeals INTEGER NOT NULL DEFAULT 0,
       overturned INTEGER NOT NULL DEFAULT 0,
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-      PRIMARY KEY (org_id, payer_id, denial_reason)
+      PRIMARY KEY (org_id, payer_id, denial_reason, angle)
     );
     CREATE TABLE IF NOT EXISTS agent_reconcile_log (
       org_id INTEGER PRIMARY KEY REFERENCES orgs(id),
       last_run_date TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS agent_digest_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      digest_date TEXT NOT NULL,
+      items_count INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'sent',
+      error TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(org_id, user_id, digest_date)
     );
   `);
   if (!columnExists('claims', 'patient_paid_amount')) db.exec('ALTER TABLE claims ADD COLUMN patient_paid_amount REAL NOT NULL DEFAULT 0');
