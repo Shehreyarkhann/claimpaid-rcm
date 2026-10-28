@@ -84,11 +84,23 @@ const mocks = [
     expected_collections_30d: { amount: 8200, claims_with_estimate: 9, open_claims: 12, sample_size: 4, label: 'early estimate', note: "Open A/R balances weighted by each payer's historical paid-rate in this workspace. An estimate, not a guarantee." },
     denial_trend_watch: [{ payer: 'Aetna', current_rate: 0.31, prior_rate: 0.18, delta_points: 13, sample_size: 16, label: 'established' }],
     exception_backlog: { count: 6, amount: 675 },
+    recovered_via_agent_appeals: { amount: 4825, appeals: 3 },
+  }],
+  // Phase 4: watchdog alerts strip on the Agent page.
+  ['/api/agent/alerts', {
+    items: {
+      pending_approvals: { count: 1, highlights: ['Draft appeal — claim CLM-1002'] },
+      followups_overdue: { count: 0, highlights: [] },
+      filing_risk: { count: 1, amount: 410, highlights: ['CLM-1013 — 10 days left'] },
+      era_exceptions: { count: 0, amount: 0 },
+      total: 2,
+    },
   }],
   ['/api/agent/claims/5/analysis', {
     claim: { id: 5, claim_number: 'CLM-9001', patient_name: 'Pat Smoke', payer: 'Aetna', status: 'denied', billed_amount: 900, paid_amount: 0, denial_reason: 'CO-50' },
     filing_risk: { filing_deadline: '2026-11-07', days_left: 9, filing_days: 90, state: 'critical' },
-    appeal_overturn: { value: 0.75, sampleSize: 4, basis: 'payer + denial reason', label: 'early estimate' },
+    appeal_overturn: { value: 0.75, sampleSize: 4, basis: 'payer + denial reason', label: 'early estimate', angle: 'medical_necessity' },
+    angle: { angle: 'medical_necessity', label: 'Medical necessity', value: 0.833, sampleSize: 6 },
     pay_likelihood: null,
     era_exceptions: [],
     scrub: { score: 92, status: 'warnings', band: 'ready', band_label: 'Ready to submit', errors: 0, warnings: 1 },
@@ -126,8 +138,23 @@ const mocks = [
   ['/api/worklist', { items: [], summary: { total: 0, totalAtStake: 0 } }],
 ];
 let disabledMode = false;
-const fakeFetch = (url) => {
+const fakeFetch = (url, options) => {
   const u = String(url);
+  // Phase 4 wizard engine: the response depends on which tool was run.
+  if (!disabledMode && u.includes('/api/agent/tools/run')) {
+    let tool = '';
+    try { tool = JSON.parse((options && options.body) || '{}').tool; } catch { /* keep default */ }
+    const out = tool === 'check_eligibility'
+      ? { tool, is_error: false, output: { claim_id: 5, claim_number: 'CLM-9001', mode: 'live', vendor: 'rest', coverage_active: true, plan_name: 'Stub PPO Gold', checks: [], lookup_id: 9 }, event: null, action: null }
+      : { tool, is_error: false, output: { score: 92, status: 'warnings', errors: [], warnings: [{ id: 'NPI-001', severity: 'warning', name: 'Missing rendering NPI', fix: 'Add the rendering provider NPI.' }], run_id: 5 }, event: { tool, label: 'Scrubbed claim' }, action: null };
+    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(out) });
+  }
+  if (!disabledMode && u.includes('/api/agent/actions/propose')) {
+    return Promise.resolve({
+      ok: true, status: 201,
+      json: () => Promise.resolve({ action: { id: 31, kind: 'draft_appeal', status: 'pending', title: 'Draft appeal — claim CLM-9001', preview: 'Dear Aetna — appeal letter.', payload: { claim_id: 5, claim_number: 'CLM-9001', category: 'medical_necessity', angle_source: 'learned', angle_stat: { value: 0.833, sampleSize: 6 } }, result: null, created_at: '2026-10-28 12:05:00', decided_at: null, executed_at: null } }),
+    });
+  }
   if (disabledMode && u.includes('/api/agent/')) {
     return Promise.resolve({
       ok: false, status: 403,
@@ -181,6 +208,15 @@ async function render({ loggedIn }) {
 
 (async () => {
   try {
+    // Phase 4 motion pack: the built CSS must carry the stamp keyframes
+    // behind the reduced-motion guard.
+    const assetsDir = path.join(distDir, 'assets');
+    const cssAll = fs.readdirSync(assetsDir).filter((f) => f.endsWith('.css'))
+      .map((f) => fs.readFileSync(path.join(assetsDir, f), 'utf8')).join('\n');
+    if (!cssAll.includes('prefers-reduced-motion')) fail('built CSS missing the prefers-reduced-motion guard');
+    if (!cssAll.includes('cp-stamp-in')) fail('built CSS missing the stamp-in keyframes');
+    console.log('  PASS motion pack present in built CSS (stamp keyframes behind prefers-reduced-motion)');
+
     // Logged-out: login page must render.
     const out = await render({ loggedIn: false });
     await until(() => out.dom.window.document.getElementById('root').childElementCount > 0, 9000, 'logged-out render');
@@ -197,6 +233,7 @@ async function render({ loggedIn }) {
     const dashTab = await until(() => [...doc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Dashboard'), 9000, 'Dashboard sidebar tab');
     dashTab.dispatchEvent(new app.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
     await until(() => doc.body.textContent.includes('Agent insights'), 9000, 'dashboard agent insights card');
+    await until(() => doc.body.textContent.includes('$4,825'), 9000, 'recovered count-up settle');
     const dashText = doc.body.textContent;
     if (!dashText.includes('At filing risk')) fail('insights card filing-risk tile missing');
     if (!dashText.includes('$12,400')) fail('insights card filing-risk amount missing');
@@ -204,7 +241,10 @@ async function render({ loggedIn }) {
     if (!dashText.includes('early estimate')) fail('insights card thin-data label missing');
     if (!dashText.includes('ERA exceptions open')) fail('insights card exception backlog tile missing');
     if (!dashText.includes('Aetna')) fail('insights card denial-watch payer missing');
-    console.log('  PASS Dashboard agent insights card renders (risk + expected + watch + backlog, thin-data labeled)');
+    if (!dashText.includes('Recovered via agent-assisted appeals')) fail('insights card recovered band missing (Phase 4)');
+    if (!dashText.includes('$4,825')) fail('insights card recovered amount missing (Phase 4)');
+    if (!dashText.includes('3 overturned appeals')) fail('insights card recovered appeal count missing (Phase 4)');
+    console.log('  PASS Dashboard agent insights card renders (recovered band + risk + expected + watch + backlog, thin-data labeled)');
 
     // Claims (Phase 3): open the claim modal — the Agent analysis panel
     // renders predictions + a spawnable recommendation.
@@ -221,6 +261,43 @@ async function render({ loggedIn }) {
     if (!panelText.includes('Draft an appeal for this denial')) fail('claim panel recommendation missing');
     if (!panelText.includes('Create draft')) fail('claim panel spawn button missing');
     console.log('  PASS Claim agent analysis panel renders (predictions + scrub + spawnable recommendation)');
+
+    // Denial Rescue wizard (Phase 4): launched from the claim modal,
+    // walks all five steps against the mocked tools/run + propose
+    // endpoints, and finishes on the stamp completion screen.
+    const clickBtn = async (label, match = 'exact') => {
+      const btn = await until(() => [...doc.querySelectorAll('button')].find((b) => (match === 'exact' ? b.textContent.trim() === label : b.textContent.includes(label))), 9000, `button "${label}"`);
+      btn.dispatchEvent(new app.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+      return btn;
+    };
+    await clickBtn('Rescue', 'includes');
+    await until(() => doc.body.textContent.includes('Denial Rescue') && doc.body.textContent.includes('Claim snapshot'), 9000, 'wizard step 1');
+    if (!doc.body.textContent.includes('Appeal overturn')) fail('wizard snapshot prediction missing');
+    await clickBtn('Continue →');
+    await until(() => doc.body.textContent.includes('Eligibility — was coverage'), 9000, 'wizard step 2');
+    await clickBtn('Run eligibility check', 'includes');
+    await until(() => doc.body.textContent.includes('Coverage active'), 9000, 'wizard eligibility result');
+    if (!doc.body.textContent.includes('Live · rest')) fail('wizard eligibility mode label missing');
+    await clickBtn('Continue →');
+    await until(() => doc.body.textContent.includes('Scrub — what would bounce'), 9000, 'wizard step 3');
+    await until(() => doc.body.textContent.includes('Missing rendering NPI'), 9000, 'wizard scrub findings');
+    await clickBtn('Continue →');
+    await until(() => doc.body.textContent.includes('Appeal draft — proposed'), 9000, 'wizard step 4');
+    if (!doc.body.textContent.includes('The draft will argue the')) fail('wizard best-angle line missing');
+    if (!doc.body.textContent.includes('medical necessity')) fail('wizard best-angle name missing');
+    await clickBtn('Create appeal draft', 'includes');
+    await until(() => doc.body.textContent.includes('Draft created'), 9000, 'wizard draft created state');
+    if (!doc.body.textContent.includes('Angle: medical necessity — overturns 83% here (n=6).')) fail('wizard learned-angle stat missing on the created draft');
+    await clickBtn('Continue →');
+    await until(() => doc.body.textContent.includes('Submission checklist'), 9000, 'wizard step 5');
+    if (!doc.body.textContent.includes('Submit via your clearinghouse')) fail('wizard honest manual-submission step missing');
+    await clickBtn('Finish', 'includes');
+    await until(() => doc.body.textContent.includes('Rescue pass complete'), 9000, 'wizard completion screen');
+    if (!doc.querySelector('.motion-stamp')) fail('wizard completion stamp element (motion-stamp class) missing');
+    console.log('  PASS Denial Rescue wizard walks all five steps to the stamped completion screen');
+    await clickBtn('Done');
+    await sleep(300);
+
     const cancelBtn = [...doc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Cancel');
     if (cancelBtn) cancelBtn.dispatchEvent(new app.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
     await sleep(300);
@@ -243,6 +320,12 @@ async function render({ loggedIn }) {
     if (!briefText.includes('Drafts ready for your approval')) fail('brief drafts header missing');
     if (!briefText.includes('Draft appeal — claim CLM-1002')) fail('brief approval card missing');
     console.log('  PASS morning brief renders (narrative + tiles + plan + inline approval card)');
+
+    // Watchdog alerts strip (Phase 4): today's computed items above the brief.
+    await until(() => doc.body.textContent.includes('Needs attention'), 9000, 'watchdog alerts strip');
+    if (!doc.body.textContent.includes('1 approval waiting')) fail('alerts strip approvals part missing');
+    if (!doc.body.textContent.includes('$410 at filing risk')) fail('alerts strip filing-risk part missing');
+    console.log('  PASS watchdog alerts strip renders (approvals + filing risk)');
 
     await until(() => doc.body.textContent.includes('What is on my worklist?'), 9000, 'conversation list');
     const convoBtn = [...doc.querySelectorAll('button')].find((b) => b.textContent.includes('What is on my worklist?'));
