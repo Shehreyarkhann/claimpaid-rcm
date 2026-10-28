@@ -62,8 +62,24 @@ function ActionCard({ action, busy, onDecide }) {
   const kind = KIND_META[action.kind] || KIND_META.draft_appeal;
   const decided = action.status !== 'pending';
   const executedNote = action.status === 'executed' ? kind.executedNote(action) : null;
+  // Phase 4 feel: when THIS card flips pending -> executed in front of
+  // the user, the paid stamp slams on (motion.css, reduced-motion safe).
+  const prevStatus = useRef(action.status);
+  const [stamping, setStamping] = useState(false);
+  useEffect(() => {
+    if (prevStatus.current === 'pending' && action.status === 'executed') {
+      setStamping(true);
+      const t = setTimeout(() => setStamping(false), 1700);
+      return () => clearTimeout(t);
+    }
+    prevStatus.current = action.status;
+  }, [action.status]);
   return (
-    <div className={`rounded-2xl border p-4 ${action.status === 'pending' ? 'border-amber-300 bg-amber-50/70' : 'border-stone-200 bg-[#FFFDF8]'}`}>
+    <div className={`relative rounded-2xl border p-4 ${action.status === 'pending' ? 'border-amber-300 bg-amber-50/70' : 'border-stone-200 bg-[#FFFDF8]'}`}>
+      {stamping && (
+        <img src="/app/claimpaid-icon.webp" alt="" aria-hidden="true"
+          className="motion-stamp absolute right-4 top-3 w-16 h-16 pointer-events-none drop-shadow-lg z-10" />
+      )}
       <div className="flex flex-wrap items-center gap-2 mb-2">
         <span className="text-sm font-bold text-stone-900">{action.title}</span>
         <span className={`badge ${meta.pill}`}>{meta.label}</span>
@@ -117,11 +133,22 @@ function BriefSection({ brief, actions, decidingId, onDecide }) {
       return new Date(`${brief.brief_date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
     } catch { return brief.brief_date; }
   })();
+  // Queue clear (Phase 4): the brief proposed drafts and none are left
+  // pending — the server only returns pending cards, so an empty list
+  // alongside non-empty proposed ids means every one was decided.
+  const proposedIds = brief.proposed_draft_action_ids || [];
+  const queueClear = proposedIds.length > 0 && !actions.some((a) => a.status === 'pending');
   return (
     <div className="card p-5 mb-5">
       <div className="flex items-baseline gap-3 flex-wrap">
         <div className="font-display font-semibold text-stone-900 text-lg">Morning brief</div>
         <div className="text-xs text-stone-400">{dateLabel} · while you were away</div>
+        {queueClear && (
+          <span className="ml-auto inline-flex items-center gap-2 text-emerald-700 font-semibold text-sm">
+            <img src="/app/claimpaid-icon.webp" alt="" aria-hidden="true" className="motion-stamp w-8 h-8" />
+            Queue clear
+          </span>
+        )}
       </div>
       {brief.summary && <p className="mt-2 text-sm leading-relaxed text-stone-700">{brief.summary}</p>}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
@@ -137,8 +164,8 @@ function BriefSection({ brief, actions, decidingId, onDecide }) {
         <div className="mt-4">
           <div className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-2">Today's plan</div>
           <ol className="space-y-1.5">
-            {brief.plan.map((p) => (
-              <li key={p.key || p.rank} className="flex items-baseline gap-2.5 text-sm">
+            {brief.plan.map((p, i) => (
+              <li key={p.key || p.rank} className="motion-fade-slide flex items-baseline gap-2.5 text-sm" style={{ animationDelay: `${Math.min(i * 60, 480)}ms` }}>
                 <span className="font-display font-semibold text-emerald-700 w-5 shrink-0">{p.rank}.</span>
                 <span className="min-w-0">
                   <span className="font-medium text-stone-800">{p.title}</span>
@@ -170,6 +197,7 @@ export default function Agent() {
   const [loading, setLoading] = useState(true);
   const [brief, setBrief] = useState(null);
   const [briefActions, setBriefActions] = useState([]);
+  const [alerts, setAlerts] = useState(null);
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -213,6 +241,17 @@ export default function Agent() {
       } catch (e) {
         if (e.code === 'AGENT_DISABLED') setDisabled(true);
       }
+    })();
+  }, []);
+
+  // Watchdog alerts strip (Phase 4): the same items the morning digest
+  // email carries, computed for this user. Silent on any failure.
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await api.agent.alerts();
+        setAlerts(r.items || null);
+      } catch { /* strip just stays hidden */ }
     })();
   }, []);
 
@@ -326,6 +365,15 @@ export default function Agent() {
         subtitle="Reads your queue, drafts the work, and never saves anything without your approval."
         actions={<button className="btn btn-dark" onClick={newChat}>+ New chat</button>}
       />
+      {alerts && alerts.total > 0 && (
+        <div className="motion-fade-slide mb-5 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-amber-300 bg-amber-50/80 px-4 py-3 text-sm text-amber-900">
+          <span className="font-semibold">⚡ Needs attention</span>
+          {alerts.pending_approvals.count > 0 && <span>{alerts.pending_approvals.count} approval{alerts.pending_approvals.count === 1 ? '' : 's'} waiting on you</span>}
+          {alerts.filing_risk.count > 0 && <span>${Number(alerts.filing_risk.amount).toLocaleString()} at filing risk ({alerts.filing_risk.count} claim{alerts.filing_risk.count === 1 ? '' : 's'})</span>}
+          {alerts.followups_overdue.count > 0 && <span>{alerts.followups_overdue.count} follow-up{alerts.followups_overdue.count === 1 ? '' : 's'} overdue</span>}
+          {alerts.era_exceptions.count > 0 && <span>{alerts.era_exceptions.count} ERA exception{alerts.era_exceptions.count === 1 ? '' : 's'} on hold</span>}
+        </div>
+      )}
       {brief && <BriefSection brief={brief} actions={briefActions} decidingId={decidingId} onDecide={decideBrief} />}
       <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)] items-start">
         {/* Conversation list */}
@@ -378,7 +426,11 @@ export default function Agent() {
             ))}
             {sending && (
               <div className="flex justify-start">
-                <div className="bg-stone-50 border border-stone-200 rounded-2xl rounded-bl-md px-4 py-3 text-sm text-stone-400">Working on it…</div>
+                <div className="bg-stone-50 border border-stone-200 rounded-2xl rounded-bl-md px-4 py-3 text-sm text-stone-400">
+                  <span className="motion-chip-pulse inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 px-2.5 py-1 text-xs font-medium">
+                    <span className="text-emerald-600">{TOOL_ICON}</span>Working on it…
+                  </span>
+                </div>
               </div>
             )}
           </div>

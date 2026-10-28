@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api, fmtMoney } from '../api';
 
 // Agent insights card (Phase 3) — renders /api/agent/insights: filing-risk
@@ -7,6 +7,37 @@ import { api, fmtMoney } from '../api';
 // the prediction service; thin samples carry their "early estimate" label
 // rather than dressing up as precision. When the agent is disabled the
 // endpoint answers AGENT_DISABLED and this card renders NOTHING at all.
+//
+// Phase 4: the recovered band leads the card — dollars actually collected
+// on claims whose agent-drafted appeal was approved and overturned,
+// counted up on first render (settled instantly for reduced motion).
+
+// Tiny rAF count-up (no library). Reduced-motion users — and jsdom-like
+// environments without rAF — get the final figure immediately.
+function useCountUp(target, duration = 850) {
+  const [value, setValue] = useState(0);
+  const rafRef = useRef(null);
+  useEffect(() => {
+    const end = Number(target) || 0;
+    if (!end || typeof requestAnimationFrame !== 'function'
+      || (typeof window !== 'undefined' && window.matchMedia
+        && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+      setValue(end);
+      return undefined;
+    }
+    const start = performance.now();
+    const tick = (t) => {
+      const p = Math.min(1, (t - start) / duration);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setValue(Math.round(end * eased * 100) / 100);
+      if (p < 1) rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [target, duration]);
+  return value;
+}
+
 export default function AgentInsights() {
   const [data, setData] = useState(null);
   const [hidden, setHidden] = useState(false);
@@ -19,8 +50,11 @@ export default function AgentInsights() {
     return () => { live = false; };
   }, []);
 
+  const recoveredAmount = useCountUp(data?.recovered_via_agent_appeals?.amount || 0);
+
   if (hidden || !data) return null;
 
+  const recovered = data.recovered_via_agent_appeals || { amount: 0, appeals: 0 };
   const risk = data.filing_risk_14d || { claims: 0, amount: 0 };
   const expected = data.expected_collections_30d || { amount: 0, claims_with_estimate: 0, open_claims: 0, label: 'no data yet', note: '' };
   const watch = data.denial_trend_watch || [];
@@ -32,6 +66,15 @@ export default function AgentInsights() {
         <span className="text-xl">🤖</span>
         <h3 className="font-display font-semibold text-stone-900 text-lg">Agent insights</h3>
         <span className="text-xs text-stone-400">Predictions from this workspace's own decided claims and remittances</span>
+      </div>
+      <div className="rounded-xl bg-emerald-700 px-4 py-3.5 mb-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <span className="motion-count-up font-display text-2xl font-semibold text-white">{fmtMoney(recoveredAmount)}</span>
+        <span className="text-sm font-medium text-emerald-50">Recovered via agent-assisted appeals</span>
+        <span className="text-xs text-emerald-200">
+          {recovered.appeals > 0
+            ? `${recovered.appeals} overturned appeal${recovered.appeals === 1 ? '' : 's'} drafted by the agent and approved by a person — dollars collected, not billed`
+            : 'No agent-assisted recoveries yet — the first approved draft that overturns starts the count'}
+        </span>
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="rounded-xl bg-[#FAF5EB] ring-1 ring-stone-200/70 px-3.5 py-3">
