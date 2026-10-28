@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, fmtMoney2 } from '../api';
 import { PageHeader, Skeleton, EmptyState } from '../components/ui';
 import { useToast } from '../components/ui';
+import RescueWizard from '../components/RescueWizard';
 
 const TYPE_META = {
   followup: { icon: '⏰', label: 'Follow-up', color: 'border-l-amber-400', bg: 'bg-amber-50' },
@@ -15,6 +16,7 @@ export default function MyWork({ onOpenAppeal, onOpenClaim, onStartAppeal }) {
   const [data, setData] = useState(null);
   const [scope, setScope] = useState('all');
   const [doneKeys, setDoneKeys] = useState(new Set());
+  const [rescueClaimId, setRescueClaimId] = useState(null);
 
   const load = () => api.worklist(scope).then(setData).catch((e) => toast.error(e.message));
   useEffect(() => { load(); }, [scope]);
@@ -109,6 +111,11 @@ export default function MyWork({ onOpenAppeal, onOpenClaim, onStartAppeal }) {
                     <button onClick={() => handleAction(item)} className="btn btn-primary !py-2 !text-[13px]">
                       {item.action.label} →
                     </button>
+                    {item.type === 'denial' && item.claim_id && (
+                      <button onClick={() => setRescueClaimId(item.claim_id)} className="btn btn-dark !py-1.5 !text-xs">
+                        🛟 Rescue
+                      </button>
+                    )}
                     <button onClick={() => markDone(item)} className="btn btn-ghost !py-1.5 !text-xs">
                       ✓ Mark worked
                     </button>
@@ -124,6 +131,9 @@ export default function MyWork({ onOpenAppeal, onOpenClaim, onStartAppeal }) {
             </div>
           )}
         </>
+      )}
+      {rescueClaimId && (
+        <RescueWizard claimId={rescueClaimId} onClose={() => setRescueClaimId(null)} />
       )}
     </div>
   );

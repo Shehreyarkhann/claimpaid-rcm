@@ -5,6 +5,7 @@ import { Modal, EmptyState, PageHeader, Skeleton, confirmDialog } from '../compo
 import { useToast } from '../components/ui';
 import { useOrgSettings } from '../orgSettings';
 import CodingAssistant from '../components/CodingAssistant';
+import RescueWizard from '../components/RescueWizard';
 
 const STATUS_META = {
   paid: { label: 'Paid', badge: 'badge-green' },
@@ -134,6 +135,7 @@ function AgentClaimPanel({ claimId }) {
 
 function ClaimModal({ claim, payers, onClose, onSaved, onCheckEligibility }) {
   const [showCoding, setShowCoding] = useState(false);
+  const [showRescue, setShowRescue] = useState(false);
   const toast = useToast();
   const [form, setForm] = useState(claim ? {
     claim_number: claim.claim_number, patient_name: claim.patient_name, payer: claim.payer,
@@ -216,8 +218,11 @@ function ClaimModal({ claim, payers, onClose, onSaved, onCheckEligibility }) {
         </div>
         {claim && <AgentClaimPanel claimId={claim.id} />}
         <div className="mt-6 flex justify-end gap-2">
+          {claim && claim.status === 'denied' && (
+            <button onClick={() => setShowRescue(true)} className="btn btn-dark mr-auto">🛟 Rescue</button>
+          )}
           {claim && onCheckEligibility && (
-            <button onClick={() => onCheckEligibility(claim)} className="btn btn-outline mr-auto">⚡ Check eligibility</button>
+            <button onClick={() => onCheckEligibility(claim)} className={`btn btn-outline ${claim.status === 'denied' ? '' : 'mr-auto'}`}>⚡ Check eligibility</button>
           )}
           <button onClick={onClose} className="btn btn-ghost">Cancel</button>
           <button onClick={save} disabled={saving} className="btn btn-primary">{saving ? 'Saving…' : claim ? 'Save changes' : 'Add claim'}</button>
@@ -253,6 +258,9 @@ function ClaimModal({ claim, payers, onClose, onSaved, onCheckEligibility }) {
           }
         }}
       />
+    )}
+    {showRescue && claim && (
+      <RescueWizard claimId={claim.id} onClose={() => setShowRescue(false)} />
     )}
     </>
   );
