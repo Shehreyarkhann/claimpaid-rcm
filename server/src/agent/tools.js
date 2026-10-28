@@ -12,7 +12,10 @@ const { db } = require('../db');
 const { computeWorklist } = require('../worklistCore');
 const { FILING_SELECT, FILING_JOIN } = require('../routes/filing');
 const { generateLetter } = require('../appealLetters');
-const { AI_SERVICE_URL, serviceToken } = require('../coding/lib');
+const { AI_SERVICE_URL, serviceToken, callCodeAssist, sanitizeSuggestions, assessJob } = require('../coding/lib');
+const { scrubClaim: runScrub } = require('../scrub');
+const eligibilityRoute = require('../routes/eligibility');
+const { listExceptions, buildResolveAction } = require('./eraResolve');
 const { createAction, serializeAction } = require('./actions');
 
 const TOOL_DEFS = [
@@ -69,6 +72,56 @@ const TOOL_DEFS = [
         claim_id: { type: 'integer', description: 'Internal claim id, if known.' },
         claim_number: { type: 'string', description: 'Payer-facing claim number.' },
       },
+    },
+  },
+  {
+    name: 'check_eligibility',
+    description: "Run a REAL eligibility check for a claim's patient/payer through the workspace's configured vendor (the same check the Eligibility tab runs; it is stored in Eligibility history). Returns coverage status, plan details, and any payer AAA rejection in plain terms. The result states its vendor MODE — a test-mode result is NOT a live payer answer and must be relayed as such.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        claim_id: { type: 'integer', description: 'Internal claim id, if known.' },
+        claim_number: { type: 'string', description: 'Payer-facing claim number.' },
+      },
+    },
+  },
+  {
+    name: 'scrub_claim',
+    description: 'Run the deterministic pre-bill scrubber on a claim. Returns the readiness score and every finding grouped by severity (errors, then warnings) with the fix for each. Read-only — it changes nothing.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        claim_id: { type: 'integer', description: 'Internal claim id, if known.' },
+        claim_number: { type: 'string', description: 'Payer-facing claim number.' },
+      },
+    },
+  },
+  {
+    name: 'suggest_codes',
+    description: "Run the quote-verified coding engine on a claim's documentation and report its verdicts EXACTLY (Valid / Review / Abstain) — never soften an abstention. When Valid codes exist, this also creates a pending apply_codes approval card carrying ONLY the Valid codes; nothing is applied to the claim unless the user approves it. Documentation comes from the note passed here, the EHR encounter that created the claim, or the claim's last coding run.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        claim_id: { type: 'integer', description: 'Internal claim id, if known.' },
+        claim_number: { type: 'string', description: 'Payer-facing claim number.' },
+        note: { type: 'string', description: 'Clinical documentation to code from, if the user pasted it. Optional.' },
+      },
+    },
+  },
+  {
+    name: 'era_exceptions',
+    description: 'List the current ERA exceptions (pending remittance lines that did not auto-post) with claim, payer, amounts, the remittance CAS adjustments, and a deterministic recommended disposition for each, with the arithmetic shown.',
+    input_schema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'resolve_exception',
+    description: 'PROPOSE resolving one ERA exception with its recommended disposition. This creates a pending approval card — nothing posts, moves, or is ignored unless the user approves it. Get the era_line_id from era_exceptions first. Use only when the user asks to resolve an exception.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        era_line_id: { type: 'integer', description: 'ERA claim line id from era_exceptions.' },
+      },
+      required: ['era_line_id'],
     },
   },
 ];
@@ -307,12 +360,323 @@ async function searchHandbook(ctx, input) {
   }
 }
 
+// ---- Eligibility (Phase 3, WS1) ----
+// Runs the EXISTING vendor layer through the eligibility route module's
+// shared runner, so the check is stored in eligibility_lookups exactly
+// like a check run from the Eligibility tab. The vendor MODE (test vs
+// live) is surfaced in both the output and the chip — a test-mode result
+// is never presented as a live payer answer.
+const AAA_GLOSS = {
+  42: 'The payer could not respond right now — retry later.',
+  52: 'The service date falls outside the provider\'s plan enrollment.',
+  58: 'The date of birth sent was invalid or missing.',
+  67: 'The payer has no patient matching what was sent.',
+  71: 'The date of birth does not match the payer\'s records for this patient.',
+  72: 'The member/subscriber ID sent was invalid or missing.',
+  75: 'The subscriber is not in the group/plan identified.',
+  76: 'The subscriber ID matches more than one record at the payer.',
+  77: 'The subscriber was found, but the patient was not.',
+  78: 'The subscriber/insured is not in the payer\'s database.',
+};
+
+async function checkEligibility(ctx, input) {
+  const claim = resolveClaim(ctx.orgId, input || {});
+  const baseLabel = 'Checked eligibility';
+  if (!claim) {
+    return {
+      output: { error: 'Claim not found in this workspace. Use get_worklist to find the claim first, or ask for the exact claim number.' },
+      isError: true,
+      event: { tool: 'check_eligibility', label: `${baseLabel} — claim not found` },
+    };
+  }
+  const label = `${baseLabel} · ${claim.claim_number}`;
+  const parts = String(claim.patient_name || '').trim().split(/\s+/).filter(Boolean);
+  const missing = [];
+  if (!claim.patient_dob) missing.push('patient date of birth');
+  if (!claim.member_id) missing.push('member ID');
+  if (!claim.payer) missing.push('payer');
+  if (parts.length < 2) missing.push('patient first and last name');
+  if (missing.length) {
+    return {
+      output: { error: `Claim ${claim.claim_number} is missing ${missing.join(', ')} — add it to the claim before an eligibility check can run. Nothing was checked.` },
+      isError: true,
+      event: { tool: 'check_eligibility', label: `${label} — missing identifiers` },
+    };
+  }
+  try {
+    const { lookup, result, cfg } = await eligibilityRoute.runOrgEligibilityCheck(ctx.orgId, ctx.user.id, {
+      patient_first: parts[0],
+      patient_last: parts.slice(1).join(' '),
+      dob: claim.patient_dob,
+      member_id: claim.member_id,
+      payer: claim.payer,
+      date_of_service: claim.service_date,
+    });
+    const mode = eligibilityRoute.eligibilityMode(cfg, result);
+    const aaa = ((result.raw_response && result.raw_response.aaa_errors) || []).map((e) => ({
+      code: e.code,
+      description: e.description || null,
+      plain_terms: AAA_GLOSS[String(e.code)] || e.description || 'The payer rejected the inquiry — see the description.',
+      followup_action: e.followup_action || null,
+    }));
+    return {
+      output: {
+        claim_id: claim.id,
+        claim_number: claim.claim_number,
+        lookup_id: lookup.id,
+        vendor: cfg.vendor,
+        mode,
+        coverage_active: !!result.coverage_active,
+        plan_name: result.plan_name || null,
+        plan_type: result.plan_type || null,
+        group_number: result.group_number || null,
+        copay_primary: result.copay_primary ?? null,
+        copay_specialist: result.copay_specialist ?? null,
+        deductible_individual: result.deductible_individual ?? null,
+        deductible_remaining: result.deductible_remaining ?? null,
+        oop_max: result.oop_max ?? null,
+        effective_date: result.effective_date || null,
+        term_date: result.term_date || null,
+        aaa_errors: aaa,
+        note: mode === 'live'
+          ? 'Live payer response via the configured vendor. The check is stored in Eligibility history.'
+          : `This check ran in ${mode.toUpperCase()} mode — it is NOT a live payer answer. You must tell the user it was a ${mode}-mode check.`,
+      },
+      event: {
+        tool: 'check_eligibility',
+        label: `${label} · ${result.coverage_active ? 'coverage active' : 'coverage not active'}${mode !== 'live' ? ` · ${mode} mode` : ''}`,
+      },
+    };
+  } catch (e) {
+    return {
+      output: { error: `Eligibility check could not run for claim ${claim.claim_number}: ${e.message}` },
+      isError: true,
+      event: { tool: 'check_eligibility', label: `${label} — could not run` },
+    };
+  }
+}
+
+// ---- Scrub (Phase 3, WS1): the existing deterministic scrubber, verbatim ----
+function scrubClaimTool(ctx, input) {
+  const claim = resolveClaim(ctx.orgId, input || {});
+  if (!claim) {
+    return {
+      output: { error: 'Claim not found in this workspace — nothing was scrubbed.' },
+      isError: true,
+      event: { tool: 'scrub_claim', label: 'Scrubbed claim — not found' },
+    };
+  }
+  const result = runScrub(claim);
+  const group = (sev) => result.issues
+    .filter((i) => i.severity === sev)
+    .map((i) => ({ rule: i.rule, name: i.name, fix: i.message }));
+  return {
+    output: {
+      claim_id: claim.id,
+      claim_number: claim.claim_number,
+      status: result.status,
+      score: result.score,
+      band: result.band,
+      band_label: result.band_label,
+      errors: group('error'),
+      warnings: group('warning'),
+      note: 'Findings are the deterministic scrubber\'s, exactly as the Scrub tab reports them. Each finding\'s "fix" is what to correct.',
+    },
+    event: { tool: 'scrub_claim', label: `Scrubbed claim · ${claim.claim_number} · score ${result.score} · ${result.errors} errors, ${result.warnings} warnings` },
+  };
+}
+
+// ---- Coding (Phase 3, WS1): the quote-verified engine, verdicts verbatim ----
+function buildEncounterNote(enc) {
+  const parseCodes = (s) => { try { const v = JSON.parse(s || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
+  const cpts = parseCodes(enc.cpt_codes);
+  const icds = parseCodes(enc.icd_codes);
+  const lines = [
+    `Patient: ${enc.patient_first || ''} ${enc.patient_last || ''}`.trim(),
+    enc.patient_dob ? `DOB: ${enc.patient_dob}` : null,
+    enc.date_of_service ? `Date of service: ${enc.date_of_service}` : null,
+    enc.payer_name ? `Payer: ${enc.payer_name}` : null,
+    enc.rendering_provider ? `Rendering provider: ${enc.rendering_provider}` : null,
+    cpts.length ? `EHR procedure codes: ${cpts.join(', ')}` : null,
+    icds.length ? `EHR diagnosis codes: ${icds.join(', ')}` : null,
+  ].filter(Boolean);
+  let raw = '';
+  try {
+    const payload = typeof enc.raw_payload === 'string' ? JSON.parse(enc.raw_payload) : enc.raw_payload;
+    raw = JSON.stringify(payload, null, 1).slice(0, 4000);
+  } catch { raw = String(enc.raw_payload || '').slice(0, 4000); }
+  if (raw) lines.push(`EHR encounter detail:\n${raw}`);
+  return lines.join('\n');
+}
+
+function codesPreview(claim, assessed, validCodes) {
+  const lines = [
+    `Code suggestions for claim ${claim.claim_number} — verdicts from the quote-verified coding engine:`,
+    '',
+    ...assessed.suggestions.map((s) => `• ${s.code} (${s.type}) — ${s.status === 'valid' ? 'Valid' : 'Review'}${s.evidence_verified ? ' · quote verified in the documentation' : ' · quote NOT verified'} — ${s.rationale || 'no rationale given'}`),
+    '',
+    validCodes.length
+      ? `Approving applies ONLY the Valid code(s) to the claim: ${validCodes.map((c) => c.code).join(', ')}. Review-status codes are never applied. Rejecting changes nothing.`
+      : 'No Valid codes in this run — nothing will be applied.',
+  ];
+  return lines.join('\n');
+}
+
+// Shared by the suggest_codes tool and POST /api/agent/actions/propose:
+// builds the pending apply_codes action from an assessed run. Only Valid
+// codes enter the payload — that is the set approval applies.
+function buildApplyCodesAction({ orgId, userId, convoId, claim, jobId, assessed }) {
+  const valid = assessed.suggestions.filter((s) => s.status === 'valid');
+  if (!valid.length) return null;
+  const codes = valid.map((s) => ({ code: s.code, type: s.type, final_code: null }));
+  const row = createAction({
+    orgId, userId, convoId: convoId || null,
+    kind: 'apply_codes',
+    payload: {
+      claim_id: claim.id,
+      claim_number: claim.claim_number,
+      payer: claim.payer || null,
+      job_id: jobId || null,
+      codes,
+      assessment: assessed.assessment,
+    },
+    preview: codesPreview(claim, assessed, codes),
+  });
+  return row;
+}
+
+async function suggestCodes(ctx, input) {
+  const claim = resolveClaim(ctx.orgId, input || {});
+  const baseLabel = 'Suggested codes';
+  if (!claim) {
+    return {
+      output: { error: 'Claim not found in this workspace — no codes were suggested.' },
+      isError: true,
+      event: { tool: 'suggest_codes', label: `${baseLabel} — claim not found` },
+    };
+  }
+  let note = typeof (input && input.note) === 'string' ? input.note.trim() : '';
+  let noteSource = note ? 'documentation provided in this conversation' : null;
+  let encounterId = null;
+  if (!note) {
+    const enc = db.prepare('SELECT * FROM ehr_encounters WHERE org_id = ? AND converted_claim_id = ? ORDER BY id DESC LIMIT 1')
+      .get(ctx.orgId, claim.id);
+    if (enc) { note = buildEncounterNote(enc); noteSource = 'the EHR encounter that created this claim'; encounterId = enc.id; }
+  }
+  if (!note) {
+    const prior = db.prepare("SELECT note_text FROM coding_jobs WHERE org_id = ? AND claim_id = ? AND status = 'complete' ORDER BY id DESC LIMIT 1")
+      .get(ctx.orgId, claim.id);
+    if (prior && prior.note_text) { note = prior.note_text; noteSource = 'the note from the last coding run on this claim'; }
+  }
+  if (!note || note.length < 50) {
+    return {
+      output: { error: `No usable documentation for claim ${claim.claim_number} (an encounter note, a prior coding note, or a note pasted here — at least 50 characters). Ask the user to paste the visit note, then run this again with it. No codes were suggested.` },
+      isError: true,
+      event: { tool: 'suggest_codes', label: `${baseLabel} · ${claim.claim_number} — no documentation` },
+    };
+  }
+  let out;
+  try {
+    out = await callCodeAssist(ctx.orgId, note);
+  } catch (e) {
+    return {
+      output: { error: `The coding engine could not run for claim ${claim.claim_number}: ${e.message}` },
+      isError: true,
+      event: { tool: 'suggest_codes', label: `${baseLabel} · ${claim.claim_number} — engine unavailable` },
+    };
+  }
+  const sanitized = sanitizeSuggestions(out.suggestions);
+  const assessed = assessJob(note, sanitized);
+  // Record the run in the same substrate as Coding-panel runs.
+  const jobId = Number(db.prepare(`
+    INSERT INTO coding_jobs (org_id, claim_id, encounter_id, note_text, created_by, status, result_json)
+    VALUES (?, ?, ?, ?, ?, 'complete', ?)
+  `).run(ctx.orgId, claim.id, encounterId, note, ctx.user.id,
+    JSON.stringify({ suggestions: sanitized, model: out.model || null })).lastInsertRowid);
+
+  let action = null;
+  const actionRow = buildApplyCodesAction({ orgId: ctx.orgId, userId: ctx.user.id, convoId: ctx.convoId, claim, jobId, assessed });
+  if (actionRow) action = serializeAction(actionRow);
+
+  return {
+    output: {
+      claim_id: claim.id,
+      claim_number: claim.claim_number,
+      job_id: jobId,
+      note_source: noteSource,
+      assessment: assessed.assessment,
+      summary: assessed.summary,
+      suggestions: assessed.suggestions.map((s) => ({
+        code: s.code, type: s.type, status: s.status, confidence: s.confidence,
+        evidence_verified: s.evidence_verified, rationale: s.rationale,
+      })),
+      action_id: action ? action.id : null,
+      note: assessed.assessment === 'abstain'
+        ? 'The coding engine ABSTAINED: no code in the library is supported by the documentation\'s own words. Report the abstention as-is — do not suggest codes yourself.'
+        : 'Verdicts are the quote-verified engine\'s, exactly as produced. Only Valid codes are on the approval card; nothing is applied unless the user approves.',
+    },
+    event: { tool: 'suggest_codes', label: `${baseLabel} · ${claim.claim_number} · ${assessed.assessment}${action ? ' — awaiting approval' : ''}` },
+    action,
+  };
+}
+
+// ---- ERA exceptions (Phase 3, WS2) ----
+function eraExceptions(ctx) {
+  const exceptions = listExceptions(ctx.orgId, 25);
+  return {
+    output: {
+      count: exceptions.length,
+      exceptions,
+      note: 'Dispositions are computed deterministically from each remittance\'s CAS adjustments — the math is in each recommendation\'s arithmetic. Resolving one requires the user to approve a resolve_exception proposal.',
+    },
+    event: { tool: 'era_exceptions', label: `Listed ERA exceptions · ${exceptions.length} open` },
+  };
+}
+
+async function resolveExceptionTool(ctx, input) {
+  const lineId = input && Number.isInteger(input.era_line_id) ? input.era_line_id : null;
+  if (!lineId) {
+    return {
+      output: { error: 'era_line_id is required — list exceptions with era_exceptions first.' },
+      isError: true,
+      event: { tool: 'resolve_exception', label: 'Resolve exception — no line given' },
+    };
+  }
+  try {
+    const row = buildResolveAction({ orgId: ctx.orgId, userId: ctx.user.id, convoId: ctx.convoId, lineId });
+    const action = serializeAction(row);
+    const p = JSON.parse(row.payload || '{}');
+    return {
+      output: {
+        action_id: row.id,
+        era_line_id: lineId,
+        disposition: p.disposition,
+        status: 'pending',
+        note: 'The proposed resolution is now shown to the user as an approval card. NOTHING has posted or been ignored. It applies only if the user approves.',
+      },
+      event: { tool: 'resolve_exception', label: `Proposed ERA resolution · ${p.disposition} — awaiting approval` },
+      action,
+    };
+  } catch (e) {
+    return {
+      output: { error: `Could not propose that resolution: ${e.message}` },
+      isError: true,
+      event: { tool: 'resolve_exception', label: 'Resolve exception — could not propose' },
+    };
+  }
+}
+
 const EXECUTORS = {
   get_worklist: getWorklist,
   get_claim: getClaim,
   payer_rules: payerRules,
   search_handbook: searchHandbook,
   draft_appeal: draftAppeal,
+  check_eligibility: checkEligibility,
+  scrub_claim: scrubClaimTool,
+  suggest_codes: suggestCodes,
+  era_exceptions: eraExceptions,
+  resolve_exception: resolveExceptionTool,
 };
 
 function createExecutor(ctx) {
@@ -333,4 +697,4 @@ function createExecutor(ctx) {
   };
 }
 
-module.exports = { TOOL_DEFS, createExecutor };
+module.exports = { TOOL_DEFS, createExecutor, resolveClaim, buildApplyCodesAction };

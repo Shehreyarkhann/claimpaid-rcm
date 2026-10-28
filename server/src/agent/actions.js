@@ -18,6 +18,8 @@ function parseJson(s, fallback) {
 function actionTitle(row, payload) {
   const p = payload || parseJson(row.payload, {});
   if (row.kind === 'draft_appeal') return `Draft appeal — claim ${p.claim_number || `#${p.claim_id || ''}`}`;
+  if (row.kind === 'apply_codes') return `Apply codes — claim ${p.claim_number || `#${p.claim_id || ''}`}`;
+  if (row.kind === 'resolve_exception') return `Resolve ERA exception — ${p.claim_number ? `claim ${p.claim_number}` : `line ${p.clp_ref || `#${p.era_line_id || ''}`}`}`;
   return row.kind;
 }
 
@@ -38,6 +40,11 @@ function serializeAction(row) {
       payer: payload.payer ?? null,
       category: payload.category ?? null,
       subject: payload.subject ?? null,
+      codes: Array.isArray(payload.codes) ? payload.codes.map((c) => ({ code: c.code, type: c.type })) : null,
+      disposition: payload.disposition ?? null,
+      disposition_label: payload.disposition_label ?? null,
+      era_line_id: payload.era_line_id ?? null,
+      job_id: payload.job_id ?? null,
     },
     result: parseJson(row.result, null),
     created_at: row.created_at,
@@ -90,7 +97,58 @@ function executeDraftAppeal(req, action) {
   return { appeal_id: appeal.id, appeal_status: 'open', letter_saved_as_note: true };
 }
 
-const EXECUTORS = { draft_appeal: executeDraftAppeal };
+// --- apply_codes (Phase 3): apply the human-approved Valid code set ---
+// Uses the EXISTING claim-update path — applyToClaim from the coding
+// routes, the same dedupe-merge the Coding panel's decide endpoint runs.
+// Only codes the quote-verified engine marked 'valid' are ever in the
+// payload (the suggest_codes tool builds it that way), mirroring the
+// panel's hard rule that unverified codes never apply on AI authority.
+function recordCodingDecisions(jobId, codes, decision, userId) {
+  if (!jobId || !Array.isArray(codes) || !codes.length) return;
+  const ins = db.prepare(`
+    INSERT INTO coding_decisions (job_id, code, type, decision, final_code, in_library, decided_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+  for (const c of codes) ins.run(jobId, c.code, c.type, decision, c.final_code || null, 1, userId);
+}
+
+function executeApplyCodes(req, action) {
+  const payload = parseJson(action.payload, {});
+  const claim = db.prepare('SELECT id, claim_number FROM claims WHERE id = ? AND org_id = ?')
+    .get(payload.claim_id, action.org_id);
+  if (!claim) throw new Error('The claim no longer exists in this workspace.');
+  const codes = Array.isArray(payload.codes) ? payload.codes : [];
+  if (!codes.length) throw new Error('No verified codes were attached to this action.');
+  const { applyToClaim } = require('../routes/coding');
+  applyToClaim(action.org_id, claim.id, req.user.id,
+    codes.map((c) => ({ code: c.code, type: c.type, final_code: c.final_code || null })));
+  recordCodingDecisions(payload.job_id, codes, 'accepted', req.user.id);
+  logActivity(action.org_id, claim.id, req.user.id, 'codes_applied',
+    `Agent-proposed codes approved and applied to claim ${claim.claim_number} (${codes.map((c) => c.final_code || c.code).join(', ')})`);
+  return { claim_id: claim.id, applied_codes: codes.map((c) => `${c.type}:${c.final_code || c.code}`), job_id: payload.job_id || null };
+}
+
+// --- resolve_exception (Phase 3): apply an approved ERA disposition ---
+// Runs eraResolve.applyResolution — posting dispositions go through the
+// existing eraPosting.postLine engine; write-off through the existing
+// ignore transition. eraResolve is required lazily: it imports
+// createAction from this module, and the lazy require keeps the cycle
+// one-directional at load time.
+function executeResolveException(req, action) {
+  const payload = parseJson(action.payload, {});
+  const { applyResolution } = require('./eraResolve');
+  const line = db.prepare('SELECT * FROM era_claim_lines WHERE id = ? AND org_id = ?')
+    .get(payload.era_line_id, action.org_id);
+  if (!line) throw new Error('The ERA line no longer exists in this workspace.');
+  const result = applyResolution({ orgId: action.org_id, user: req.user }, line, payload.disposition);
+  if (result.claim_id) {
+    logActivity(action.org_id, result.claim_id, req.user.id, 'era_exception_resolved',
+      `ERA exception resolved via agent action (${payload.disposition}) on claim — ${result.posted ? `posted, claim now ${result.new_status}` : 'line written off/ignored'}`);
+  }
+  return result;
+}
+
+const EXECUTORS = { draft_appeal: executeDraftAppeal, apply_codes: executeApplyCodes, resolve_exception: executeResolveException };
 
 function executeAction(req, action) {
   const fn = EXECUTORS[action.kind];
@@ -129,6 +187,13 @@ function rejectAction(req, action) {
   if (action.status !== 'pending') throw decidedError();
   db.prepare("UPDATE agent_actions SET status = 'rejected', decided_at = datetime('now') WHERE id = ?").run(action.id);
   auditLog(req, 'agent_action_reject', 'agent_action', action.id, actionTitle(action));
+  // Decision substrate (Phase 3): a rejected apply_codes proposal records
+  // the rejected coding decisions on its job, same as the Coding panel —
+  // accept/reject history is what Phase 4 learns suggestion quality from.
+  if (action.kind === 'apply_codes') {
+    const payload = parseJson(action.payload, {});
+    recordCodingDecisions(payload.job_id, payload.codes, 'rejected', req.user.id);
+  }
   return getAction(action.id, action.org_id);
 }
 
