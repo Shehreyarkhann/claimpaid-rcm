@@ -6,6 +6,7 @@ import { useToast } from '../components/ui';
 import { useOrgSettings } from '../orgSettings';
 import CodingAssistant from '../components/CodingAssistant';
 import RescueWizard from '../components/RescueWizard';
+import CallCopilot from '../components/CallCopilot';
 
 const STATUS_META = {
   paid: { label: 'Paid', badge: 'badge-green' },
@@ -41,6 +42,8 @@ function AgentClaimPanel({ claimId }) {
   const [hidden, setHidden] = useState(false);
   const [spawning, setSpawning] = useState('');
   const [spawned, setSpawned] = useState(new Set());
+  const [showCall, setShowCall] = useState(false);
+  const [reloadTick, setReloadTick] = useState(0);
 
   useEffect(() => {
     let live = true;
@@ -48,7 +51,7 @@ function AgentClaimPanel({ claimId }) {
       .then((d) => { if (live) setData(d); })
       .catch((e) => { if (live && e && e.code === 'AGENT_DISABLED') setHidden(true); });
     return () => { live = false; };
-  }, [claimId]);
+  }, [claimId, reloadTick]);
 
   if (hidden || !data) return null;
 
@@ -128,6 +131,34 @@ function AgentClaimPanel({ claimId }) {
           })}
           <p className="text-[11px] text-stone-400">Drafts wait for a person's approval in the Agent tab — creating one changes nothing on this claim.</p>
         </div>
+      )}
+      {/* Payer-call copilot (Phase 5): history + the brief/log flow */}
+      <div className="mt-4">
+        <div className="flex items-center gap-3">
+          <div className="text-sm font-medium text-stone-800">Payer calls</div>
+          <button className="btn btn-dark btn-sm ml-auto" onClick={() => setShowCall(true)}>📞 Call payer</button>
+        </div>
+        {(data.call_history || []).length === 0 ? (
+          <p className="text-xs text-stone-400 mt-1.5">No calls logged yet — the copilot builds the script from this claim's denial and playbook.</p>
+        ) : (
+          <div className="mt-2 space-y-1.5">
+            {data.call_history.map((c) => (
+              <div key={c.id} className="flex items-baseline gap-2 text-[13px]">
+                <span className={`badge shrink-0 ${c.outcome === 'promised_payment' ? 'badge-green' : c.outcome === 'denied_upheld' ? 'badge-rose' : 'badge-slate'}`}>{c.outcome_label}</span>
+                <span className="text-stone-600 min-w-0">
+                  {c.agent_name ? `with ${c.agent_name}` : 'call logged'}
+                  {c.reference_number ? ` · ref ${c.reference_number}` : ''}
+                  {c.promised_date ? ` · payment promised by ${c.promised_date}` : ''}
+                  {c.notes ? ` — ${c.notes}` : ''}
+                </span>
+                <span className="ml-auto shrink-0 text-[11px] text-stone-400">{new Date(String(c.created_at).replace(' ', 'T') + 'Z').toLocaleDateString()}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      {showCall && (
+        <CallCopilot claimId={claimId} onClose={() => setShowCall(false)} onLogged={() => setReloadTick((t) => t + 1)} />
       )}
     </div>
   );
