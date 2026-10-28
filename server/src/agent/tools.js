@@ -722,4 +722,4 @@ function createExecutor(ctx) {
   };
 }
 
-module.exports = { TOOL_DEFS, createExecutor, resolveClaim, buildApplyCodesAction };
+module.exports = { TOOL_DEFS, createExecutor, resolveClaim, buildApplyCodesAction, draftAppealTool: draftAppeal };

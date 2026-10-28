@@ -10,7 +10,16 @@ const predict = require('../agent/predict');
 const eraResolve = require('../agent/eraResolve');
 const { scrubClaim: runScrub } = require('../scrub');
 const { sanitizeSuggestions, assessJob } = require('../coding/lib');
-const { checkAiQueryQuota, quotaExceeded, recordAgentTurn } = require('../usage');
+const { checkAiQueryQuota, checkClaimQuota, quotaExceeded, recordAgentTurn } = require('../usage');
+// Phase 5 modules: document intake, payer-call copilot, manager's agent,
+// CSV import wizard, deadline audit.
+const multer = require('multer');
+const fs = require('fs');
+const intake = require('../agent/intake');
+const callCopilot = require('../agent/callCopilot');
+const teamInsights = require('../agent/teamInsights');
+const importWizard = require('../agent/importWizard');
+const auditWizard = require('../agent/audit');
 
 const router = express.Router();
 router.use(authRequired, requireProduct('rcm'));
@@ -175,6 +184,7 @@ router.get('/claims/:id/analysis', (req, res) => {
         score: scrub.score, status: scrub.status, band: scrub.band, band_label: scrub.band_label,
         errors: scrub.errors, warnings: scrub.warnings,
       },
+      call_history: callCopilot.recentCalls(req.orgId, claim.id, 5),
       recommendations,
     });
   } catch (e) {
@@ -381,6 +391,242 @@ router.post('/actions/:id/reject', canDecide, (req, res) => {
   } catch (e) {
     return res.status(e.status || 500).json({ error: e.message });
   }
+});
+
+// =====================================================================
+// Phase 5 — Document intake (WS1)
+// =====================================================================
+// Upload is memory-buffered then written under server/agent-documents/
+// <org_id>/ (intake.DOCS_ROOT) — deliberately NOT the server's public
+// /uploads static root: these are PHI documents, and the only read path
+// is the org-checked file endpoint below. Extraction goes through the
+// agent model client and meters as agent turns like chat.
+const docUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+router.post('/documents', (req, res) => {
+  docUpload.single('file')(req, res, async (err) => {
+    if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ error: 'That file is larger than 10 MB.' });
+      return res.status(400).json({ error: 'The upload could not be read.' });
+    }
+    if (!req.file) return res.status(400).json({ error: 'A file is required (PDF, PNG, or JPG, up to 10 MB).' });
+    const mediaType = intake.detectMediaType(req.file.buffer);
+    if (!mediaType) return res.status(400).json({ error: 'Only PDF, PNG, or JPG documents are supported.' });
+    // Extraction is a model call — same AI-quota gate as chat.
+    if (!req.isSuperAdmin) {
+      const gate = checkAiQueryQuota(req.orgId);
+      if (gate) return quotaExceeded(res, 'ai_query_limit_reached', gate.plan, gate.limit, gate.used);
+    }
+    try {
+      const { doc, usage } = await intake.extractAndStore({
+        orgId: req.orgId, userId: req.user.id,
+        filename: req.file.originalname || 'document',
+        mediaType, buffer: req.file.buffer,
+      });
+      recordAgentTurn(req.orgId, usage || {});
+      return res.status(201).json({ document: intake.serializeDocument(doc, { detail: true }) });
+    } catch (e) {
+      console.error('[agent] document intake failed:', e.message);
+      return res.status(500).json({ error: 'The document could not be processed. It was not saved.' });
+    }
+  });
+});
+
+router.get('/documents', (req, res) => {
+  const rows = db.prepare(`
+    SELECT * FROM agent_documents WHERE org_id = ? ORDER BY id DESC LIMIT 100
+  `).all(req.orgId);
+  res.json({ documents: rows.map((d) => intake.serializeDocument(d)) });
+});
+
+router.get('/documents/:id', (req, res) => {
+  const doc = intake.getDocument(req.params.id, req.orgId);
+  if (!doc) return res.status(404).json({ error: 'Document not found' });
+  const out = intake.serializeDocument(doc, { detail: true });
+  const action = doc.action_id ? getAction(doc.action_id, req.orgId) : null;
+  out.action = action ? serializeAction(action) : null;
+  res.json({ document: out });
+});
+
+// The ONLY file read path: org-scoped by the document row, never a
+// static URL. Inline disposition so the reviewer can view the scan.
+router.get('/documents/:id/file', (req, res) => {
+  const doc = intake.getDocument(req.params.id, req.orgId);
+  if (!doc) return res.status(404).json({ error: 'Document not found' });
+  const filePath = intake.documentPath(doc);
+  fs.stat(filePath, (err, st) => {
+    if (err || !st.isFile()) return res.status(404).json({ error: 'The stored file is missing.' });
+    const safeName = String(doc.filename || 'document').replace(/["\r\n]/g, '_');
+    res.setHeader('Content-Type', doc.media_type);
+    res.setHeader('Content-Disposition', `inline; filename="${safeName}"`);
+    fs.createReadStream(filePath).pipe(res);
+  });
+});
+
+// Reviewer fixes a match: { line_index, claim_id } for a remittance line,
+// { claim_id } for a denial letter. claim_id null clears the match.
+router.post('/documents/:id/match', (req, res) => {
+  const doc = intake.getDocument(req.params.id, req.orgId);
+  if (!doc) return res.status(404).json({ error: 'Document not found' });
+  if (doc.status === 'applied' || doc.status === 'dismissed') {
+    return res.status(409).json({ error: 'This document is already closed.' });
+  }
+  const { line_index, claim_id } = req.body || {};
+  try {
+    const updated = intake.updateMatch(req.orgId, doc, {
+      lineIndex: Number.isInteger(line_index) ? line_index : null,
+      claimId: claim_id == null ? null : Number(claim_id),
+    });
+    return res.json({ document: intake.serializeDocument(updated, { detail: true }) });
+  } catch (e) {
+    return res.status(e.status || 500).json({ error: e.message });
+  }
+});
+
+router.post('/documents/:id/dismiss', (req, res) => {
+  const doc = intake.getDocument(req.params.id, req.orgId);
+  if (!doc) return res.status(404).json({ error: 'Document not found' });
+  if (doc.status === 'applied') return res.status(409).json({ error: 'This document was already applied.' });
+  db.prepare("UPDATE agent_documents SET status = 'dismissed', updated_at = datetime('now') WHERE id = ?")
+    .run(doc.id);
+  res.json({ document: intake.serializeDocument(intake.getDocument(doc.id, req.orgId), { detail: true }) });
+});
+
+// Propose the apply: creates the PENDING apply_intake approval action.
+// Nothing is created or attached until a decider approves that action.
+router.post('/documents/:id/propose-apply', (req, res) => {
+  const doc = intake.getDocument(req.params.id, req.orgId);
+  if (!doc) return res.status(404).json({ error: 'Document not found' });
+  try {
+    const action = intake.buildIntakeAction({ orgId: req.orgId, userId: req.user.id, doc });
+    return res.status(201).json({ action: serializeAction(action) });
+  } catch (e) {
+    return res.status(e.status || 500).json({ error: e.message });
+  }
+});
+
+// =====================================================================
+// Phase 5 — Payer-call copilot (WS2)
+// =====================================================================
+
+router.get('/claims/:id/call-brief', (req, res) => {
+  const claim = resolveClaim(req.orgId, { claim_id: Number(req.params.id) });
+  if (!claim) return res.status(404).json({ error: 'Claim not found' });
+  try {
+    res.json({ brief: callCopilot.buildCallBrief(req.orgId, claim) });
+  } catch (e) {
+    console.error('[agent] call brief failed:', e.message);
+    res.status(500).json({ error: 'The call brief could not be prepared.' });
+  }
+});
+
+router.post('/claims/:id/call-log', (req, res) => {
+  const claim = resolveClaim(req.orgId, { claim_id: Number(req.params.id) });
+  if (!claim) return res.status(404).json({ error: 'Claim not found' });
+  try {
+    const out = callCopilot.logCall({ orgId: req.orgId, userId: req.user.id, claim, input: req.body || {} });
+    return res.status(201).json(out);
+  } catch (e) {
+    return res.status(e.status || 500).json({ error: e.message });
+  }
+});
+
+// =====================================================================
+// Phase 5 — Manager's agent (WS3): owners only. Members get a 403 and
+// the client renders the Team section only when this endpoint succeeds.
+// =====================================================================
+
+router.get('/team-insights', roleRequired('owner'), (req, res) => {
+  try {
+    res.json(teamInsights.computeTeamInsights(req.orgId));
+  } catch (e) {
+    console.error('[agent] team insights failed:', e.message);
+    res.status(500).json({ error: 'Team insights could not be computed right now.' });
+  }
+});
+
+// =====================================================================
+// Phase 5 — CSV import wizard (WS4)
+// =====================================================================
+
+const csvUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+
+router.get('/import/template', (req, res) => {
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="claimpaid-import-template.csv"');
+  res.send(importWizard.TEMPLATE_CSV);
+});
+
+router.post('/import/preview', (req, res) => {
+  csvUpload.single('file')(req, res, (err) => {
+    if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ error: 'That file is larger than 5 MB.' });
+      return res.status(400).json({ error: 'The upload could not be read.' });
+    }
+    if (!req.file) return res.status(400).json({ error: 'A CSV file is required.' });
+    try {
+      const preview = importWizard.createPreview({
+        orgId: req.orgId, userId: req.user.id,
+        filename: req.file.originalname || 'import.csv',
+        text: req.file.buffer.toString('utf8'),
+      });
+      return res.status(201).json({ preview: importWizard.serializePreview(preview) });
+    } catch (e) {
+      return res.status(e.status || 400).json({ error: `Could not parse that CSV: ${e.message}` });
+    }
+  });
+});
+
+router.post('/import/preview/:id/mapping', (req, res) => {
+  const preview = importWizard.getPreview(req.params.id, req.orgId);
+  if (!preview) return res.status(404).json({ error: 'Import preview not found — upload the CSV again.' });
+  try {
+    const updated = importWizard.remapPreview(req.orgId, preview, (req.body || {}).mapping || {});
+    return res.json({ preview: importWizard.serializePreview(updated) });
+  } catch (e) {
+    return res.status(e.status || 500).json({ error: e.message });
+  }
+});
+
+// The explicit final step. checkClaimQuota applies like any claim
+// creation; each row still goes through createClaimDraft's validation.
+router.post('/import/commit', checkClaimQuota, (req, res) => {
+  const { preview_id } = req.body || {};
+  const preview = importWizard.getPreview(preview_id, req.orgId);
+  if (!preview) return res.status(404).json({ error: 'Import preview not found — upload the CSV again.' });
+  try {
+    const result = importWizard.commitPreview({ orgId: req.orgId, userId: req.user.id, preview });
+    return res.json({ result });
+  } catch (e) {
+    return res.status(e.status || 500).json({ error: e.message });
+  }
+});
+
+// =====================================================================
+// Phase 5 — Deadline audit (WS5)
+// =====================================================================
+
+router.post('/audit/run', (req, res) => {
+  const { source, preview_id } = req.body || {};
+  if (source !== 'workspace' && source !== 'csv') {
+    return res.status(400).json({ error: "source must be 'workspace' or 'csv'." });
+  }
+  try {
+    const audit = auditWizard.runAudit({ orgId: req.orgId, userId: req.user.id, source, previewId: preview_id });
+    return res.status(201).json({ audit });
+  } catch (e) {
+    return res.status(e.status || 500).json({ error: e.message });
+  }
+});
+
+router.get('/audit', (req, res) => {
+  res.json({ audits: auditWizard.listAudits(req.orgId) });
+});
+
+router.get('/audit/:id', (req, res) => {
+  const audit = auditWizard.getAudit(req.params.id, req.orgId);
+  if (!audit) return res.status(404).json({ error: 'Audit not found' });
+  res.json({ audit });
 });
 
 module.exports = router;

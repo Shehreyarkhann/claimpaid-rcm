@@ -936,6 +936,75 @@ function initSchema() {
       UNIQUE(org_id, user_id, digest_date)
     );
   `);
+  // ---- In-app agent (Phase 5) ----
+  // agent_documents: paper intake (EOBs / payer letters). The uploaded
+  // file lives on disk under server/agent-documents/<org_id>/ (NOT the
+  // public /uploads static root — these are PHI documents; every read
+  // goes through the org-checked API). `extracted` is the validated
+  // model extraction (JSON); `problems` is the deterministic validation
+  // output (JSON string array). Nothing in `extracted` touches claims or
+  // remittances until an apply_intake action is approved.
+  // agent_call_logs: payer-call copilot outcomes on the claim timeline.
+  // agent_import_previews: CSV import wizard state (raw rows + mapping +
+  // validation), org-scoped; committing is a separate explicit step.
+  // agent_audits: deadline-audit snapshots so a run can be reopened and
+  // shared in-app (the sales-wedge leave-behind).
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS agent_documents (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      filename TEXT NOT NULL,
+      stored_name TEXT NOT NULL,
+      media_type TEXT NOT NULL,
+      size_bytes INTEGER NOT NULL DEFAULT 0,
+      kind TEXT NOT NULL DEFAULT 'unknown',
+      status TEXT NOT NULL DEFAULT 'needs_review',
+      extracted TEXT,
+      problems TEXT,
+      action_id INTEGER REFERENCES agent_actions(id),
+      era_id INTEGER REFERENCES era_remittances(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_agent_docs_org ON agent_documents(org_id, created_at);
+    CREATE TABLE IF NOT EXISTS agent_call_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      claim_id INTEGER NOT NULL REFERENCES claims(id),
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      agent_name TEXT,
+      reference_number TEXT,
+      outcome TEXT NOT NULL,
+      promised_date TEXT,
+      follow_up_date TEXT,
+      notes TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_agent_calls_claim ON agent_call_logs(org_id, claim_id, created_at);
+    CREATE TABLE IF NOT EXISTS agent_import_previews (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      filename TEXT,
+      headers TEXT NOT NULL DEFAULT '[]',
+      rows TEXT NOT NULL DEFAULT '[]',
+      mapping TEXT NOT NULL DEFAULT '{}',
+      validation TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_agent_import_org ON agent_import_previews(org_id, created_at);
+    CREATE TABLE IF NOT EXISTS agent_audits (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      source TEXT NOT NULL,
+      source_label TEXT,
+      result TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_agent_audits_org ON agent_audits(org_id, created_at);
+  `);
   if (!columnExists('claims', 'patient_paid_amount')) db.exec('ALTER TABLE claims ADD COLUMN patient_paid_amount REAL NOT NULL DEFAULT 0');
   // ---- Market-launch cleanup (deploy #52, one-time) ----
   // Removes pre-launch demo/junk data: the seeded Demo Billing Co. org, the

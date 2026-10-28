@@ -25,6 +25,13 @@
 //   message  { role:'user'|'assistant', content:'text' }
 //            { role:'assistant', content:'text', toolCalls:[{id,name,input}] }
 //            { role:'user', toolResults:[{id, output:'json string', isError}] }
+//            { role:'user', content:'text', attachments:[attachment] }
+//   attachment { kind:'document'|'image', mediaType, dataBase64 } — used by
+//            the Phase 5 document-intake extraction call (extractDocument).
+//            Anthropic carries PDFs as `document` blocks and PNG/JPG as
+//            `image` blocks; the OpenAI-compatible adapter maps images to
+//            image_url data URLs and refuses PDF attachments outright
+//            (chat-completions has no portable PDF input shape).
 //   response { text:'', toolCalls:[{id,name,input}], stopReason,
 //              usage?: { inputTokens, outputTokens } }
 //   tool def { name, description, input_schema }  (JSON Schema, Anthropic-style;
@@ -72,6 +79,12 @@ function buildAnthropicRequest({ system, messages, tools, model, maxTokens }) {
       if (m.content) blocks.push({ type: 'text', text: m.content });
       for (const tc of m.toolCalls) blocks.push({ type: 'tool_use', id: tc.id, name: tc.name, input: tc.input || {} });
       out.push({ role: 'assistant', content: blocks });
+    } else if (m.attachments && m.attachments.length) {
+      const blocks = m.attachments.map((a) => (a.kind === 'document' || a.mediaType === 'application/pdf'
+        ? { type: 'document', source: { type: 'base64', media_type: a.mediaType, data: a.dataBase64 } }
+        : { type: 'image', source: { type: 'base64', media_type: a.mediaType, data: a.dataBase64 } }));
+      if (m.content) blocks.push({ type: 'text', text: m.content });
+      out.push({ role: m.role, content: blocks });
     } else {
       out.push({ role: m.role, content: m.content || '' });
     }
@@ -115,6 +128,16 @@ function buildOpenAiRequest({ system, messages, tools, model, maxTokens }) {
           function: { name: tc.name, arguments: JSON.stringify(tc.input || {}) },
         })),
       });
+    } else if (m.attachments && m.attachments.length) {
+      const parts = [];
+      if (m.content) parts.push({ type: 'text', text: m.content });
+      for (const a of m.attachments) {
+        if (a.kind === 'document' || a.mediaType === 'application/pdf') {
+          throw new Error('PDF document input is not supported by the OpenAI-compatible transport — document extraction requires the Anthropic transport (unset AGENT_BASE_URL).');
+        }
+        parts.push({ type: 'image_url', image_url: { url: `data:${a.mediaType};base64,${a.dataBase64}` } });
+      }
+      out.push({ role: m.role, content: parts });
     } else {
       out.push({ role: m.role, content: m.content || '' });
     }
@@ -274,6 +297,42 @@ async function runTurn({ system, history = [], userText, tools = [], executeTool
   return { reply: lastText, toolEvents, actions, usage };
 }
 
+// ---------- Document extraction (Phase 5 intake) ----------
+// One transport call carrying a single file attachment (base64 PDF
+// document block / PNG / JPG image block on the Anthropic wire) plus a
+// strict-JSON instruction supplied by the caller (agent/intake.js owns
+// the schema + validation). Returns the raw text + usage; parsing and
+// validation are the caller's job — this function never interprets the
+// reply. Goes through createTransport like everything else, so the
+// AGENT_TRANSPORT_MODULE test override exercises the identical path.
+async function extractDocument({ mediaType, dataBase64, instruction, system, transport, model, maxTokens = 4096 }) {
+  const t = transport || createTransport();
+  const resp = await t({
+    system: system || '',
+    messages: [{
+      role: 'user',
+      content: instruction,
+      attachments: [{
+        kind: mediaType === 'application/pdf' ? 'document' : 'image',
+        mediaType,
+        dataBase64,
+      }],
+    }],
+    tools: [],
+    model,
+    maxTokens,
+  });
+  const u = resp.usage || {};
+  return {
+    text: resp.text || '',
+    usage: {
+      inputTokens: u.inputTokens ?? u.input_tokens ?? 0,
+      outputTokens: u.outputTokens ?? u.output_tokens ?? 0,
+    },
+    stopReason: resp.stopReason || null,
+  };
+}
+
 module.exports = {
   resolveProviderConfig,
   buildAnthropicRequest,
@@ -282,5 +341,6 @@ module.exports = {
   parseOpenAiResponse,
   createTransport,
   runTurn,
+  extractDocument,
   MAX_TOOL_ITERATIONS,
 };

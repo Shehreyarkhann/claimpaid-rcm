@@ -17,6 +17,10 @@ function parseJson(s, fallback) {
 
 function actionTitle(row, payload) {
   const p = payload || parseJson(row.payload, {});
+  if (row.kind === 'apply_intake') {
+    const what = p.doc_kind === 'remittance' ? 'remittance' : p.doc_kind === 'denial_letter' ? 'denial letter' : 'document';
+    return `Apply intake — ${what}${p.filename ? ` (${p.filename})` : ''}`;
+  }
   if (row.kind === 'draft_appeal') return `Draft appeal — claim ${p.claim_number || `#${p.claim_id || ''}`}`;
   if (row.kind === 'apply_codes') return `Apply codes — claim ${p.claim_number || `#${p.claim_id || ''}`}`;
   if (row.kind === 'resolve_exception') return `Resolve ERA exception — ${p.claim_number ? `claim ${p.claim_number}` : `line ${p.clp_ref || `#${p.era_line_id || ''}`}`}`;
@@ -37,6 +41,9 @@ function serializeAction(row) {
     payload: {
       claim_id: payload.claim_id ?? null,
       claim_number: payload.claim_number ?? null,
+      document_id: payload.document_id ?? null,
+      doc_kind: payload.doc_kind ?? null,
+      filename: payload.filename ?? null,
       payer: payload.payer ?? null,
       category: payload.category ?? null,
       angle_source: payload.angle_source ?? null,
@@ -150,7 +157,14 @@ function executeResolveException(req, action) {
   return result;
 }
 
-const EXECUTORS = { draft_appeal: executeDraftAppeal, apply_codes: executeApplyCodes, resolve_exception: executeResolveException };
+// --- apply_intake (Phase 5): apply a reviewed document intake ---
+// intake.js builds its actions through this module's createAction, so it
+// is required lazily (same one-directional cycle rule as eraResolve).
+function executeApplyIntake(req, action) {
+  return require('./intake').applyIntake(req, action);
+}
+
+const EXECUTORS = { draft_appeal: executeDraftAppeal, apply_codes: executeApplyCodes, resolve_exception: executeResolveException, apply_intake: executeApplyIntake };
 
 function executeAction(req, action) {
   const fn = EXECUTORS[action.kind];
@@ -195,6 +209,16 @@ function rejectAction(req, action) {
   if (action.kind === 'apply_codes') {
     const payload = parseJson(action.payload, {});
     recordCodingDecisions(payload.job_id, payload.codes, 'rejected', req.user.id);
+  }
+  // Rejecting an intake apply dismisses the document — nothing created.
+  if (action.kind === 'apply_intake') {
+    const payload = parseJson(action.payload, {});
+    if (payload.document_id) {
+      db.prepare(`
+        UPDATE agent_documents SET status = 'dismissed', updated_at = datetime('now')
+        WHERE id = ? AND org_id = ? AND status != 'applied'
+      `).run(payload.document_id, action.org_id);
+    }
   }
   return getAction(action.id, action.org_id);
 }
