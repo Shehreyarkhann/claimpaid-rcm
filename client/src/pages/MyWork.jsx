@@ -3,6 +3,7 @@ import { api, fmtMoney2 } from '../api';
 import { PageHeader, Skeleton, EmptyState } from '../components/ui';
 import { useToast } from '../components/ui';
 import RescueWizard from '../components/RescueWizard';
+import ImportWizard from '../components/ImportWizard';
 
 const TYPE_META = {
   followup: { icon: '⏰', label: 'Follow-up', color: 'border-l-amber-400', bg: 'bg-amber-50' },
@@ -17,6 +18,7 @@ export default function MyWork({ onOpenAppeal, onOpenClaim, onStartAppeal }) {
   const [scope, setScope] = useState('all');
   const [doneKeys, setDoneKeys] = useState(new Set());
   const [rescueClaimId, setRescueClaimId] = useState(null);
+  const [showImport, setShowImport] = useState(false);
 
   const load = () => api.worklist(scope).then(setData).catch((e) => toast.error(e.message));
   useEffect(() => { load(); }, [scope]);
@@ -43,6 +45,7 @@ export default function MyWork({ onOpenAppeal, onOpenClaim, onStartAppeal }) {
         title="My Work"
         subtitle={data ? `${visible.length} items prioritized for you · ${fmtMoney2(data.summary.totalAtStake)} total at stake` : 'Your prioritized daily queue'}
         actions={[
+          <button key="import" className="btn btn-dark" onClick={() => setShowImport(true)}>🧾 Import claims</button>,
           <div key="scope" className="flex gap-1 bg-white border border-stone-200 rounded-xl p-1">
             {[['all', 'Team queue'], ['mine', 'Assigned to me']].map(([v, l]) => (
               <button key={v} onClick={() => setScope(v)}
@@ -134,6 +137,9 @@ export default function MyWork({ onOpenAppeal, onOpenClaim, onStartAppeal }) {
       )}
       {rescueClaimId && (
         <RescueWizard claimId={rescueClaimId} onClose={() => setRescueClaimId(null)} />
+      )}
+      {showImport && (
+        <ImportWizard onClose={() => setShowImport(false)} onImported={load} />
       )}
     </div>
   );
