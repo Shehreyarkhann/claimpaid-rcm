@@ -404,6 +404,15 @@ export const api = {
       authFetch(`/api/agent/actions/${id}/approve`, { method: 'POST' }).then(handle),
     rejectAction: (id) =>
       authFetch(`/api/agent/actions/${id}/reject`, { method: 'POST' }).then(handle),
+    // Phase 3 surfaces: dashboard insights, per-claim analysis, and
+    // proposing a pending action from outside the chat (claim panel).
+    insights: () => get('/api/agent/insights'),
+    claimAnalysis: (id) => get(`/api/agent/claims/${id}/analysis`),
+    propose: (data) =>
+      authFetch('/api/agent/actions/propose', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      }).then(handle),
   },
 };
 

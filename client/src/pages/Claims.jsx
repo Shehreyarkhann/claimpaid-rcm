@@ -29,6 +29,109 @@ export function FilingBadge({ days }) {
   return <span className="text-xs text-stone-400">{days}d</span>;
 }
 
+// Agent analysis panel (Phase 3) — predictions + recommended actions for
+// this claim from /api/agent/claims/:id/analysis. The panel PROPOSES:
+// buttons create pending agent actions; approval still happens on the
+// standard cards in the Agent tab. Renders nothing when the agent is
+// disabled (AGENT_DISABLED) or while loading.
+function AgentClaimPanel({ claimId }) {
+  const toast = useToast();
+  const [data, setData] = useState(null);
+  const [hidden, setHidden] = useState(false);
+  const [spawning, setSpawning] = useState('');
+  const [spawned, setSpawned] = useState(new Set());
+
+  useEffect(() => {
+    let live = true;
+    api.agent.claimAnalysis(claimId)
+      .then((d) => { if (live) setData(d); })
+      .catch((e) => { if (live && e && e.code === 'AGENT_DISABLED') setHidden(true); });
+    return () => { live = false; };
+  }, [claimId]);
+
+  if (hidden || !data) return null;
+
+  const spawn = async (rec) => {
+    const key = `${rec.kind}-${rec.era_line_id || ''}`;
+    setSpawning(key);
+    try {
+      await api.agent.propose({ kind: rec.kind, claim_id: claimId, era_line_id: rec.era_line_id || undefined });
+      setSpawned((s) => new Set(s).add(key));
+      toast.success('Draft created — review and approve it in the Agent tab');
+    } catch (e) {
+      toast.error(e.message || 'Could not create that draft');
+    } finally {
+      setSpawning('');
+    }
+  };
+
+  const pct = (v) => `${Math.round(v * 100)}%`;
+  const predLine = (label, p) => (p && p.value != null ? (
+    <div className="flex items-baseline gap-2 text-sm">
+      <span className="text-stone-500 w-36 shrink-0">{label}</span>
+      <span className="font-medium text-stone-800">{pct(p.value)}</span>
+      <span className="text-xs text-stone-400">n={p.sampleSize} · {p.basis}{p.label === 'early estimate' ? ' · early estimate' : ''}</span>
+    </div>
+  ) : null);
+
+  return (
+    <div className="mt-5 pt-5 border-t border-stone-100">
+      <div className="flex items-center gap-2 mb-3">
+        <span>🤖</span>
+        <div className="text-sm font-semibold text-stone-700">Agent analysis</div>
+        <span className="text-xs text-stone-400">from this workspace's own history</span>
+      </div>
+      <div className="space-y-1.5">
+        {data.filing_risk && data.filing_risk.days_left != null && (
+          <div className="flex items-baseline gap-2 text-sm">
+            <span className="text-stone-500 w-36 shrink-0">Filing deadline</span>
+            <span className={`font-medium ${data.filing_risk.state === 'expired' || data.filing_risk.state === 'critical' ? 'text-rose-700' : 'text-stone-800'}`}>
+              {data.filing_risk.days_left < 0 ? `Expired ${-data.filing_risk.days_left}d ago` : `${data.filing_risk.days_left} days left`}
+            </span>
+            <span className="text-xs text-stone-400">{data.filing_risk.filing_deadline} · {data.filing_risk.filing_days}-day limit</span>
+          </div>
+        )}
+        {predLine('Appeal overturn', data.appeal_overturn)}
+        {predLine('Payment likelihood', data.pay_likelihood)}
+        <div className="flex items-baseline gap-2 text-sm">
+          <span className="text-stone-500 w-36 shrink-0">Scrub readiness</span>
+          <span className="font-medium text-stone-800">{data.scrub.score}/100</span>
+          <span className="text-xs text-stone-400">{data.scrub.band_label} · {data.scrub.errors} errors, {data.scrub.warnings} warnings</span>
+        </div>
+        {data.era_exceptions.length > 0 && (
+          <div className="flex items-baseline gap-2 text-sm">
+            <span className="text-stone-500 w-36 shrink-0">ERA exceptions</span>
+            <span className="font-medium text-stone-800">{data.era_exceptions.length} open</span>
+            <span className="text-xs text-stone-400">{data.era_exceptions.map((e) => e.recommendation.label).join('; ')}</span>
+          </div>
+        )}
+      </div>
+      {data.recommendations.length > 0 && (
+        <div className="mt-3.5 space-y-2">
+          {data.recommendations.map((rec, i) => {
+            const key = `${rec.kind}-${rec.era_line_id || ''}`;
+            const done = spawned.has(key);
+            return (
+              <div key={i} className="flex items-center gap-3 rounded-xl bg-[#FAF5EB] ring-1 ring-stone-200/70 px-3.5 py-2.5">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-stone-800">{rec.label}</div>
+                  {rec.detail && <div className="text-xs text-stone-500 mt-0.5">{rec.detail}</div>}
+                </div>
+                {rec.spawnable && (
+                  <button className="btn btn-primary btn-sm shrink-0" disabled={done || spawning === key} onClick={() => spawn(rec)}>
+                    {done ? 'Draft created ✓' : spawning === key ? 'Creating…' : 'Create draft'}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          <p className="text-[11px] text-stone-400">Drafts wait for a person's approval in the Agent tab — creating one changes nothing on this claim.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ClaimModal({ claim, payers, onClose, onSaved, onCheckEligibility }) {
   const [showCoding, setShowCoding] = useState(false);
   const toast = useToast();
@@ -111,6 +214,7 @@ function ClaimModal({ claim, payers, onClose, onSaved, onCheckEligibility }) {
               <input className="input font-mono" value={form.rendering_npi} onChange={set('rendering_npi')} placeholder="10 digits" maxLength={10} /></div>
           </div>
         </div>
+        {claim && <AgentClaimPanel claimId={claim.id} />}
         <div className="mt-6 flex justify-end gap-2">
           {claim && onCheckEligibility && (
             <button onClick={() => onCheckEligibility(claim)} className="btn btn-outline mr-auto">⚡ Check eligibility</button>

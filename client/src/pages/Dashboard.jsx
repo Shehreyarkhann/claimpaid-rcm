@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { api, fmtMoney, fmtMoneyCompact, fmtDate } from '../api';
 import { Skeleton, PageHeader } from '../components/ui';
+import AgentInsights from '../components/AgentInsights';
 
 const COLORS = ['#10b981', '#B45309', '#D97706', '#f59e0b', '#f43f5e', '#78716C', '#35805B', '#57534E'];
 
@@ -125,6 +126,8 @@ export default function Dashboard({ goDenials }) {
         <Kpi label="Clean Claim Rate" value={`${kpis.cleanClaimRate}%`} accent="bg-emerald-400" icon="✨" />
         <Kpi label="Denial Rate" value={`${kpis.denialRate}%`} accent="bg-rose-400" icon="⚠️" />
       </div>
+
+      <AgentInsights />
 
       {appealStats && (
         <div className="card p-5 mb-6 flex flex-wrap items-center gap-x-8 gap-y-3">

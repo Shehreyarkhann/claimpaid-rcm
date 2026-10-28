@@ -35,26 +35,49 @@ function ToolChips({ events }) {
   );
 }
 
+const KIND_META = {
+  draft_appeal: {
+    pendingNote: 'The agent drafted this — nothing has been saved. Approving saves it to the claim as a draft appeal (never submitted to the payer).',
+    approveLabel: 'Approve & save draft',
+    executedNote: (a) => (a.result?.appeal_id ? 'Saved as a draft appeal on the claim — find it in Denial Appeals.' : null),
+  },
+  apply_codes: {
+    pendingNote: 'The agent proposed these codes from the quote-verified coding engine — nothing has been applied. Approving applies ONLY the Valid codes listed to the claim; Review-status codes are never applied.',
+    approveLabel: 'Approve & apply codes',
+    executedNote: (a) => (a.result?.applied_codes?.length
+      ? `Applied to the claim: ${a.result.applied_codes.map((c) => String(c).split(':').pop()).join(', ')}.`
+      : null),
+  },
+  resolve_exception: {
+    pendingNote: 'The agent proposes resolving this ERA exception with the disposition below — the math is computed from the remittance itself. Approving posts/ignores the line through the standard ERA path; rejecting leaves it untouched in the ERA inbox.',
+    approveLabel: 'Approve & resolve',
+    executedNote: (a) => (a.result?.posted
+      ? `Posted to the claim — the claim is now ${a.result.new_status || 'updated'}.`
+      : a.result?.ignored ? 'Line written off (ignored) — the remittance is updated.' : null),
+  },
+};
+
 function ActionCard({ action, busy, onDecide }) {
   const meta = STATUS_META[action.status] || STATUS_META.pending;
+  const kind = KIND_META[action.kind] || KIND_META.draft_appeal;
   const decided = action.status !== 'pending';
+  const executedNote = action.status === 'executed' ? kind.executedNote(action) : null;
   return (
     <div className={`rounded-2xl border p-4 ${action.status === 'pending' ? 'border-amber-300 bg-amber-50/70' : 'border-stone-200 bg-[#FFFDF8]'}`}>
       <div className="flex flex-wrap items-center gap-2 mb-2">
         <span className="text-sm font-bold text-stone-900">{action.title}</span>
         <span className={`badge ${meta.pill}`}>{meta.label}</span>
         {action.payload?.category && <span className="badge badge-slate">{action.payload.category.replace(/_/g, ' ')}</span>}
+        {action.payload?.disposition_label && <span className="badge badge-slate">{action.payload.disposition_label}</span>}
       </div>
       {action.status === 'pending' && (
-        <p className="text-xs text-amber-800 mb-2">
-          The agent drafted this — nothing has been saved. Approving saves it to the claim as a draft appeal (never submitted to the payer).
-        </p>
+        <p className="text-xs text-amber-800 mb-2">{kind.pendingNote}</p>
       )}
       <div className="max-h-64 overflow-auto rounded-xl border border-stone-200 bg-white p-3.5">
         <pre className="whitespace-pre-wrap font-sans text-[13px] leading-relaxed text-stone-700">{action.preview}</pre>
       </div>
-      {action.status === 'executed' && action.result?.appeal_id && (
-        <p className="text-xs text-emerald-700 mt-2 font-medium">Saved as a draft appeal on the claim — find it in Denial Appeals.</p>
+      {executedNote && (
+        <p className="text-xs text-emerald-700 mt-2 font-medium">{executedNote}</p>
       )}
       {action.status === 'failed' && action.result?.error && (
         <p className="text-xs text-rose-600 mt-2 font-medium">{action.result.error}</p>
@@ -62,7 +85,7 @@ function ActionCard({ action, busy, onDecide }) {
       {!decided && (
         <div className="flex gap-2 mt-3">
           <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => onDecide(action, 'approve')}>
-            {busy ? 'Saving…' : 'Approve & save draft'}
+            {busy ? 'Saving…' : kind.approveLabel}
           </button>
           <button className="btn btn-outline btn-sm" disabled={busy} onClick={() => onDecide(action, 'reject')}>
             Reject
@@ -198,9 +221,9 @@ export default function Agent() {
     try {
       const r = decision === 'approve' ? await api.agent.approveAction(action.id) : await api.agent.rejectAction(action.id);
       setBriefActions((list) => list.map((a) => (a.id === action.id ? r.action : a)));
-      if (decision === 'approve' && r.action.status === 'executed') toast.success('Appeal draft saved to the claim');
+      if (decision === 'approve' && r.action.status === 'executed') toast.success('Approved and applied');
       if (decision === 'approve' && r.action.status === 'failed') toast.error('Approval recorded, but saving failed');
-      if (decision === 'reject') toast.success('Draft rejected — nothing was saved');
+      if (decision === 'reject') toast.success('Rejected — nothing was changed');
     } catch (e) {
       toast.error(e.message || 'Could not record that decision');
     } finally {
@@ -261,9 +284,9 @@ export default function Agent() {
     try {
       const r = decision === 'approve' ? await api.agent.approveAction(action.id) : await api.agent.rejectAction(action.id);
       setActions((list) => list.map((a) => (a.id === action.id ? r.action : a)));
-      if (decision === 'approve' && r.action.status === 'executed') toast.success('Appeal draft saved to the claim');
+      if (decision === 'approve' && r.action.status === 'executed') toast.success('Approved and applied');
       if (decision === 'approve' && r.action.status === 'failed') toast.error('Approval recorded, but saving failed');
-      if (decision === 'reject') toast.success('Draft rejected — nothing was saved');
+      if (decision === 'reject') toast.success('Rejected — nothing was changed');
       loadConversations().catch(() => {});
     } catch (e) {
       toast.error(e.message || 'Could not record that decision');

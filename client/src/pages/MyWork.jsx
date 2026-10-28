@@ -90,6 +90,16 @@ export default function MyWork({ onOpenAppeal, onOpenClaim, onStartAppeal }) {
                     <div className="text-[13px] text-stone-600 mt-1.5 flex items-center gap-1.5">
                       <span className="text-stone-400">→</span> {item.reason}
                     </div>
+                    {item.prediction && (
+                      <div className="mt-1.5">
+                        <span
+                          title={`${item.prediction.detail}${item.prediction.label === 'early estimate' ? ' — early estimate (thin history)' : ''}`}
+                          className={`inline-flex items-center gap-1.5 text-[11px] font-medium rounded-full px-2 py-0.5 border ${item.prediction.value >= 0.5 ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-amber-800 bg-amber-50 border-amber-200'}`}>
+                          🤖 {item.prediction.headline} · n={item.prediction.sampleSize}
+                          {item.prediction.label === 'early estimate' && <span className="text-amber-600">· early estimate</span>}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <div className="text-right shrink-0 hidden sm:block">
                     <div className="text-lg font-bold text-stone-900">{fmtMoney2(item.amount)}</div>
