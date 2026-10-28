@@ -866,6 +866,32 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_agent_action_org ON agent_actions(org_id, status, created_at);
     CREATE INDEX IF NOT EXISTS idx_agent_action_convo ON agent_actions(convo_id, id);
   `);
+  // ---- In-app agent (Phase 2) ----
+  // agent_briefs: the proactive morning brief, one row per user per
+  // org-local day (generated lazily on first read, then stored — the
+  // UNIQUE constraint is what makes double-generation impossible).
+  // agent_usage: per-org monthly agent metering (completed turns + token
+  // totals), merged into the plan AI-query figure by server/src/usage.js.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS agent_briefs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      brief_date TEXT NOT NULL,
+      content TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(org_id, user_id, brief_date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_agent_briefs_user ON agent_briefs(org_id, user_id, brief_date);
+    CREATE TABLE IF NOT EXISTS agent_usage (
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      month TEXT NOT NULL,
+      turns INTEGER NOT NULL DEFAULT 0,
+      input_tokens INTEGER NOT NULL DEFAULT 0,
+      output_tokens INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (org_id, month)
+    );
+  `);
   if (!columnExists('claims', 'patient_paid_amount')) db.exec('ALTER TABLE claims ADD COLUMN patient_paid_amount REAL NOT NULL DEFAULT 0');
   // ---- Market-launch cleanup (deploy #52, one-time) ----
   // Removes pre-launch demo/junk data: the seeded Demo Billing Co. org, the

@@ -25,9 +25,14 @@
 //   message  { role:'user'|'assistant', content:'text' }
 //            { role:'assistant', content:'text', toolCalls:[{id,name,input}] }
 //            { role:'user', toolResults:[{id, output:'json string', isError}] }
-//   response { text:'', toolCalls:[{id,name,input}], stopReason }
+//   response { text:'', toolCalls:[{id,name,input}], stopReason,
+//              usage?: { inputTokens, outputTokens } }
 //   tool def { name, description, input_schema }  (JSON Schema, Anthropic-style;
 //              adapters translate to each provider's dialect)
+// runTurn accumulates per-call usage across tool iterations and returns it
+// as result.usage { inputTokens, outputTokens, calls } — the metering layer
+// (server/src/usage.js) counts COMPLETED turns from that. Transports that
+// report no usage (scripted test fakes may omit it) count as zeros.
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 const ANTHROPIC_VERSION = '2023-06-01';
@@ -84,7 +89,13 @@ function parseAnthropicResponse(json) {
   const toolCalls = blocks
     .filter((b) => b.type === 'tool_use')
     .map((b) => ({ id: b.id, name: b.name, input: b.input || {} }));
-  return { text, toolCalls, stopReason: json && json.stop_reason };
+  const u = (json && json.usage) || {};
+  return {
+    text,
+    toolCalls,
+    stopReason: json && json.stop_reason,
+    usage: { inputTokens: u.input_tokens || 0, outputTokens: u.output_tokens || 0 },
+  };
 }
 
 // ---------- OpenAI-compatible dialect (pure conversions — unit-tested) ----------
@@ -132,10 +143,15 @@ function parseOpenAiResponse(json) {
     name: tc.function && tc.function.name,
     input: safeParseArgs(tc.function && tc.function.arguments),
   }));
+  const u = (json && json.usage) || {};
   return {
     text: typeof msg.content === 'string' ? msg.content : '',
     toolCalls,
     stopReason: json && json.choices && json.choices[0] && json.choices[0].finish_reason,
+    usage: {
+      inputTokens: u.prompt_tokens ?? u.input_tokens ?? 0,
+      outputTokens: u.completion_tokens ?? u.output_tokens ?? 0,
+    },
   };
 }
 
@@ -218,13 +234,19 @@ async function runTurn({ system, history = [], userText, tools = [], executeTool
   ];
   const toolEvents = [];
   const actions = [];
+  const usage = { inputTokens: 0, outputTokens: 0, calls: 0 };
   let lastText = '';
 
   for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
     const resp = await t({ system, messages, tools, model, maxTokens });
+    usage.calls += 1;
+    if (resp.usage) {
+      usage.inputTokens += resp.usage.inputTokens ?? resp.usage.input_tokens ?? 0;
+      usage.outputTokens += resp.usage.outputTokens ?? resp.usage.output_tokens ?? 0;
+    }
     if (resp.text) lastText = resp.text;
     if (!resp.toolCalls || resp.toolCalls.length === 0) {
-      return { reply: resp.text || lastText || '', toolEvents, actions };
+      return { reply: resp.text || lastText || '', toolEvents, actions, usage };
     }
     messages.push({ role: 'assistant', content: resp.text || '', toolCalls: resp.toolCalls });
     const results = [];
@@ -244,11 +266,12 @@ async function runTurn({ system, history = [], userText, tools = [], executeTool
         reply: lastText || 'I started that but hit the step limit before finishing — the work so far is above, and you can ask me to continue.',
         toolEvents,
         actions,
+        usage,
         truncated: true,
       };
     }
   }
-  return { reply: lastText, toolEvents, actions };
+  return { reply: lastText, toolEvents, actions, usage };
 }
 
 module.exports = {

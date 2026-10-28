@@ -67,6 +67,46 @@ function aiQueriesUsedThisMonth(rcmOrgId, now = new Date()) {
   }
 }
 
+// ---- Agent usage (RCM-side, agent_usage table) ----
+// The in-app agent meters COMPLETED turns (chat turns + the brief's single
+// narrative call) into agent_usage in THIS database — never into the AI
+// app's DB. usageForOrg merges those turns into the reported aiQueries
+// figure so Billing shows one true AI total across both products.
+function agentTurnsThisMonth(orgId, now = new Date()) {
+  try {
+    const row = db.prepare('SELECT turns FROM agent_usage WHERE org_id = ? AND month = ?')
+      .get(orgId, monthKeyUtc(now));
+    return row ? row.turns : 0;
+  } catch {
+    return 0; // table missing (pre-Phase-2 DB before first boot migration) — count nothing
+  }
+}
+
+function recordAgentTurn(orgId, usage = {}, now = new Date()) {
+  try {
+    db.prepare(`
+      INSERT INTO agent_usage (org_id, month, turns, input_tokens, output_tokens)
+      VALUES (?, ?, 1, ?, ?)
+      ON CONFLICT(org_id, month) DO UPDATE SET
+        turns = turns + 1,
+        input_tokens = input_tokens + excluded.input_tokens,
+        output_tokens = output_tokens + excluded.output_tokens
+    `).run(orgId, monthKeyUtc(now), usage.inputTokens || 0, usage.outputTokens || 0);
+  } catch (e) {
+    // Metering must never break the turn it is counting.
+    console.error('[usage] recordAgentTurn failed:', e.message);
+  }
+}
+
+// Merged AI usage: AskBase chat queries (read from the AI DB) + agent turns
+// (this DB). `unknown` tracks the AskBase read only — when that read fails,
+// `used` is the agent-only partial and pct stays null, exactly like before.
+function mergedAiQueriesUsed(orgId, now = new Date()) {
+  const ai = aiQueriesUsedThisMonth(orgId, now);
+  const agentTurns = agentTurnsThisMonth(orgId, now);
+  return { used: (ai.used || 0) + agentTurns, unknown: ai.unknown, askbaseUsed: ai.used, agentTurns };
+}
+
 // Full usage snapshot for an org (powers the Billing usage bars and the 80%
 // warning banner). Never throws — a counter that can't be read reports unknown.
 function usageForOrg(orgId) {
@@ -74,7 +114,7 @@ function usageForOrg(orgId) {
   const limits = limitsForPlan(plan);
   const claimsUsed = claimsUsedThisMonth(orgId);
   const seatsUsedCount = seatsUsed(orgId);
-  const ai = aiQueriesUsedThisMonth(orgId);
+  const ai = mergedAiQueriesUsed(orgId);
 
   const claims = { used: claimsUsed, limit: limits.claimsPerMonth, pct: usagePct(claimsUsed, limits.claimsPerMonth) };
   const seats = { used: seatsUsedCount, limit: limits.seats, pct: usagePct(seatsUsedCount, limits.seats) };
@@ -82,6 +122,7 @@ function usageForOrg(orgId) {
     used: ai.used, limit: limits.aiQueriesPerMonth,
     pct: ai.unknown ? null : usagePct(ai.used, limits.aiQueriesPerMonth),
     unknown: ai.unknown,
+    agentTurns: ai.agentTurns,
   };
   const warn = [];
   for (const [key, u] of [['claims', claims], ['seats', seats], ['aiQueries', aiQueries]]) {
@@ -94,7 +135,7 @@ function usageForOrg(orgId) {
 
 function quotaExceeded(res, kind, plan, limit, used) {
   const planLabel = { starter: 'RCM Starter', pro: 'RCM Pro + AI', ai: 'ClaimPaid AI', enterprise: 'Enterprise' }[plan] || 'your';
-  const noun = kind === 'claim_limit_reached' ? 'claims' : 'team seats';
+  const noun = { claim_limit_reached: 'claims', seat_limit_reached: 'team seats', ai_query_limit_reached: 'AI queries' }[kind] || 'units';
   return res.status(402).json({
     error: kind,
     plan: plan || 'trial',
@@ -135,6 +176,21 @@ function checkSeatQuota(req, res, next) {
   }
 }
 
+// Agent-turn quota gate for POST /api/agent/chat. Returns { plan, limit,
+// used } when the org is at/over its plan AI-query allowance, else null.
+// Phase-2 policy (founder decision pending — see the Phase 2 report): the
+// gate fires ONLY when the plan carries a positive finite allowance (Pro
+// 2,000, AI 1,000). A 0 allowance (Starter: "no AI product") does NOT block
+// the agent in this phase — those turns are counted and surfaced instead,
+// and null (enterprise / legacy-grandfathered) never blocks.
+function checkAiQueryQuota(orgId) {
+  const plan = orgPlan(orgId);
+  const limit = limitsForPlan(plan).aiQueriesPerMonth;
+  if (typeof limit !== 'number' || !Number.isFinite(limit) || limit <= 0) return null;
+  const { used } = mergedAiQueriesUsed(orgId);
+  return used >= limit ? { plan, limit, used } : null;
+}
+
 module.exports = {
   monthStartUtc,
   monthKeyUtc,
@@ -142,7 +198,12 @@ module.exports = {
   claimsUsedThisMonth,
   seatsUsed,
   aiQueriesUsedThisMonth,
+  agentTurnsThisMonth,
+  recordAgentTurn,
+  mergedAiQueriesUsed,
   usageForOrg,
+  quotaExceeded,
+  checkAiQueryQuota,
   checkClaimQuota,
   checkSeatQuota,
 };

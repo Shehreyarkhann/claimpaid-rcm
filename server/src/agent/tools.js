@@ -12,6 +12,7 @@ const { db } = require('../db');
 const { computeWorklist } = require('../worklistCore');
 const { FILING_SELECT, FILING_JOIN } = require('../routes/filing');
 const { generateLetter } = require('../appealLetters');
+const { AI_SERVICE_URL, serviceToken } = require('../coding/lib');
 const { createAction, serializeAction } = require('./actions');
 
 const TOOL_DEFS = [
@@ -46,6 +47,17 @@ const TOOL_DEFS = [
         payer_id: { type: 'integer', description: 'Payer id, if known.' },
       },
       required: ['payer'],
+    },
+  },
+  {
+    name: 'search_handbook',
+    description: 'Search the Payer Policy Handbook (ClaimPaid\'s curated payer-policy knowledge base on the AI service) for payer policy: filing and appeal deadlines, documentation and authorization rules, payer-specific requirements. Returns cited excerpts — cite the source name in your answer. Use for payer-POLICY questions; use payer_rules for this workspace\'s own filing limits and denial data.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'What to look up, e.g. "Aetna timely filing deadline" or "Cigna corrected claim rules".' },
+      },
+      required: ['query'],
     },
   },
   {
@@ -244,10 +256,62 @@ function draftAppeal(ctx, input) {
   };
 }
 
+// ---- Handbook search (AI service /api/v1/kb-search) ----
+// Same service-JWT pattern as the code-assist integration (coding/lib).
+// ANY failure — AI service down, bad response, timeout — degrades to a
+// graceful "handbook unavailable" tool result the model can relay; it
+// never throws the turn. Chunks carry their source filename so the model
+// can cite the handbook section it used.
+async function searchHandbook(ctx, input) {
+  const query = String((input && input.query) || '').trim();
+  const label = 'Searched the Payer Policy Handbook';
+  if (!query) {
+    return { output: { error: 'query_required', note: 'search_handbook needs a query string.' }, isError: true, event: { tool: 'search_handbook', label } };
+  }
+  try {
+    const res = await fetch(`${AI_SERVICE_URL}/api/v1/kb-search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-service-token': serviceToken(ctx.orgId) },
+      body: JSON.stringify({ query, limit: 5 }),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) throw new Error(`kb-search responded ${res.status}`);
+    const data = await res.json();
+    const chunks = (Array.isArray(data && data.chunks) ? data.chunks : [])
+      .map((c) => ({ text: String(c.text || '').slice(0, 1500), source: c.source || 'Payer Policy Handbook', score: c.score }))
+      .filter((c) => c.text);
+    if (chunks.length === 0) {
+      return {
+        output: { found: false, query, note: 'The Payer Policy Handbook has nothing on that. Tell the user plainly that the handbook does not cover it — do not fill the gap from memory.' },
+        event: { tool: 'search_handbook', label: `${label} · no match` },
+      };
+    }
+    return {
+      output: {
+        found: true,
+        query,
+        chunks,
+        note: 'Answer from these excerpts and cite the source name(s) (the "source" field) in your reply.',
+      },
+      event: { tool: 'search_handbook', label },
+    };
+  } catch (e) {
+    return {
+      output: {
+        available: false,
+        query,
+        note: `The Payer Policy Handbook is unavailable right now (${e.message}). Tell the user plainly that the handbook could not be reached, and do not reconstruct payer policy from memory.`,
+      },
+      event: { tool: 'search_handbook', label: `${label} · unavailable` },
+    };
+  }
+}
+
 const EXECUTORS = {
   get_worklist: getWorklist,
   get_claim: getClaim,
   payer_rules: payerRules,
+  search_handbook: searchHandbook,
   draft_appeal: draftAppeal,
 };
 

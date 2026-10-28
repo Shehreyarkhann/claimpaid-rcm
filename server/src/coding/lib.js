@@ -155,4 +155,4 @@ function assessJob(noteText, suggestions) {
   };
 }
 
-module.exports = { loadLibrary, normCode, isInLibrary, libraryDescription, callCodeAssist, sanitizeSuggestions, assessSuggestions, assessJob, AI_SERVICE_URL };
+module.exports = { loadLibrary, normCode, isInLibrary, libraryDescription, callCodeAssist, sanitizeSuggestions, assessSuggestions, assessJob, AI_SERVICE_URL, serviceToken };

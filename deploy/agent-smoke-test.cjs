@@ -39,6 +39,31 @@ const bundle = fs.readFileSync(entryPath, 'utf8');
 const fakeUser = { id: 1, org_id: 1, email: 'gate@smoke.local', name: 'Gate User', role: 'owner', orgName: 'Gate Test Co.' };
 const agentConvo = { id: 7, title: 'What is on my worklist?', created_at: '2026-10-28 10:00:00', updated_at: '2026-10-28 10:01:00' };
 const mocks = [
+  ['/api/agent/brief', {
+    brief: {
+      id: 11, brief_date: '2026-10-28', timezone: 'America/New_York',
+      summary: 'Six new denials landed overnight and one follow-up is overdue — start there.',
+      while_away: {
+        since: '2026-10-27 14:00:00',
+        new_denials: { count: 6, highlights: [{ claim_id: 9, claim_number: 'CLM-2005', patient_name: 'Pat', amount: 900, denial_reason: 'CO-50' }] },
+        era_postings: { count: 1, total_paid: 250.5 },
+        era_exceptions: { new_count: 1, on_hold_count: 3 },
+        followups_passed: { count: 1 },
+      },
+      plan: [
+        { rank: 1, key: 'followup-25', type: 'followup', title: 'Follow up appeal — CLM-2005', subtitle: 'Pat · Aetna', reason: 'Follow-up was due Oct 27', amount: 900, due: '2026-10-27', claim_id: 9, appeal_id: 25 },
+        { rank: 2, key: 'denial-6', type: 'denial', title: 'Denied: CLM-1002', subtitle: 'Pat · Aetna', reason: 'CO-50 not medically necessary', amount: 700, due: null, claim_id: 6, appeal_id: null },
+      ],
+      proposed_draft_action_ids: [21],
+      created_at: '2026-10-28 12:00:00',
+    },
+    actions: [{
+      id: 21, kind: 'draft_appeal', title: 'Draft appeal — claim CLM-1002', status: 'pending',
+      preview: 'October 28, 2026\n\nAppeals Department\nAetna\n\nRe: Formal Appeal — Denied Claim CLM-1002\n\nWe are writing to formally appeal the denial of the above-referenced claim on the basis of medical necessity.',
+      payload: { claim_id: 6, claim_number: 'CLM-1002', payer: 'Aetna', category: 'medical_necessity', subject: 'Appeal of Denied Claim CLM-1002' },
+      result: null, created_at: '2026-10-28 12:00:00', decided_at: null, executed_at: null,
+    }],
+  }],
   ['/api/agent/conversations/7', {
     conversation: agentConvo,
     messages: [
@@ -126,6 +151,19 @@ async function render({ loggedIn }) {
 
     await until(() => doc.body.textContent.includes('Reads your queue, drafts the work'), 9000, 'Agent page header');
     console.log('  PASS Agent page renders (header + composer shell)');
+
+    // Morning brief (Phase 2): section renders above the thread from the
+    // mocked /api/agent/brief — dated header, narrative, while-you-were-
+    // away tiles, ranked plan, and the brief's own approval card.
+    await until(() => doc.body.textContent.includes('Morning brief'), 9000, 'morning brief section');
+    const briefText = doc.body.textContent;
+    if (!briefText.includes('Six new denials landed overnight')) fail('brief narrative summary missing');
+    if (!briefText.includes('New denials')) fail('brief while-away tiles missing');
+    if (!briefText.includes("Today's plan")) fail('brief plan section missing');
+    if (!briefText.includes('Follow up appeal — CLM-2005')) fail('brief plan top item missing');
+    if (!briefText.includes('Drafts ready for your approval')) fail('brief drafts header missing');
+    if (!briefText.includes('Draft appeal — claim CLM-1002')) fail('brief approval card missing');
+    console.log('  PASS morning brief renders (narrative + tiles + plan + inline approval card)');
 
     await until(() => doc.body.textContent.includes('What is on my worklist?'), 9000, 'conversation list');
     const convoBtn = [...doc.querySelectorAll('button')].find((b) => b.textContent.includes('What is on my worklist?'));

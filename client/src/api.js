@@ -392,6 +392,7 @@ export const api = {
   },
   // ---- In-app agent (Phase 1; dark-shipped behind AGENT_ENABLED + key) ----
   agent: {
+    brief: () => get('/api/agent/brief'),
     conversations: () => get('/api/agent/conversations'),
     conversation: (id) => get(`/api/agent/conversations/${id}`),
     chat: (convoId, message) =>

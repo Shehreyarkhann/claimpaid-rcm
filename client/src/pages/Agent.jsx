@@ -73,10 +73,80 @@ function ActionCard({ action, busy, onDecide }) {
   );
 }
 
+function BriefSection({ brief, actions, decidingId, onDecide }) {
+  const w = brief.while_away || {};
+  const tiles = [
+    { label: 'New denials', value: w.new_denials ? w.new_denials.count : 0 },
+    {
+      label: 'ERA posted',
+      value: w.era_postings ? w.era_postings.count : 0,
+      sub: w.era_postings && w.era_postings.total_paid ? `$${Number(w.era_postings.total_paid).toLocaleString()} paid` : null,
+    },
+    {
+      label: 'Exceptions on hold',
+      value: w.era_exceptions ? w.era_exceptions.on_hold_count : 0,
+      sub: w.era_exceptions && w.era_exceptions.new_count ? `${w.era_exceptions.new_count} new` : null,
+    },
+    { label: 'Follow-ups passed', value: w.followups_passed ? w.followups_passed.count : 0 },
+  ];
+  const dateLabel = (() => {
+    try {
+      return new Date(`${brief.brief_date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+    } catch { return brief.brief_date; }
+  })();
+  return (
+    <div className="card p-5 mb-5">
+      <div className="flex items-baseline gap-3 flex-wrap">
+        <div className="font-display font-semibold text-stone-900 text-lg">Morning brief</div>
+        <div className="text-xs text-stone-400">{dateLabel} · while you were away</div>
+      </div>
+      {brief.summary && <p className="mt-2 text-sm leading-relaxed text-stone-700">{brief.summary}</p>}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+        {tiles.map((t) => (
+          <div key={t.label} className="rounded-xl bg-[#FAF5EB] ring-1 ring-stone-200/70 px-3 py-2.5">
+            <div className="font-display text-xl font-semibold text-stone-900">{t.value}</div>
+            <div className="text-[11px] font-medium uppercase tracking-wide text-stone-500">{t.label}</div>
+            {t.sub && <div className="text-[11px] text-emerald-700 font-medium mt-0.5">{t.sub}</div>}
+          </div>
+        ))}
+      </div>
+      {brief.plan && brief.plan.length > 0 && (
+        <div className="mt-4">
+          <div className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-2">Today's plan</div>
+          <ol className="space-y-1.5">
+            {brief.plan.map((p) => (
+              <li key={p.key || p.rank} className="flex items-baseline gap-2.5 text-sm">
+                <span className="font-display font-semibold text-emerald-700 w-5 shrink-0">{p.rank}.</span>
+                <span className="min-w-0">
+                  <span className="font-medium text-stone-800">{p.title}</span>
+                  {p.reason && <span className="text-stone-500"> — {p.reason}</span>}
+                </span>
+                {p.amount != null && <span className="ml-auto shrink-0 font-medium text-stone-700">${Number(p.amount).toLocaleString()}</span>}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+      {actions.length > 0 && (
+        <div className="mt-4">
+          <div className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-2">Drafts ready for your approval</div>
+          <div className="space-y-3">
+            {actions.map((a) => (
+              <ActionCard key={a.id} action={a} busy={decidingId === a.id} onDecide={onDecide} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Agent() {
   const toast = useToast();
   const [disabled, setDisabled] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [brief, setBrief] = useState(null);
+  const [briefActions, setBriefActions] = useState([]);
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -107,6 +177,36 @@ export default function Agent() {
   }, []);
 
   useEffect(() => { loadConversations().catch(() => setLoading(false)); }, [loadConversations]);
+
+  // Morning brief: generated lazily server-side on the first read of the
+  // org-local day. A failure (other than the disabled state) just hides
+  // the section — the chat below is unaffected.
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await api.agent.brief();
+        setBrief(r.brief || null);
+        setBriefActions(r.actions || []);
+      } catch (e) {
+        if (e.code === 'AGENT_DISABLED') setDisabled(true);
+      }
+    })();
+  }, []);
+
+  const decideBrief = async (action, decision) => {
+    setDecidingId(action.id);
+    try {
+      const r = decision === 'approve' ? await api.agent.approveAction(action.id) : await api.agent.rejectAction(action.id);
+      setBriefActions((list) => list.map((a) => (a.id === action.id ? r.action : a)));
+      if (decision === 'approve' && r.action.status === 'executed') toast.success('Appeal draft saved to the claim');
+      if (decision === 'approve' && r.action.status === 'failed') toast.error('Approval recorded, but saving failed');
+      if (decision === 'reject') toast.success('Draft rejected — nothing was saved');
+    } catch (e) {
+      toast.error(e.message || 'Could not record that decision');
+    } finally {
+      setDecidingId(null);
+    }
+  };
 
   const openConversation = async (id) => {
     try {
@@ -203,6 +303,7 @@ export default function Agent() {
         subtitle="Reads your queue, drafts the work, and never saves anything without your approval."
         actions={<button className="btn btn-dark" onClick={newChat}>+ New chat</button>}
       />
+      {brief && <BriefSection brief={brief} actions={briefActions} decidingId={decidingId} onDecide={decideBrief} />}
       <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)] items-start">
         {/* Conversation list */}
         <div className="card p-3 lg:sticky lg:top-5">
