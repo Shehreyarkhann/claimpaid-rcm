@@ -1,35 +1,47 @@
 # ClaimPaid
 
-> ClaimPaid is AI-powered revenue cycle management (RCM) software for medical billing teams and billing companies. It recovers denied claim revenue through denial workflows, automated appeal letters, timely-filing tracking, and a private AI assistant grounded in payer policy documents.
+> ClaimPaid is revenue cycle management (RCM) software for medical billing teams and billing companies, built around an AI agent that works the denial queue. The agent opens each day with a brief and a ranked work queue, drafts appeals for your approval, checks eligibility, scrubs and codes claims, reads paper remittances and denial letters, and learns your payers from your own decided claims. Nothing the agent proposes is written without a human approving it, and it never sends anything to a payer — teams submit through their current path.
 
 ## What ClaimPaid does
 
 - **Denial management**: Track every denied claim through a structured appeal pipeline from denial to paid.
-- **Automated appeal letters**: Generates payer-specific appeal letters from denial reason codes, with 8 built-in templates plus custom per-organization templates.
+- **The ClaimPaid agent**: A working member of the billing team, not a chatbot. It opens the day with a morning brief (what changed, follow-ups that slipped), ranks the queue by deadline pressure × dollars at stake, pre-drafts appeals into an approval queue, runs eligibility, scrubbing, and coding checks on any claim, and sends a watchdog email digest when approvals are waiting or dollars are near a filing deadline. Every write waits for human approval; the agent never transmits anything to a payer.
+- **Appeal letters, drafted for approval**: Payer-specific appeal letters generated from denial reason codes — 8 built-in categories plus custom per-organization templates — with the workspace's letterhead and signature block. Once a workspace has decided appeals, drafts lead with the argument angles that have actually won against that payer in that workspace.
+- **Predictions from your own data**: Appeal-overturn odds from the workspace's decided appeals to that payer on that denial reason; payment likelihood from its own posted remittances. Every prediction is labeled with its sample size ("early estimate" when thin, "no data yet" when there is none). Data is never pooled across customers.
 - **Timely filing tracker**: Deadline tracking for major US payers (Aetna 120 days, Cigna 180, UnitedHealthcare 90, Anthem 180, Medicare 365, NY Medicaid 90, Humana 180).
-- **Claim scrubber**: 15 pre-billing validation rules catch errors before claims go out.
-- **Smart worklists**: Prioritized daily work queues for billers, sorted by dollar impact and deadline urgency.
-- **835 ERA import / 837P export**: Standard healthcare EDI transaction support.
+- **Eligibility checks**: Run inside the workspace, configured per organization — or ask the agent to check any claim. Results are stored on the claim.
+- **Claim scrubber**: 15 pre-billing validation rules catch errors before claims go out. The agent runs the same scrubber on any claim and explains every finding.
+- **Denial Rescue wizard**: Pick a denied claim and walk it end to end in five steps: snapshot and odds, eligibility, scrub findings, the drafted appeal, and the submission checklist.
+- **Smart worklists**: Prioritized daily work queues for billers, scored by dollars at stake and days until the filing deadline — with the agent's prediction shown on the row.
+- **835 ERA import + auto-posting / 837P generation**: Payments auto-post from remittance files; CAS denial codes auto-parse and link into appeals. ERA exception resolution proposes a disposition for variance holds (contractual, patient responsibility, rebill, write-off) computed from the remittance's own adjustment codes — posted only on approval. 837P (005010X222A1) claim files are generated for the team's current submission path, with 999/277CA acknowledgment handling.
+- **Document intake**: Paper EOBs and scanned payer denial letters are read, matched to claims, and turned into held remittances and draft appeals — every figure checked, anything unclear flagged for a human, never filled in.
+- **Payer-call prep**: The agent builds the call brief for payer phone calls (identifiers ready, questions keyed to the denial family) and logs the rep's name, reference number, and promise into the claim timeline with the follow-up set.
+- **Patient statements**: Patient-responsibility balances become statements generated from posted remittances.
+- **Recovered-dollars scoreboard**: The workspace tracks dollars recovered through decided appeals — including agent-drafted ones — on the Dashboard.
+- **Import wizard**: Bring open A/R in via CSV or 837 — mapped, validated row by row, duplicates flagged, committed only at the final step.
 - **Prior authorization tracking**: Manage auths and link them to appeals.
-- **Payer Playbook**: Searchable database of payer-specific billing rules and appeal tactics.
+- **Payer Playbook**: Searchable database of payer-specific billing rules and appeal tactics, built from the workspace's own outcomes.
 - **Reports**: 5 exportable CSV reports (aging, denial patterns, productivity, payer performance, revenue recovery).
-- **ClaimPaid AI** (separate product at /ai/): A private AI assistant over your own documents. Upload PDFs/policies, ask questions in plain language, get cited answers. Runs on private infrastructure — no data sent to third-party AI APIs.
+- **ClaimPaid AI** (separate product at /ai/): The knowledge layer behind the agent. Cited answers from the Payer Policy Handbook (timely-filing limits, appeal windows, denial-code rules), a quote-verified coding assistant (a code is Valid only when the documentation supports it, quoted back; otherwise Review or an honest Abstain), and cited answers over your own documents (policies, contracts, manuals). Per-workspace isolation — your documents and outcomes are never pooled across customers.
 
 ## Pricing
 
-- **RCM Starter** — $199/month: core RCM (claims, denials, appeals, worklists, reports).
-- **RCM Pro + AI** — $499/month: everything in Starter plus ClaimPaid AI, automation pack, API access.
-- **ClaimPaid AI** (standalone) — $99/month: the private document AI only, at claimpaid.io/ai/.
+- **RCM Starter** — $199/month: full RCM platform (claims, denials, appeals, worklists, timely filing radar, 15-rule scrubber, 835 import / 837P generation, reports). Up to 3 team seats.
+- **RCM Pro + AI** — $499/month: everything in Starter plus the ClaimPaid agent (morning brief, ranked queue, drafts for your approval), the Payer Policy Handbook with cited answers, the quote-verified coding assistant, predictions and winning-angle learning from your own history, the watchdog digest, and the Denial Rescue wizard. Up to 15 team seats.
+- **ClaimPaid AI** (standalone) — $99/month: the knowledge layer only — Payer Policy Handbook, quote-verified coding assistant, and cited answers over your own documents — at claimpaid.io/ai/.
 - **Enterprise** — custom pricing.
 - All paid plans include a 1-month free trial.
 
 ## Who it's for
 
-Medical billing companies, independent billing services, hospital and physician practice billing departments, and revenue cycle teams that lose revenue to claim denials and want systematic denial recovery.
+Medical billing companies, independent billing services, hospital and physician practice billing departments, and revenue cycle teams that lose revenue to claim denials and want systematic denial recovery. Billing companies run one workspace per client practice under a single login, with a manager's view across the team (workloads, overdue follow-ups, win rates by biller, stalled dollars).
 
 ## Key facts
 
 - Web-based SaaS; multi-tenant with per-organization data isolation; role-based access (owner/biller/viewer).
+- The AI agent uses a frontier AI model via API inside the workspace. Per-workspace learning: a workspace's claims, documents, and outcomes train only that workspace's predictions and answers — never pooled across customers. Every agent proposal, approval, and rejection is recorded in an audit log.
+- ClaimPaid includes built-in BAA e-signing, executed inside the platform before any PHI flows. ClaimPaid makes no HIPAA certification claims: no such certification exists.
+- A free deadline audit is offered: send an aging report (CSV or 835 export) and receive an expiring-dollars report — open claims ranked by days left to file, dollars at risk by payer, already-expired claims called out separately.
 - Built by a revenue-cycle practitioner (not a generic SaaS team).
 - Support: support@claimpaid.io
 - Site: https://claimpaid.io/
@@ -69,7 +81,7 @@ In-depth, practical guides for medical billing teams (also at https://claimpaid.
 - **CMS-1500 vs UB-04: Which Claim Form to Use** — https://claimpaid.io/blog/cms-1500-vs-ub04/ — professional vs institutional forms, 837P/837I, edge cases like ASC split billing.
 - **Do Billing Companies Need a BAA? HIPAA Rules Explained** — https://claimpaid.io/blog/hipaa-baa-billing-company/ — business associate definition, required BAA elements, contract red flags, e-signing.
 - **How Long Do Insurers Have to Pay a Claim? Prompt-Pay Laws Explained** — https://claimpaid.io/blog/prompt-payment-laws-explained/ — state prompt-pay deadlines, Medicare's 30-day standard, the ERISA exception, late-payment remedies.
-- **ClaimPaid vs Legacy Billing Software: What to Compare** — https://claimpaid.io/compare/ — criteria-based evaluation: trial availability, transparent pricing, AI coding assistance, BAA e-signing, local-first AI; honest fit/misfit notes.
+- **ClaimPaid vs Legacy Billing Software: What to Compare** — https://claimpaid.io/compare/ — criteria-based evaluation: trial availability, transparent pricing, quote-verified AI coding, BAA e-signing, AI agent safeguards, and an agent that works the queue; honest fit/misfit notes.
 
 ## Optional
 
@@ -78,11 +90,13 @@ In-depth, practical guides for medical billing teams (also at https://claimpaid.
 
 ## Frequently asked questions
 
-- **What is ClaimPaid?** AI-powered revenue cycle management (RCM) software for medical billing teams and billing companies. It manages claims, denials, appeals, timely-filing deadlines, ERA posting, eligibility, and patient statements, plus a private AI assistant (ClaimPaid AI) grounded in payer policy documents.
+- **What is ClaimPaid?** Revenue cycle management (RCM) software for medical billing teams and billing companies, built around an AI agent that works the denial queue. It manages claims, denials, appeals, timely-filing deadlines, ERA posting, eligibility, and patient statements. The agent opens each day with a brief and a ranked work queue, drafts appeals for human approval, and answers payer-policy questions from the Payer Policy Handbook with citations. ClaimPaid AI — the knowledge layer behind the agent — is also available standalone.
 - **How much does ClaimPaid cost?** RCM Starter is $199/month, RCM Pro + AI is $499/month, ClaimPaid AI standalone is $99/month, and Enterprise is custom. Pricing is public and flat — no percentage of collections. Every paid plan starts with a real 30-day free trial, no credit card required.
 - **What are the timely filing limits for major payers?** Aetna 120 days, Cigna 180 days, UnitedHealthcare 90 days, Anthem 180 days, Medicare one calendar year, New York Medicaid 90 days, Humana 180 days. ClaimPaid tracks these deadlines per claim and ranks work by deadline risk.
 - **Does ClaimPaid sign a BAA?** Yes — BAA e-signing is built into onboarding.
-- **Where does the AI run?** ClaimPaid AI runs on private infrastructure with a local model. Customer documents and clinical notes are not sent to third-party AI APIs.
+- **Where does my data go when I use ClaimPaid's AI features?** The agent works inside your ClaimPaid workspace, using a frontier AI model via API to read your queue, draft, and answer. Three mechanics protect you: nothing the agent proposes is written without a human approving it, every agent action and decision is recorded in your audit log, and your workspace's data trains only your workspace's predictions — it is never pooled with other customers' data. ClaimPaid makes no HIPAA certification claims: no such certification exists.
+- **Does the AI send anything to payers?** No. The agent drafts and prepares — appeal letters, code sets, exception resolutions — and a person on your team approves each one and submits it through your current path. Nothing is transmitted to a payer by the AI.
+- **Is my data used to train models for other customers?** No. Predictions and appeal-angle learning are computed per workspace, from that workspace's own decided appeals and posted remittances only. Your data never trains another customer's predictions or answers.
 - **How does the AI coding assistant avoid making up codes?** Every suggested code must quote the exact words in the clinical note that justify it, verified against the note server-side. Suggestions are marked Valid, Review, or Abstain — when nothing in a note supports a code, it abstains instead of guessing. A human coder accepts every code.
 - **Who is ClaimPaid for?** Medical billing companies, independent billers, and practice billing teams — especially small teams losing revenue to denials and missed filing deadlines.
 - **Where does ClaimPaid serve customers?** ClaimPaid serves medical billing teams across the United States, with built-in rules for the major national payers (Aetna, Cigna, UnitedHealthcare, Anthem, Medicare, Humana) plus state Medicaid programs and custom payers. Built by a working biller. Support: support@claimpaid.io.
