@@ -8,33 +8,36 @@
    present, go straight to the app. Logged out (or token expired) = landing. */
 (function(){try{var t=localStorage.getItem('pulse_token');if(!t)return;var b=t.split('.')[1];if(!b)return;var p=JSON.parse(decodeURIComponent(escape(atob(b.replace(/-/g,'+').replace(/_/g,'/')))));if(p.exp&&p.exp*1000>Date.now()){location.replace('/app/');}}catch(e){}})();
 </script>
-<title>ClaimPaid — AI-Powered Medical Billing & Denial Management Software | Get your claims paid.</title>
-<meta name="description" content="AI-powered medical billing & denial management software: denial appeals, timely-filing tracking, 837P/835 EDI and payer-policy AI. 30-day free trial, no card."/>
-<meta name="keywords" content="AI-powered medical billing software, denial management software, medical billing software for small practices, revenue cycle management software, claim scrubber, timely filing tracker, AI medical coding assistant, 835 ERA, 837P claims, automated appeal letters, payer policy AI, billing company software"/>
+<title>ClaimPaid — AI Agent for Medical Billing & Denial Management | Get your claims paid.</title>
+<meta name="description" content="ClaimPaid's AI agent opens each day with a brief and a ranked work queue, drafts appeals for your approval, checks eligibility, scrubs and codes claims, and learns your payers from your own decided claims. Full RCM platform — 30-day free trial, no card."/>
+<meta name="keywords" content="AI medical billing agent, AI-powered medical billing software, denial management software, medical billing software for small practices, revenue cycle management software, claim scrubber, timely filing tracker, AI medical coding assistant, 835 ERA, 837P claims, appeal letter drafting, payer policy handbook, billing company software"/>
 <link rel="canonical" href="https://claimpaid.io/"/>
 <meta name="robots" content="index, follow, max-image-preview:large"/>
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="ClaimPaid"/>
-<meta property="og:title" content="ClaimPaid — AI-Powered Medical Billing & Denial Management Software"/>
-<meta property="og:description" content="Denial appeals, timely-filing tracking, 837P/835 EDI, real-time eligibility and a private payer-policy AI — for small-practice billing teams. 30-day free trial, no credit card."/>
+<meta property="og:title" content="ClaimPaid — AI Agent for Medical Billing & Denial Management"/>
+<meta property="og:description" content="An AI agent that works your denial queue: morning brief, ranked plan, appeal drafts for your approval, eligibility checks and cited payer-policy answers. 30-day free trial, no credit card."/>
 <meta property="og:url" content="https://claimpaid.io/"/>
 <meta property="og:image" content="https://claimpaid.io/claimpaid-icon.webp"/>
 <meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:title" content="ClaimPaid — AI-Powered Medical Billing & Denial Management Software"/>
-<meta name="twitter:description" content="Denial appeals, timely-filing tracking, 837P/835 EDI, eligibility + private payer-policy AI. 30-day free trial, no card."/>
+<meta name="twitter:title" content="ClaimPaid — AI Agent for Medical Billing & Denial Management"/>
+<meta name="twitter:description" content="Denial appeals drafted for your approval, timely-filing tracking, 837P/835 EDI, eligibility checks + cited payer-policy answers. 30-day free trial, no card."/>
 <meta name="twitter:image" content="https://claimpaid.io/claimpaid-icon.webp"/>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
 {"@type":"Question","name":"What does ClaimPaid cost?","acceptedAnswer":{"@type":"Answer","text":"RCM Starter is $199/month, RCM Pro + AI is $499/month, ClaimPaid AI standalone is $99/month, and Enterprise is custom. Every paid plan starts with a 30-day free trial — no credit card required."}},
 {"@type":"Question","name":"Is the 30-day free trial really free — no credit card?","acceptedAnswer":{"@type":"Answer","text":"Yes. Selecting a plan starts a real 30-day trial of the app — no credit card required. A guided 5-step onboarding wizard sets up your workspace, and you can sign in with Google. Trial days remaining sync to billing, so checkout only starts paid billing after the trial ends."}},
 {"@type":"Question","name":"Can I sign a BAA with ClaimPaid?","acceptedAnswer":{"@type":"Answer","text":"Yes — ClaimPaid includes built-in BAA e-signing, so the business associate agreement is executed inside the platform before any PHI flows."}},
-{"@type":"Question","name":"How do real-time eligibility checks work?","acceptedAnswer":{"@type":"Answer","text":"ClaimPaid runs real-time 270/271 eligibility transactions through Availity or your clearinghouse's REST endpoint, configured per workspace. Eligibility results stop CO-50 non-covered-service denials before claims go out."}},
+{"@type":"Question","name":"How do eligibility checks work?","acceptedAnswer":{"@type":"Answer","text":"ClaimPaid runs eligibility checks inside the workspace, configured per organization — or ask the agent to check any claim before it goes out. Results are stored on the claim, so CO-50 non-covered-service denials get stopped before submission, not after."}},
 {"@type":"Question","name":"Which EHR integrations does ClaimPaid support?","acceptedAnswer":{"@type":"Answer","text":"ClaimPaid connects to athenahealth via OAuth2 to sync patient and claim data. Other EHR integrations are evaluated per organization."}},
-{"@type":"Question","name":"Where does my data go when I use ClaimPaid's AI features?","acceptedAnswer":{"@type":"Answer","text":"ClaimPaid AI runs on private infrastructure — your documents and claim data are not sent to third-party AI APIs. That's the local-first design: your data stays in your environment. We make no HIPAA certification claims — we simply keep your data on infrastructure you can trust and let you sign a BAA."}},
+{"@type":"Question","name":"Where does my data go when I use ClaimPaid's AI features?","acceptedAnswer":{"@type":"Answer","text":"The agent works inside your ClaimPaid workspace, using a frontier AI model via API to read your queue, draft, and answer. Three mechanics protect you: nothing the agent proposes is written without a human approving it, every agent action and decision is recorded in your audit log, and your workspace's data trains only your workspace's predictions — it is never pooled with other customers' data. We make no HIPAA certification claims: no such certification exists."}},
+{"@type":"Question","name":"Is my data used to train models for other customers?","acceptedAnswer":{"@type":"Answer","text":"No. Predictions and appeal-angle learning are computed per workspace, from that workspace's own decided appeals and posted remittances only. Your data never trains another customer's predictions or answers."}},
+{"@type":"Question","name":"Does the AI send anything to payers?","acceptedAnswer":{"@type":"Answer","text":"No. The agent drafts and prepares — appeal letters, code sets, exception resolutions — and a person on your team approves each one and submits it through your current path. Nothing is transmitted to a payer by the AI."}},
+{"@type":"Question","name":"What does the agent do each morning?","acceptedAnswer":{"@type":"Answer","text":"It opens the day with a brief: what changed while you were away, a ranked work plan (deadline pressure times dollars at stake), and appeal drafts already written for the claims that need them — waiting for your approval. A watchdog digest emails the same picture when you're away from the app."}},
 {"@type":"Question","name":"Is my data encrypted?","acceptedAnswer":{"@type":"Answer","text":"Database backups are encrypted with age (X25519) the moment they are written, and each backup is decrypt-verified before its plaintext is deleted. All traffic uses TLS. No HIPAA certification claims are made: no such certification exists."}},
-{"@type":"Question","name":"Does ClaimPaid write appeal letters automatically?","acceptedAnswer":{"@type":"Answer","text":"Yes — it drafts payer-specific appeal letters from denial reason codes using 8 built-in templates plus custom per-organization templates. The AI-assisted coding helper suggests codes from a 370-code library, always with a human in the loop — unverified codes are hard-blocked from submission."}},
+{"@type":"Question","name":"Does ClaimPaid write appeal letters automatically?","acceptedAnswer":{"@type":"Answer","text":"The agent drafts payer-specific appeal letters from the denial reason code — using the letter engine's categories, your letterhead, and, once your workspace has decided appeals, the argument angles that have actually won against that payer. Every draft waits for a human to approve it; approving saves the appeal, and your team submits it. The coding assistant suggests codes from a 370-code library only when the documentation supports them — unverified codes are never applied on the AI's say-so."}},
 {"@type":"Question","name":"Which payers' timely-filing deadlines does ClaimPaid track?","acceptedAnswer":{"@type":"Answer","text":"Aetna (120 days), Cigna (180), UnitedHealthcare (90), Anthem (180), Medicare (365), NY Medicaid (90), and Humana (180) — with custom payers and deadlines configurable per organization."}},
-{"@type":"Question","name":"Can I use ClaimPaid AI without the RCM platform?","acceptedAnswer":{"@type":"Answer","text":"Yes — ClaimPaid AI standalone is $99/month at claimpaid.io/ai/. Support is handled through a two-way helpdesk with a 24-hour response SLA."}},
+{"@type":"Question","name":"Can I use ClaimPaid AI without the RCM platform?","acceptedAnswer":{"@type":"Answer","text":"Yes — ClaimPaid AI standalone is $99/month at claimpaid.io/ai/: cited answers from the Payer Policy Handbook, the quote-verified coding assistant, and cited answers over your own documents, without the full RCM platform. RCM Pro includes it with one shared login. Support is handled through a two-way helpdesk with a 24-hour response SLA."}},
 {"@type":"Question","name":"How long does implementation take?","acceptedAnswer":{"@type":"Answer","text":"Most teams are live within 24 hours — a 5-step onboarding wizard gets your workspace set up on a real 30-day trial, no implementation project required."}},
 {"@type":"Question","name":"When is ClaimPaid not the right fit?","acceptedAnswer":{"@type":"Answer","text":"ClaimPaid is software, not a billing service — if you want a company to do the billing work for you rather than software for your team, we're not that. It's web-based SaaS (not on-premise), and its payer content is built around US billing workflows."}}
 ]}
@@ -44,7 +47,7 @@
 {"@context":"https://schema.org","@type":"Organization","name":"ClaimPaid","url":"https://claimpaid.io/","logo":"https://claimpaid.io/claimpaid-icon.webp","description":"AI-powered revenue cycle management software for medical billing teams.","sameAs":[],"contactPoint":{"@type":"ContactPoint","email":"support@claimpaid.io","contactType":"customer support"}}
 </script>
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"SoftwareApplication","name":"ClaimPaid","applicationCategory":"BusinessApplication","operatingSystem":"Web","url":"https://claimpaid.io/","description":"Revenue cycle management software: denial management workflows, automated appeal letter generation, timely-filing deadline tracking, 15-rule claim scrubber, 835 ERA import, 837P generation and transmission, real-time 270/271 eligibility, athenahealth EHR integration, AI-assisted coding with a 370-code library, BAA e-signing, and ClaimPaid AI — a private AI assistant grounded in payer policy documents.","offers":[{"@type":"Offer","name":"RCM Starter","price":"199","priceCurrency":"USD","description":"Core RCM: claims, denials, appeals, worklists, reports."},{"@type":"Offer","name":"RCM Pro + AI","price":"499","priceCurrency":"USD","description":"Everything in Starter plus ClaimPaid AI assistant, automation pack, and API."},{"@type":"Offer","name":"ClaimPaid AI","price":"99","priceCurrency":"USD","description":"Private AI assistant over your documents. Standalone plan."},{"@type":"Offer","name":"Enterprise","priceCurrency":"USD","description":"Custom annual agreement for large billing companies and MSOs."}],"provider":{"@type":"Organization","name":"ClaimPaid","url":"https://claimpaid.io/"}}
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"ClaimPaid","applicationCategory":"BusinessApplication","operatingSystem":"Web","url":"https://claimpaid.io/","description":"Revenue cycle management software with an AI agent: a morning brief and ranked work queue, appeal drafts approved by a human before anything is written, eligibility checks, a 15-rule claim scrubber, quote-verified coding with a 370-code library, 835 ERA import with auto-posting and exception resolution, timely-filing deadline tracking, document intake for paper EOBs and denial letters, athenahealth EHR integration, BAA e-signing, and predictions learned from each workspace's own decided claims.","offers":[{"@type":"Offer","name":"RCM Starter","price":"199","priceCurrency":"USD","description":"Core RCM: claims, denials, appeals, worklists, reports."},{"@type":"Offer","name":"RCM Pro + AI","price":"499","priceCurrency":"USD","description":"Everything in Starter plus the ClaimPaid agent, the Payer Policy Handbook, and the verified coding assistant."},{"@type":"Offer","name":"ClaimPaid AI","price":"99","priceCurrency":"USD","description":"Handbook answers with citations plus the quote-verified coding assistant. Standalone plan."},{"@type":"Offer","name":"Enterprise","priceCurrency":"USD","description":"Custom annual agreement for large billing companies and MSOs."}],"provider":{"@type":"Organization","name":"ClaimPaid","url":"https://claimpaid.io/"}}
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -324,7 +327,7 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
 <nav id="nav"><div class="wrap nav-in">
   <a class="logo" href="/"><img src="claimpaid-icon.webp" alt="ClaimPaid"/><span class="wm">Claim<em>Paid</em></span></a>
   <div class="nav-links" id="navLinks">
-    <a href="#platform">Platform</a><a href="#ai-sec">AI Assistant</a><a href="#pricing">Pricing</a><a href="/blog/">Blog</a><a href="/compare/">Compare</a>
+    <a href="#platform">Platform</a><a href="#agent">The Agent</a><a href="#pricing">Pricing</a><a href="/blog/">Blog</a><a href="/compare/">Compare</a>
     <a class="btn btn-green btn-sm" href="/app/" data-smart-cta>Get started</a>
   </div>
   <button class="burger" id="burger" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
@@ -336,19 +339,19 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
     <div class="fcard">
       <div class="row"><span class="cid">CLM-100122 · Medicaid NY</span><span class="pill denied">DENIED</span></div>
       <div class="amt">$5,183.64</div>
-      <div class="lbl">Coordination of benefits — appeal drafted automatically</div>
-      <div class="bar"><i></i></div><div class="lbl">Recovering…</div>
+      <div class="lbl">Coordination of benefits — appeal drafted, waiting for your approval</div>
+      <div class="bar"><i></i></div><div class="lbl">In this morning's brief…</div>
     </div>
     <div class="fcard">
-      <div class="row"><span class="cid">CLM-100091 · Aetna</span><span class="pill paid">✓ PAID</span></div>
+      <div class="row"><span class="cid">CLM-100091 · Aetna</span><span class="pill denied">11 DAYS LEFT</span></div>
       <div class="amt">$8,275.36</div>
-      <div class="lbl">Timely-filing appeal won in 6 days</div>
+      <div class="lbl">Filing deadline closing in — ranked #1 in today's plan</div>
     </div>
   </div>
   <div class="wrap">
-    <div class="hero-badge"><span class="dot"></span>AI-powered revenue-cycle management</div>
+    <div class="hero-badge"><span class="dot"></span>Revenue-cycle management, with an AI agent on the team</div>
     <h1 id="headline"><span class="w" style="animation-delay:.15s">Get</span> <span class="w" style="animation-delay:.28s">your</span> <span class="w" style="animation-delay:.41s">claims</span> <span class="w" style="animation-delay:.54s"><span class="grad">paid.</span></span></h1>
-    <p class="hero-sub">Spreadsheets track denials. Dashboards display them. <b>ClaimPaid collects them.</b> Deadline-ranked work, appeals in the payer's own words, payments posted automatically — denial management that ends at <i>paid</i>, not at <i>reported</i>.</p>
+    <p class="hero-sub">Spreadsheets track denials. Dashboards display them. <b>ClaimPaid collects them.</b> An AI agent works the queue with your team: it opens the day with a brief and a ranked plan, drafts the appeals, runs eligibility, scrubbing, and coding checks before claims go out — and nothing is written without your approval.</p>
     <div class="hero-ctas">
       <a class="btn btn-green" href="/app/" data-smart-cta>Start recovering revenue →</a>
       <a class="btn btn-ghost" href="#platform">See how it works</a>
@@ -380,7 +383,7 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
     <div class="trust reveal"><div class="tk">⚡</div><div><b>Live in 24 hours</b><small>No implementation project</small></div></div>
     <div class="trust reveal"><div class="tk">💰</div><div><b>Zero per-claim fees</b><small>Flat pricing, public — cancel anytime</small></div></div>
     <div class="trust reveal"><div class="tk">🖊️</div><div><b>BAA e-sign built in</b><small>Signed before your first claim</small></div></div>
-    <div class="trust reveal"><div class="tk">🏠</div><div><b>Local AI</b><small>Notes never sent to a third-party AI API</small></div></div>
+    <div class="trust reveal"><div class="tk">🔒</div><div><b>Per-workspace learning</b><small>Your data trains only your predictions — never pooled</small></div></div>
     <div class="trust reveal"><div class="tk">🔐</div><div><b>Encrypted backups, full audit log</b><small>Every sensitive action recorded</small></div></div>
     <div class="trust reveal"><div class="tk">🏥</div><div><b>Built by a billing insider</b><small>Works denials every day — not a generic SaaS team</small></div></div>
   </div>
@@ -402,7 +405,7 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
   <div class="prob-grid">
     <div class="prob reveal"><div class="big">90 days</div><h3>UHC's filing guillotine</h3><p>The tightest commercial window in the industry. Miss it by a day and the claim is dead — you can't even bill the patient. ClaimPaid's filing radar flags these before they expire.</p></div>
     <div class="prob reveal"><div class="big">CO-29</div><h3>Death by timely filing</h3><p>The most painful denial code in billing. Entirely preventable, completely unrecoverable without proof of submission. ClaimPaid tracks every deadline per payer, automatically.</p></div>
-    <div class="prob reveal"><div class="big">21+ days</div><h3>Appeals that stall out</h3><p>An appeal sitting untouched for three weeks is an appeal you've forgotten. ClaimPaid auto-escalates stale appeals and nudges your team on the right cadence.</p></div>
+    <div class="prob reveal"><div class="big">21+ days</div><h3>Appeals that stall out</h3><p>An appeal sitting untouched for three weeks is an appeal you've forgotten. The agent's morning brief and watchdog digest put stale appeals and passed follow-ups in front of your team every day.</p></div>
   </div>
 </div></section>
 
@@ -410,44 +413,86 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
   <span>⚠ CO-29 · Timely filing expired — $4,224.06 at risk</span><span>⚠ CO-197 · Prior auth missing — $2,370.17 at risk</span><span>⚠ CO-16 · Lacks information — $575.66 at risk</span><span>⚠ CO-97 · Bundled into primary — $310.07 at risk</span><span>⚠ CO-29 · Timely filing expired — $4,224.06 at risk</span><span>⚠ CO-197 · Prior auth missing — $2,370.17 at risk</span><span>⚠ CO-16 · Lacks information — $575.66 at risk</span><span>⚠ CO-97 · Bundled into primary — $310.07 at risk</span>
 </div></div>
 
+<section id="agent"><div class="wrap">
+  <div class="sec-tag reveal">MEET YOUR AGENT</div>
+  <h2 class="reveal">The queue works itself.<br/><span class="grad">You make the calls.</span></h2>
+  <p class="sec-sub reveal">ClaimPaid's agent is a working member of the billing team — not a chatbot in a corner. It reads your queue, does the legwork, and brings you finished drafts. Every write waits for your click, and every decision lands in the audit log.</p>
+  <div class="bento">
+    <div class="bcard wide reveal"><span class="tag ai">AGENT</span><span class="ico">🌅</span><h3>The morning brief</h3><p>Your day starts with a brief, not a pile: what changed while you were away — new denials, ERA postings, exceptions on hold, follow-ups that slipped — and the first moves that matter, already worked out.</p></div>
+    <div class="bcard reveal"><span class="tag ai">AGENT</span><span class="ico">🎯</span><h3>A ranked queue</h3><p>The plan ranks every item by deadline pressure times dollars at stake, and says why it's ranked there — including what your own history says about the odds of winning it.</p></div>
+    <div class="bcard reveal"><span class="tag ai">AGENT</span><span class="ico">✍️</span><h3>Drafts awaiting approval</h3><p>Appeals are drafted before you ask — letter written, evidence lined up. You approve or reject. Approving saves the appeal; your team submits it through your current path. The agent never sends anything to a payer.</p></div>
+    <div class="bcard wide reveal"><span class="tag ai">AGENT</span><span class="ico">🐕</span><h3>The watchdog</h3><p>Away from the app, the watchdog watches: a morning email digest when approvals are waiting, follow-ups are overdue, or dollars are inside 14 days of a filing deadline. Nothing actionable, no email.</p></div>
+  </div>
+</div></section>
+
 <section id="platform"><div class="wrap">
   <div class="sec-tag reveal">THE PLATFORM</div>
   <h2 class="reveal">One workspace.<br/><span class="grad">Every dollar chased.</span></h2>
   <p class="sec-sub reveal">Not another dashboard to glance at. A work engine your billers open every morning — prioritized, drafted, and tracked to paid.</p>
   <div class="bento">
-    <div class="bcard wide reveal"><span class="tag">NEW</span><span class="ico">🚀</span><h3>5-Step Onboarding Wizard — Real 30-Day Trial</h3><p>Welcome → Workspace → Goals → Plan → Success: a guided setup that gets your workspace live on a real 30-day trial. No credit card, ever — sign in with Google and start working claims the same day.</p></div>
-    <div class="bcard reveal"><span class="tag">CORE</span><span class="ico">🎯</span><h3>Smart Worklist — "My Work"</h3><p>Every claim, appeal, and follow-up scored by dollars at stake and days until the filing deadline dies. Your team stops guessing what to work first.</p></div>
-    <div class="bcard v reveal"><span class="tag ai">AI</span><span class="ico">🧾</span><h3>AI-Assisted Coding</h3><p>A 370-code library suggests the right codes with a human always in the loop — unverified codes are hard-blocked from submission. Coding help that never goes rogue. <a class="glink" href="/blog/medical-billing-modifiers-guide/">Medical billing modifiers guide →</a></p></div>
-    <div class="bcard reveal"><span class="tag">CORE</span><span class="ico">⚖️</span><h3>Denial Appeal Pipeline</h3><p>Open → in progress → submitted → won. Win an appeal and the claim auto-marks paid. Nothing falls through.</p></div>
-    <div class="bcard reveal"><span class="tag">CORE</span><span class="ico">✉️</span><h3>Auto Appeal Letters</h3><p>One click generates a payer-ready appeal letter for 8 denial categories — with your letterhead, signature block, and the right argument for the denial code. <a class="glink" href="/blog/how-to-appeal-denied-claim/">How to appeal a denied claim →</a></p></div>
-    <div class="bcard reveal"><span class="tag">CORE</span><span class="ico">⏰</span><h3>Timely Filing Radar</h3><p>Deadlines for 7 major payers (UHC 90d, Aetna 120d, Cigna 180d, Anthem 180d, Medicare 365d, NY Medicaid 90d, Humana 180d) tracked against every open claim — and you can add any payer with its own custom deadlines. Red alerts before revenue becomes unrecoverable. <a class="glink" href="/blog/timely-filing-limits-by-payer-2026/">Timely-filing limits by payer →</a></p></div>
-    <div class="bcard reveal"><span class="tag">CORE</span><span class="ico">🔍</span><h3>15-Rule Claim Scrubber</h3><p>Fifteen validation rules catch coding errors, missing modifiers, and eligibility gaps before the claim leaves the building — not after the denial lands.</p></div>
-    <div class="bcard reveal"><span class="tag">NEW</span><span class="ico">✅</span><h3>Real-Time 270/271 Eligibility</h3><p>Live eligibility transactions through Availity or your clearinghouse's REST endpoint. Stops CO-50 denials before they happen. <a class="glink" href="/blog/eligibility-verification-checklist/">Eligibility verification checklist →</a></p></div>
-    <div class="bcard reveal"><span class="tag">NEW</span><span class="ico">📤</span><h3>837P Generation + Transmission</h3><p>Real 837P (005010X222A1) claim generation with a structural validator, 999 and 277CA acknowledgments, and manual, SFTP, and REST transmission adapters. <a class="glink" href="/blog/837p-vs-835-explained/">837P vs 835, explained →</a></p></div>
-    <div class="bcard reveal"><span class="tag">NEW</span><span class="ico">🏥</span><h3>athenahealth EHR Integration</h3><p>Connect athenahealth via OAuth2 to sync patient and claim data into your billing workspace. Honest scope: athenahealth is the supported EHR.</p></div>
-    <div class="bcard reveal"><span class="tag">NEW</span><span class="ico">🖊️</span><h3>BAA E-Signing</h3><p>Sign Business Associate Agreements electronically right inside the app — compliance paperwork done before you touch your first real claim.</p></div>
-    <div class="bcard reveal"><span class="tag">NEW</span><span class="ico">💬</span><h3>Two-Way Support Helpdesk</h3><p>A built-in helpdesk with a 24-hour response SLA. Ask a question from inside the app and get a real answer — not a chatbot loop.</p></div>
-    <div class="bcard v reveal"><span class="tag ai">AI</span><span class="ico">🤖</span><h3>ClaimPaid AI, Embedded</h3><p>A full AI tab plus a floating quick-chat inside the platform. Ask "What's UHC's timely filing limit?" mid-appeal — get the cited answer instantly.</p></div>
-    <div class="bcard reveal"><span class="tag">CORE</span><span class="ico">📄</span><h3>835 ERA Import</h3><p>Drop in remittance files — payments auto-post, CAS denial codes auto-parse and link straight into appeals. <a class="glink" href="/blog/how-to-read-835-remittance-advice/">How to read an 835 remittance →</a></p></div>
-    <div class="bcard reveal"><span class="tag">CORE</span><span class="ico">🛡️</span><h3>Prior-Auth Tracking</h3><p>Prior-auth pipeline with expiration countdowns and denial-to-auth cross-links, so missing authorizations never become write-offs.</p></div>
-    <div class="bcard reveal"><span class="tag">CORE</span><span class="ico">📊</span><h3>Reports + Payer Playbook</h3><p>Five exportable reports, denial-pattern analytics by payer × reason, and a living playbook of what actually wins against each payer.</p></div>
+    <div class="bcard reveal"><span class="tag">BEFORE THE CLAIM</span><span class="ico">✅</span><h3>Eligibility Checks</h3><p>Coverage checked before claims go out — in the workspace, or ask the agent to run a check on any claim. Results live on the claim, so CO-50 non-covered-service denials get stopped at the door. <a class="glink" href="/blog/eligibility-verification-checklist/">Eligibility verification checklist →</a></p></div>
+    <div class="bcard reveal"><span class="tag">BEFORE THE CLAIM</span><span class="ico">🔍</span><h3>15-Rule Claim Scrubber</h3><p>Fifteen validation rules catch coding errors, missing modifiers, and eligibility gaps before the claim leaves the building — not after the denial lands. The agent runs the same scrubber on any claim and explains every finding.</p></div>
+    <div class="bcard v reveal"><span class="tag ai">BEFORE THE CLAIM</span><span class="ico">🧾</span><h3>Quote-Verified Coding</h3><p>A 370-code library, with a rule no other assistant follows: a code is Valid only when your documentation actually supports it, quoted back to you. Weak evidence gets Review. No evidence gets an honest Abstain. Applying codes takes your approval — never the AI's say-so. <a class="glink" href="/blog/medical-billing-modifiers-guide/">Medical billing modifiers guide →</a></p></div>
+    <div class="bcard reveal"><span class="tag">BEFORE THE CLAIM</span><span class="ico">🛡️</span><h3>Prior-Auth Tracking</h3><p>Prior-auth pipeline with expiration countdowns and denial-to-auth cross-links, so missing authorizations never become write-offs.</p></div>
+    <div class="bcard wide reveal"><span class="tag">THE DAY'S WORK</span><span class="ico">🎯</span><h3>Smart Worklist — "My Work"</h3><p>Every claim, appeal, and follow-up scored by dollars at stake and days until the filing deadline dies — now with the agent's prediction on the row: how likely an appeal is to overturn, from your own decided history. Your team stops guessing what to work first.</p></div>
+    <div class="bcard reveal"><span class="tag">THE DAY'S WORK</span><span class="ico">⏰</span><h3>Timely Filing Radar</h3><p>Deadlines for 7 major payers (UHC 90d, Aetna 120d, Cigna 180d, Anthem 180d, Medicare 365d, NY Medicaid 90d, Humana 180d) tracked against every open claim — and you can add any payer with its own custom deadlines. Red alerts before revenue becomes unrecoverable. <a class="glink" href="/blog/timely-filing-limits-by-payer-2026/">Timely-filing limits by payer →</a></p></div>
+    <div class="bcard reveal"><span class="tag ai">THE DAY'S WORK</span><span class="ico">🛟</span><h3>Denial Rescue Wizard</h3><p>Pick a denied claim and walk it end to end in five steps: snapshot and odds, eligibility, scrub findings, the drafted appeal, and the submission checklist. One claim, rescued in minutes.</p></div>
+    <div class="bcard reveal"><span class="tag">DENIALS &amp; APPEALS</span><span class="ico">⚖️</span><h3>Denial Appeal Pipeline</h3><p>Open → in progress → submitted → won. Win an appeal and the claim auto-marks paid. Nothing falls through.</p></div>
+    <div class="bcard reveal"><span class="tag">DENIALS &amp; APPEALS</span><span class="ico">✉️</span><h3>Appeal Letters, Ready to Approve</h3><p>One click generates a payer-ready appeal letter for 8 denial categories — with your letterhead, signature block, and the right argument for the denial code. The agent pre-drafts them into your approval queue. <a class="glink" href="/blog/how-to-appeal-denied-claim/">How to appeal a denied claim →</a></p></div>
+    <div class="bcard reveal"><span class="tag ai">DENIALS &amp; APPEALS</span><span class="ico">📚</span><h3>Payer Policy Handbook</h3><p>Timely-filing limits, appeal windows, and denial-code rules for major payers — ask the agent mid-appeal and get the answer with the source cited, not a guess.</p></div>
+    <div class="bcard reveal"><span class="tag ai">DENIALS &amp; APPEALS</span><span class="ico">📞</span><h3>Payer-Call Prep</h3><p>Some fights still happen on the phone. The agent builds the call brief — identifiers ready, the questions for that denial family — and logs the rep's name, reference number, and promise straight into the claim timeline, follow-up set.</p></div>
+    <div class="bcard reveal"><span class="tag">MONEY IN</span><span class="ico">📄</span><h3>835 ERA Import + Auto-Posting</h3><p>Drop in remittance files — payments auto-post, CAS denial codes auto-parse and link straight into appeals. <a class="glink" href="/blog/how-to-read-835-remittance-advice/">How to read an 835 remittance →</a></p></div>
+    <div class="bcard reveal"><span class="tag ai">MONEY IN</span><span class="ico">🧮</span><h3>ERA Exception Resolution</h3><p>Variance holds and flagged lines don't rot in an inbox. The agent works out the disposition from the remittance's own adjustment codes — contractual, patient responsibility, rebill, write-off — arithmetic shown, and posts it only when you approve.</p></div>
+    <div class="bcard reveal"><span class="tag">MONEY IN</span><span class="ico">📬</span><h3>Document Intake</h3><p>Still getting paper EOBs? Drop them in. Scanned remittances and payer denial letters are read, matched to your claims, and turned into held remittances and draft appeals — every figure checked, anything unclear flagged for a human, never filled in.</p></div>
+    <div class="bcard reveal"><span class="tag">MONEY IN</span><span class="ico">🧾</span><h3>Patient Statements</h3><p>Patient-responsibility balances become clean statements from the same workspace — generated from posted remittances, not re-typed.</p></div>
+    <div class="bcard reveal"><span class="tag">MONEY IN</span><span class="ico">🏆</span><h3>Recovered-Dollars Scoreboard</h3><p>Your workspace tracks the dollars recovered through decided appeals — including the ones the agent drafted — on the Dashboard, where your team can see the number grow.</p></div>
+    <div class="bcard reveal"><span class="tag">SETUP &amp; SCALE</span><span class="ico">📥</span><h3>Import Wizard</h3><p>Bring your open A/R with you: CSV or 837 files mapped, validated row by row, duplicates flagged, and committed only at the final step. Running by this afternoon, not next quarter.</p></div>
+    <div class="bcard reveal"><span class="tag">SETUP &amp; SCALE</span><span class="ico">📤</span><h3>837P Generation</h3><p>Real 837P (005010X222A1) claim files generated from your claims, structurally validated, with 999 and 277CA acknowledgment handling — ready to send through your current submission path. <a class="glink" href="/blog/837p-vs-835-explained/">837P vs 835, explained →</a></p></div>
+    <div class="bcard wide reveal"><span class="tag">SETUP &amp; SCALE</span><span class="ico">🚀</span><h3>5-Step Onboarding Wizard — Real 30-Day Trial</h3><p>Welcome → Workspace → Goals → Plan → Success: a guided setup that gets your workspace live on a real 30-day trial. No credit card, ever — sign in with Google and start working claims the same day.</p></div>
+    <div class="bcard reveal"><span class="tag">SETUP &amp; SCALE</span><span class="ico">🏥</span><h3>athenahealth EHR Integration</h3><p>Connect athenahealth via OAuth2 to sync patient and claim data into your billing workspace. Honest scope: athenahealth is the supported EHR.</p></div>
+    <div class="bcard reveal"><span class="tag">SETUP &amp; SCALE</span><span class="ico">🖊️</span><h3>BAA E-Signing</h3><p>Sign Business Associate Agreements electronically right inside the app — compliance paperwork done before you touch your first real claim.</p></div>
+    <div class="bcard reveal"><span class="tag">SETUP &amp; SCALE</span><span class="ico">📊</span><h3>Reports + Payer Playbook</h3><p>Five exportable reports, denial-pattern analytics by payer × reason, and a living playbook of what actually wins against each payer — built from your own outcomes.</p></div>
+    <div class="bcard reveal"><span class="tag">SETUP &amp; SCALE</span><span class="ico">💬</span><h3>Two-Way Support Helpdesk</h3><p>A built-in helpdesk with a 24-hour response SLA. Ask a question from inside the app and get a real answer — not a chatbot loop.</p></div>
   </div>
 </div></section>
+<section id="learns"><div class="wrap">
+  <div class="sec-tag reveal">LEARNS YOUR PAYERS</div>
+  <h2 class="reveal">It learns your payers.<br/><span class="grad">Only yours.</span></h2>
+  <p class="sec-sub reveal">Most AI in billing is trained on everyone's data and answers with industry averages. ClaimPaid's agent learns from one practice's evidence: yours. Every decided appeal and every posted remittance sharpens what it tells you next.</p>
+  <div class="bento">
+    <div class="bcard reveal"><span class="ico">🎲</span><h3>Odds from your own history</h3><p>Overturn predictions for a denial come from your workspace's decided appeals to that payer on that denial reason. Payment likelihood comes from your own posted remittances. Not a benchmark. Your record.</p></div>
+    <div class="bcard reveal"><span class="ico">🏹</span><h3>Angles that actually win</h3><p>Once a payer-and-reason pair has enough decided appeals behind it, drafts lead with the argument angle that has overturned most often in your workspace — and the card says so, with the record behind it.</p></div>
+    <div class="bcard reveal"><span class="ico">🔢</span><h3>Labeled honestly</h3><p>Every prediction carries its sample size. Four decided appeals? It says "early estimate." None yet? It says "no data yet" instead of dressing up a guess as science.</p></div>
+  </div>
+  <p class="sec-note reveal">Per-workspace isolation is the design, not a setting: your claims, documents, and outcomes train only your predictions. A billing company running ten practices gets ten separate brains — one per client, never pooled.</p>
+</div></section>
+
+<section id="billing-companies"><div class="wrap">
+  <div class="sec-tag reveal">FOR BILLING COMPANIES</div>
+  <h2 class="reveal">Every client, its own workspace.<br/><span class="grad">One team, every queue.</span></h2>
+  <p class="sec-sub reveal">You don't bill one practice — you bill dozens. ClaimPaid gives each client its own workspace under one login, and gives you the view across your team that spreadsheets never could.</p>
+  <div class="bento">
+    <div class="bcard reveal"><span class="ico">🗂️</span><h3>Multi-workspace by design</h3><p>One login, a workspace per client practice — claims, payers, deadlines, and documents separated by client, switchable in one click. Onboard a new client through the same 5-step wizard and import wizard.</p></div>
+    <div class="bcard reveal"><span class="ico">👥</span><h3>The manager's view</h3><p>Owners see the whole floor: who is carrying what, whose follow-ups are overdue, win rates by biller, dollars stalled with nobody on them — and reassignment suggestions when the math says the load is lopsided.</p></div>
+    <div class="bcard reveal"><span class="ico">🔒</span><h3>Client isolation, provable</h3><p>Each client's data trains only that client's predictions — never pooled, never shared across workspaces. The audit log shows every action, per workspace, per person. That's a sentence you can say to a client's compliance officer.</p></div>
+  </div>
+</div></section>
+
 <section id="ai-sec"><div class="wrap">
   <div class="ai-grid">
     <div>
-      <div class="sec-tag reveal">CLAIMPAID AI</div>
+      <div class="sec-tag reveal">THE KNOWLEDGE LAYER</div>
       <h2 class="reveal">Ask it like you'd ask<br/>your <span class="grad">best biller.</span></h2>
-      <p class="sec-sub reveal" style="margin-bottom:0">"What's UnitedHealthcare's timely filing limit?" — answered in seconds, with the policy cited. Trained on payer manuals, appeal windows, and denial codes. It even crawls payer sites so it stays current.</p>
+      <p class="sec-sub reveal" style="margin-bottom:0">"What's UnitedHealthcare's timely filing limit?" — answered in seconds, with the policy cited. The agent searches the Payer Policy Handbook mid-task, mid-appeal — and the coding help next to it refuses to guess.</p>
       <div class="ai-feats">
-        <div class="ai-feat reveal"><span class="e">📚</span><div><b>Feed it your world</b><p>Drop in payer PDFs, import policy URLs, or point it at a sitemap — it ingests, chunks, and embeds everything automatically.</p></div></div>
-        <div class="ai-feat reveal"><span class="e">🔄</span><div><b>It keeps itself current</b><p>Autopilot re-crawls your sources every 6 hours. New policy published? The AI knows before your team does.</p></div></div>
-        <div class="ai-feat reveal"><span class="e">🧠</span><div><b>It learns from misses</b><p>Every unanswered question lands in an Insights queue. Teach it once — it answers with a citation forever after.</p></div></div>
-        <div class="ai-feat reveal"><span class="e">⚡</span><div><b>Lives inside the platform</b><p>Full tab + floating quick-chat. No tab-switching, no copy-paste — policy answers where the work happens.</p></div></div>
+        <div class="ai-feat reveal"><span class="e">📚</span><div><b>The handbook, cited</b><p>Timely-filing limits, appeal windows, denial-code rules for major payers. When the handbook doesn't say, the agent says that — and points you to the payer instead of inventing a policy.</p></div></div>
+        <div class="ai-feat reveal"><span class="e">🧾</span><div><b>Coding that shows its evidence</b><p>Suggested codes come back Valid, Review, or Abstain — Valid only when your note supports the code, quoted line and all. Nothing unverified is ever applied.</p></div></div>
+        <div class="ai-feat reveal"><span class="e">✍️</span><div><b>Drafts, never sends</b><p>The agent prepares appeals, code sets, and exception resolutions for approval. A person approves, a person submits — through the path you already use.</p></div></div>
+        <div class="ai-feat reveal"><span class="e">🔢</span><div><b>Numbers from code</b><p>Deadlines, scrub findings, and exception math are computed by deterministic rules, not generated by the model. Every figure it cites can be checked — and is, in your audit log.</p></div></div>
       </div>
     </div>
     <div class="chatmock reveal" id="chatmock">
-      <div class="chead"><div class="av">🤖</div><div><b>ClaimPaid AI</b><small>Payer Policy Handbook · online</small></div></div>
+      <div class="chead"><div class="av">🤖</div><div><b>ClaimPaid Agent</b><small>Payer Policy Handbook · online</small></div></div>
       <div class="cbody" id="chatbody"></div>
     </div>
   </div>
@@ -458,9 +503,9 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
   <h2 class="reveal">Live in a day.<br/><span class="grad">Paid in weeks.</span></h2>
   <p class="sec-sub reveal">No six-month implementation. No consultants. Your billing operation, upgraded.</p>
   <div class="steps">
-    <div class="step reveal"><h3>Onboard in minutes</h3><p>A 5-step wizard sets up your workspace on a real 30-day trial — no credit card, sign in with Google. Import your open AR via CSV, 835 files, or manual entry, and ClaimPaid scores everything by dollars at stake and filing-deadline urgency.</p></div>
-    <div class="step reveal"><h3>Work the smart list</h3><p>Open My Work each morning: prioritized follow-ups, one-click appeal letters, auth tracking, and the AI one tap away for any policy question. Denials move through the pipeline to won.</p></div>
-    <div class="step reveal"><h3>Watch revenue land</h3><p>Won appeals auto-mark claims paid. Reports show win rates by payer and reason. The playbook learns what beats each payer — and your whole team benefits.</p></div>
+    <div class="step reveal"><h3>Onboard in minutes</h3><p>A 5-step wizard sets up your workspace on a real 30-day trial — no credit card, sign in with Google. Import your open A/R through the import wizard, and ClaimPaid scores everything by dollars at stake and filing-deadline urgency.</p></div>
+    <div class="step reveal"><h3>Approve the agent's work</h3><p>Each morning opens with the brief: a ranked plan, drafts already written, follow-ups that slipped. You approve or reject the drafts, work the exceptions, and let the queue reorder itself around deadlines.</p></div>
+    <div class="step reveal"><h3>Watch revenue land</h3><p>Won appeals auto-mark claims paid, and the recovered-dollars scoreboard keeps the running total. Your workspace's predictions sharpen with every decided appeal — your team gets better odds, payer by payer.</p></div>
   </div>
 </div></section>
 
@@ -471,10 +516,21 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
   <div class="bento">
     <div class="bcard reveal"><span class="ico">🔐</span><h3>Encrypted backups</h3><p>Every database backup is encrypted with age (X25519) the moment it's written — then decrypt-verified before the plaintext is deleted. A stolen backup file is useless without the key.</p></div>
     <div class="bcard reveal"><span class="ico">🖊️</span><h3>BAA e-signing</h3><p>Sign your Business Associate Agreement electronically inside the app, before your first real claim touches the system.</p></div>
-    <div class="bcard reveal"><span class="ico">🏠</span><h3>Local-first AI</h3><p>ClaimPaid AI runs on our own server. Your notes and claims are never sent to a third-party AI API.</p></div>
-    <div class="bcard reveal"><span class="ico">📋</span><h3>Audit-logged</h3><p>Plan changes, data deletes, MFA resets — sensitive actions are written to a tamper-evident audit log.</p></div>
+    <div class="bcard reveal"><span class="ico">🔒</span><h3>Per-workspace isolation</h3><p>Your claims, documents, and outcomes train only your workspace's predictions and answers. Data is never pooled across customers — a structural property of the system, not a policy promise.</p></div>
+    <div class="bcard reveal"><span class="ico">📋</span><h3>Audit-logged, approval-gated</h3><p>Nothing the agent proposes is written without a human approving it — and every proposal, approval, and rejection is recorded alongside plan changes, data deletes, and MFA resets in a tamper-evident audit log.</p></div>
   </div>
 </div></section>
+<section id="audit"><div class="wrap">
+  <div class="sec-tag reveal">FREE DEADLINE AUDIT</div>
+  <h2 class="reveal">See what's about to expire.<br/><span class="grad">Free.</span></h2>
+  <p class="sec-sub reveal">Send us an aging report — CSV or 835 export from whatever you bill with today — and we'll send back the expiring-dollars report: every open claim ranked by days left to file, dollars at risk by payer, the already-expired called out separately. No pitch deck attached. If the number doesn't scare you, don't buy anything.</p>
+  <div class="reveal" style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+    <a class="btn btn-green" href="#" data-demo-modal>Request the free audit →</a>
+    <a class="glink" href="/app/" data-smart-cta>or run it yourself in a free trial →</a>
+  </div>
+  <p class="sec-note reveal">Billing companies: run one audit per client practice. It's the fastest honest conversation you can have about their A/R — and it's the same report the agent produces inside ClaimPaid, any time, from live data.</p>
+</div></section>
+
 <section id="pricing"><div class="wrap">
   <div class="sec-tag reveal">PRICING</div>
   <div class="reveal"><span class="badge-no1">★ PRO + AI — THE COMPLETE PACKAGE</span></div>
@@ -492,14 +548,14 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
       <div class="pop">MOST POPULAR</div>
       <h3>RCM Pro + AI</h3><div class="pd">For teams serious about denial recovery</div>
       <div class="amt">$499</div><div class="per">per month</div>
-      <ul><li><b>Everything in Starter</b></li><li><b>ClaimPaid AI</b> — embedded tab + quick-chat</li><li>Payer Policy Handbook, pre-loaded</li><li>Autopilot web crawling + Teach-it loop</li><li>Denial pattern analytics</li><li>Unlimited team seats</li></ul>
+      <ul><li><b>Everything in Starter</b></li><li><b>The ClaimPaid agent</b> — morning brief, ranked queue, drafts for your approval</li><li>Payer Policy Handbook, cited answers</li><li>Quote-verified coding assistant</li><li>Predictions + winning-angle learning from your own history</li><li>Watchdog digest + Denial Rescue wizard</li><li>Up to 15 team seats</li></ul>
       <a class="btn btn-green" style="justify-content:center" href="/app/?plan=pro">Choose Pro + AI →</a>
       <div class="trial-note">Free for 30 days · No credit card required</div>
     </div>
     <div class="price reveal">
-      <h3>ClaimPaid AI</h3><div class="pd">Just the AI assistant — private answers from your documents</div>
+      <h3>ClaimPaid AI</h3><div class="pd">The knowledge layer, standalone — handbook, verified coding, your documents</div>
       <div class="amt">$99</div><div class="per">per month</div>
-      <ul><li><b>Generative cited answers</b> over your documents</li><li>Unlimited knowledge bases</li><li>Widget + public links + API</li><li><b>Private</b> — data never leaves our servers</li><li>One login for RCM + AI</li></ul>
+      <ul><li><b>Payer Policy Handbook</b> — answers with citations</li><li><b>Quote-verified coding assistant</b> — evidence or abstain</li><li>Cited answers over your own documents</li><li>Unlimited knowledge bases · Widget + API</li><li>Per-workspace isolation — never pooled</li><li>One login for RCM + AI</li></ul>
       <a class="btn btn-ghost" style="justify-content:center" href="/ai/app/">Choose AI only</a>
       <div class="trial-note">Free for 30 days · No credit card required</div>
     </div>
@@ -520,13 +576,16 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
     <details class="reveal"><summary>What does ClaimPaid cost?</summary><p>RCM Starter is $199/month, RCM Pro + AI is $499/month, and ClaimPaid AI standalone is $99/month. Enterprise is custom. Every paid plan starts with a 30-day free trial — no credit card required.</p></details>
     <details class="reveal"><summary>Is the 30-day free trial really free — no credit card?</summary><p>Yes. Selecting a plan starts a real 30-day trial of the app — no credit card required. A guided 5-step onboarding wizard sets up your workspace, and you can sign in with Google. Trial days remaining sync to billing, so checkout only starts paid billing after the trial ends.</p></details>
     <details class="reveal"><summary>Can I sign a BAA with ClaimPaid?</summary><p>Yes — ClaimPaid includes built-in BAA e-signing, so the business associate agreement is executed inside the platform before any PHI flows. <a class="glink" href="/blog/hipaa-baa-billing-company/">Do billing companies need a BAA? →</a></p></details>
-    <details class="reveal"><summary>How do real-time eligibility checks work?</summary><p>ClaimPaid runs real-time 270/271 eligibility transactions through Availity or your clearinghouse's REST endpoint, configured per workspace. Eligibility results stop CO-50 non-covered-service denials before claims go out.</p></details>
+    <details class="reveal"><summary>How do eligibility checks work?</summary><p>ClaimPaid runs eligibility checks inside the workspace, configured per organization — or ask the agent to check any claim before it goes out. Results are stored on the claim, so CO-50 non-covered-service denials get stopped before submission, not after.</p></details>
     <details class="reveal"><summary>Which EHR integrations does ClaimPaid support?</summary><p>ClaimPaid connects to athenahealth via OAuth2 to sync patient and claim data. Other EHR integrations are evaluated per organization.</p></details>
-    <details class="reveal"><summary>Where does my data go when I use ClaimPaid's AI features?</summary><p>ClaimPaid AI runs on private infrastructure — your documents and claim data are not sent to third-party AI APIs. That's the local-first design: your data stays in your environment. We make no HIPAA certification claims — we simply keep your data on infrastructure you can trust and let you sign a BAA.</p></details>
+    <details class="reveal"><summary>Where does my data go when I use ClaimPaid's AI features?</summary><p>The agent works inside your ClaimPaid workspace, using a frontier AI model via API to read your queue, draft, and answer. Three mechanics protect you: nothing the agent proposes is written without a human approving it, every agent action and decision is recorded in your audit log, and your workspace's data trains only your workspace's predictions — it is never pooled with other customers' data. We make no HIPAA certification claims: no such certification exists.</p></details>
+    <details class="reveal"><summary>Is my data used to train models for other customers?</summary><p>No. Predictions and appeal-angle learning are computed per workspace, from that workspace's own decided appeals and posted remittances only. Your data never trains another customer's predictions or answers.</p></details>
+    <details class="reveal"><summary>Does the AI send anything to payers?</summary><p>No. The agent drafts and prepares — appeal letters, code sets, exception resolutions — and a person on your team approves each one and submits it through your current path. Nothing is transmitted to a payer by the AI.</p></details>
+    <details class="reveal"><summary>What does the agent do each morning?</summary><p>It opens the day with a brief: what changed while you were away, a ranked work plan (deadline pressure times dollars at stake), and appeal drafts already written for the claims that need them — waiting for your approval. A watchdog digest emails the same picture when you're away from the app.</p></details>
     <details class="reveal"><summary>Is my data encrypted?</summary><p>Database backups are encrypted with age (X25519) the moment they're written, and each backup is decrypt-verified before its plaintext is deleted. All traffic uses TLS. We make no HIPAA certification claims: no such certification exists.</p></details>
-    <details class="reveal"><summary>Does ClaimPaid write appeal letters automatically?</summary><p>Yes. It drafts payer-specific appeal letters from the denial reason code using 8 built-in templates (timely filing, medical necessity, authorization, coding, eligibility, duplicate, bundling, experimental), plus custom templates per organization. The AI-assisted coding helper suggests codes from a 370-code library with a human always in the loop — unverified codes are hard-blocked from submission.</p></details>
+    <details class="reveal"><summary>Does ClaimPaid write appeal letters automatically?</summary><p>The agent drafts payer-specific appeal letters from the denial reason code — using the letter engine's categories (timely filing, medical necessity, authorization, coding, eligibility, duplicate, bundling, experimental), your letterhead, and, once your workspace has decided appeals, the argument angles that have actually won against that payer. Every draft waits for a human to approve it; approving saves the appeal, and your team submits it. The coding assistant suggests codes from a 370-code library only when the documentation supports them — unverified codes are never applied on the AI's say-so.</p></details>
     <details class="reveal"><summary>Which payers' timely-filing deadlines does ClaimPaid track?</summary><p>Seven major payers out of the box: Aetna (120 days), Cigna (180), UnitedHealthcare (90), Anthem (180), Medicare (365), NY Medicaid (90), and Humana (180) — with custom payers and deadlines configurable per organization. Related guides: <a class="glink" href="/blog/timely-filing-limits-by-payer-2026/">timely-filing limits by payer</a>, <a class="glink" href="/blog/aetna-timely-filing-denial-appeal/">appealing an Aetna timely-filing denial</a>, <a class="glink" href="/blog/medicare-timely-filing-deadline/">Medicare's timely-filing deadline</a>.</p></details>
-    <details class="reveal"><summary>Can I use ClaimPaid AI without the RCM platform?</summary><p>Yes. ClaimPaid AI is available as a standalone $99/month plan at claimpaid.io/ai/ — upload any documents (policies, contracts, manuals), ask questions in plain language, and get cited answers. RCM Pro customers get it included with one shared login.</p></details>
+    <details class="reveal"><summary>Can I use ClaimPaid AI without the RCM platform?</summary><p>Yes. ClaimPaid AI is available as a standalone $99/month plan at claimpaid.io/ai/ — cited answers from the Payer Policy Handbook, the quote-verified coding assistant, and cited answers over your own documents (policies, contracts, manuals). RCM Pro customers get it included with one shared login.</p></details>
     <details class="reveal"><summary>How long does implementation take?</summary><p>Most teams are live within 24 hours — a 5-step onboarding wizard gets your workspace set up on a real 30-day trial, no implementation project required. Support is handled through a two-way helpdesk with a 24-hour response SLA.</p></details>
     <details class="reveal"><summary>When is ClaimPaid not the right fit?</summary><p>ClaimPaid is software, not a billing service — if you want a company to do the billing work for you rather than software for your team, we're not that. It's web-based SaaS (not on-premise), and its payer content is built around US billing workflows.</p></details>
   </div>
