@@ -164,7 +164,7 @@ function AgentClaimPanel({ claimId }) {
   );
 }
 
-function ClaimModal({ claim, payers, onClose, onSaved, onCheckEligibility }) {
+function ClaimModal({ claim, payers, onClose, onSaved, onCheckEligibility, onReviewAgentDrafts }) {
   const [showCoding, setShowCoding] = useState(false);
   const [showRescue, setShowRescue] = useState(false);
   const toast = useToast();
@@ -291,7 +291,7 @@ function ClaimModal({ claim, payers, onClose, onSaved, onCheckEligibility }) {
       />
     )}
     {showRescue && claim && (
-      <RescueWizard claimId={claim.id} onClose={() => setShowRescue(false)} />
+      <RescueWizard claimId={claim.id} onClose={() => setShowRescue(false)} onReviewDrafts={onReviewAgentDrafts} />
     )}
     </>
   );
@@ -382,7 +382,7 @@ function ScrubResultsModal({ result, onClose }) {
   );
 }
 
-export default function Claims({ onCheckEligibility, initialClaimId, onConsumed }) {
+export default function Claims({ onCheckEligibility, initialClaimId, onConsumed, onReviewAgentDrafts }) {
   const { user } = useAuth();
   const toast = useToast();
   const [data, setData] = useState(null);
@@ -535,7 +535,7 @@ export default function Claims({ onCheckEligibility, initialClaimId, onConsumed 
     <div>
       {modal && <ClaimModal claim={modal === 'add' ? null : modal} payers={payers}
         onClose={() => setModal(null)} onSaved={() => { setModal(null); fetchClaims(); }}
-        onCheckEligibility={onCheckEligibility} />}
+        onCheckEligibility={onCheckEligibility} onReviewAgentDrafts={onReviewAgentDrafts} />}
 
       <PageHeader
         title="Claims"

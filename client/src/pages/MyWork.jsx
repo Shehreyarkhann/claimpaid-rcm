@@ -12,7 +12,7 @@ const TYPE_META = {
   stale: { icon: '💤', label: 'Stale A/R', color: 'border-l-stone-400', bg: 'bg-stone-50' },
 };
 
-export default function MyWork({ onOpenAppeal, onOpenClaim, onStartAppeal }) {
+export default function MyWork({ onOpenAppeal, onOpenClaim, onStartAppeal, onReviewAgentDrafts }) {
   const toast = useToast();
   const [data, setData] = useState(null);
   const [scope, setScope] = useState('all');
@@ -136,7 +136,7 @@ export default function MyWork({ onOpenAppeal, onOpenClaim, onStartAppeal }) {
         </>
       )}
       {rescueClaimId && (
-        <RescueWizard claimId={rescueClaimId} onClose={() => setRescueClaimId(null)} />
+        <RescueWizard claimId={rescueClaimId} onClose={() => setRescueClaimId(null)} onReviewDrafts={onReviewAgentDrafts} />
       )}
       {showImport && (
         <ImportWizard onClose={() => setShowImport(false)} onImported={load} />

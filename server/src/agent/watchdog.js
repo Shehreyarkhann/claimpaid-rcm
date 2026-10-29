@@ -48,9 +48,26 @@ function orgLocalParts(timezone, now) {
 }
 
 // Org-level items every member shares (the ERA exception backlog).
+// Highlights (deploy #97): the top held lines keyed by line + remittance,
+// with the matched claim id when the line matched one — added for the
+// Agent page's expandable alerts panel. The digest email reads only
+// count + amount for this category, so the addition changes no email.
 function sharedOrgItems(orgId) {
   const backlog = predict.insights(orgId).exception_backlog;
-  return { era_exceptions: { count: backlog.count, amount: money(backlog.amount) } };
+  const highlights = db.prepare(`
+    SELECT id AS era_line_id, era_id AS remittance_id, match_claim_id AS claim_id,
+           clp_ref AS claim_number, billed
+    FROM era_claim_lines
+    WHERE org_id = ? AND post_status = 'pending' AND flags IS NOT NULL AND flags != '[]'
+    ORDER BY billed DESC LIMIT 3
+  `).all(orgId).map((r) => ({
+    era_line_id: r.era_line_id,
+    remittance_id: r.remittance_id,
+    claim_id: r.claim_id != null ? r.claim_id : null,
+    claim_number: r.claim_number,
+    amount: money(r.billed),
+  }));
+  return { era_exceptions: { count: backlog.count, amount: money(backlog.amount), highlights } };
 }
 
 // The per-user actionable set. Owners see org-wide filing risk (the team
@@ -71,14 +88,16 @@ function computeDigestItems(org, user, shared) {
   };
 
   const followRows = db.prepare(`
-    SELECT c.claim_number, a.follow_up_date FROM appeals a JOIN claims c ON c.id = a.claim_id
+    SELECT c.claim_number, a.follow_up_date, c.id AS claim_id, a.id AS appeal_id FROM appeals a JOIN claims c ON c.id = a.claim_id
     WHERE a.org_id = ? AND a.assigned_to = ? AND a.status NOT IN ('won', 'lost')
       AND a.follow_up_date IS NOT NULL AND a.follow_up_date < ?
     ORDER BY a.follow_up_date ASC
   `).all(orgId, user.id, today);
   const followups = {
     count: followRows.length,
-    highlights: followRows.slice(0, 3).map((r) => ({ claim_number: r.claim_number, due: r.follow_up_date })),
+    highlights: followRows.slice(0, 3).map((r) => ({
+      claim_number: r.claim_number, due: r.follow_up_date, claim_id: r.claim_id, appeal_id: r.appeal_id,
+    })),
   };
 
   const assignedClause = user.role === 'owner'
@@ -86,7 +105,7 @@ function computeDigestItems(org, user, shared) {
     : `AND EXISTS (SELECT 1 FROM appeals am WHERE am.claim_id = c.id AND am.org_id = c.org_id
         AND am.status NOT IN ('won', 'lost') AND am.assigned_to = ${Number(user.id)})`;
   const filingRows = db.prepare(`
-    SELECT c.claim_number, (c.billed_amount - c.paid_amount) AS at_stake, ${FILING_SELECT}
+    SELECT c.claim_number, (c.billed_amount - c.paid_amount) AS at_stake, c.id AS claim_id, c.status AS claim_status, ${FILING_SELECT}
     FROM claims c ${FILING_JOIN}
     WHERE c.org_id = ? AND c.status IN ('pending', 'in_ar', 'denied') ${assignedClause}
   `).all(orgId)
@@ -97,6 +116,7 @@ function computeDigestItems(org, user, shared) {
     amount: money(filingRows.reduce((s, r) => s + (r.at_stake || 0), 0)),
     highlights: filingRows.slice(0, 3).map((r) => ({
       claim_number: r.claim_number, days_left: r.days_until_filing, amount: money(r.at_stake),
+      claim_id: r.claim_id, status: r.claim_status,
     })),
   };
 

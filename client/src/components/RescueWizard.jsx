@@ -16,7 +16,7 @@ const STEPS = ['Snapshot', 'Eligibility', 'Scrub', 'Appeal draft', 'Submit check
 
 function pct(v) { return `${Math.round(v * 100)}%`; }
 
-export default function RescueWizard({ claimId, onClose }) {
+export default function RescueWizard({ claimId, onClose, onReviewDrafts }) {
   const toast = useToast();
   const [step, setStep] = useState(0);
   const [analysis, setAnalysis] = useState(null);
@@ -113,7 +113,16 @@ export default function RescueWizard({ claimId, onClose }) {
                   ? 'The appeal draft is waiting as a pending card in the Agent tab — approve it there, then follow the submission checklist.'
                   : 'You have everything this claim needs checked. If a draft is still needed, it is one click in the Agent tab.'}
               </p>
-              <button className="btn btn-primary mt-5" onClick={onClose}>Done</button>
+              {draft && onReviewDrafts ? (
+                <div className="flex gap-2 justify-center mt-5">
+                  <button className="btn btn-primary" onClick={() => { onReviewDrafts(); onClose(); }}>
+                    Review &amp; approve in Agent tab →
+                  </button>
+                  <button className="btn btn-outline" onClick={onClose}>Done</button>
+                </div>
+              ) : (
+                <button className="btn btn-primary mt-5" onClick={onClose}>Done</button>
+              )}
             </div>
           ) : step === 0 ? (
             <div>
@@ -217,11 +226,21 @@ export default function RescueWizard({ claimId, onClose }) {
                     <div className="text-emerald-800 mt-1">Angle: {String(draft.payload.category || '').replace(/_/g, ' ')} — overturns {pct(draft.payload.angle_stat.value)} here (n={draft.payload.angle_stat.sampleSize}).</div>
                   )}
                   <div className="text-emerald-700 mt-1">Nothing has been saved to the claim yet — approving the card is what saves it, and submitting stays manual (next step).</div>
+                  {onReviewDrafts && (
+                    <button className="btn btn-primary btn-sm mt-3" onClick={() => { onReviewDrafts(); onClose(); }}>
+                      Review &amp; approve in Agent tab →
+                    </button>
+                  )}
                 </div>
               ) : draftRec && !draftRec.spawnable ? (
                 <div className="rounded-xl bg-[#FAF5EB] ring-1 ring-stone-200 px-4 py-3.5 text-sm">
                   <div className="font-medium text-stone-800">{draftRec.label}</div>
                   <div className="text-stone-500 mt-0.5">{draftRec.detail}</div>
+                  {onReviewDrafts && /awaiting a decision/.test(draftRec.label) && (
+                    <button className="btn btn-primary btn-sm mt-3" onClick={() => { onReviewDrafts(); onClose(); }}>
+                      Review &amp; approve in Agent tab →
+                    </button>
+                  )}
                 </div>
               ) : (
                 <>

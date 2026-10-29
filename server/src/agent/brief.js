@@ -110,6 +110,32 @@ function slimPlanItem(item, rank) {
   };
 }
 
+const PLAN_KEY_ID = /^(followup|filing|denial|stale)-(\d+)$/;
+
+// Guarantee explicit claim_id / appeal_id (nullable) on every plan item
+// (deploy #97): the client wires Open claim / Draft appeal buttons off
+// these fields, so a plan row must never arrive without them. Worklist
+// items carry both already; the item key encodes them as a fallback
+// (followup-<appealId>, filing-<claimId>, denial-<claimId>), and a
+// follow-up item whose claim is missing resolves it through its appeal.
+// Applied at build time AND in presentBrief, so a brief stored before an
+// item gained its ids still reads actionable. Title/reason/amount are
+// never touched.
+function normalizePlanItem(orgId, item) {
+  const out = { ...item, claim_id: item.claim_id ?? null, appeal_id: item.appeal_id ?? null };
+  const m = PLAN_KEY_ID.exec(item.key || '');
+  if (m) {
+    const idFromKey = Number(m[2]);
+    if (m[1] === 'followup' && out.appeal_id == null) out.appeal_id = idFromKey;
+    if (m[1] !== 'followup' && out.claim_id == null) out.claim_id = idFromKey;
+  }
+  if (out.claim_id == null && out.appeal_id != null) {
+    const appeal = db.prepare('SELECT claim_id FROM appeals WHERE id = ? AND org_id = ?').get(out.appeal_id, orgId);
+    if (appeal) out.claim_id = appeal.claim_id;
+  }
+  return out;
+}
+
 // Appeal-ready = denied claim with NO live (non-terminal) appeal and NO
 // pending draft_appeal action anywhere in the org for that claim.
 function draftCandidates(orgId, planItems) {
@@ -175,7 +201,7 @@ function presentBrief(row) {
       timezone: content.timezone || null,
       summary: content.summary || null,
       while_away: content.while_away || null,
-      plan: content.plan || [],
+      plan: (content.plan || []).map((p) => normalizePlanItem(row.org_id, p)),
       proposed_draft_action_ids: content.proposed_draft_action_ids || [],
       created_at: row.created_at,
     },
@@ -219,7 +245,7 @@ async function getOrCreateBrief({ orgId, user, isSuperAdmin = false }) {
     `).all(orgId, ...planClaimIds)) planClaims.set(c.id, c);
   }
   const plan = planRows.map((item, i) => {
-    const slim = slimPlanItem(item, i + 1);
+    const slim = normalizePlanItem(orgId, slimPlanItem(item, i + 1));
     const claim = item.claim_id ? planClaims.get(item.claim_id) : null;
     const pred = claim ? predict.predictionForClaim(orgId, claim) : null;
     if (pred) {

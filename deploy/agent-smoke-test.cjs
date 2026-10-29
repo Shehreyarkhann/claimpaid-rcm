@@ -86,13 +86,15 @@ const mocks = [
     exception_backlog: { count: 6, amount: 675 },
     recovered_via_agent_appeals: { amount: 4825, appeals: 3 },
   }],
-  // Phase 4: watchdog alerts strip on the Agent page.
+  // Phase 4: watchdog alerts strip on the Agent page. Deploy #97 shapes:
+  // highlights are objects carrying claim_id (+ status / appeal_id), and
+  // era_exceptions gained a highlights list keyed by line + remittance.
   ['/api/agent/alerts', {
     items: {
       pending_approvals: { count: 1, highlights: ['Draft appeal — claim CLM-1002'] },
       followups_overdue: { count: 0, highlights: [] },
-      filing_risk: { count: 1, amount: 410, highlights: ['CLM-1013 — 10 days left'] },
-      era_exceptions: { count: 0, amount: 0 },
+      filing_risk: { count: 1, amount: 410, highlights: [{ claim_number: 'CLM-1013', days_left: 10, amount: 410, claim_id: 12, status: 'denied' }] },
+      era_exceptions: { count: 0, amount: 0, highlights: [] },
       total: 2,
     },
   }],
@@ -241,6 +243,29 @@ const fakeFetch = (url, options) => {
       ? { tool, is_error: false, output: { claim_id: 5, claim_number: 'CLM-9001', mode: 'live', vendor: 'rest', coverage_active: true, plan_name: 'Stub PPO Gold', checks: [], lookup_id: 9 }, event: null, action: null }
       : { tool, is_error: false, output: { score: 92, status: 'warnings', errors: [], warnings: [{ id: 'NPI-001', severity: 'warning', name: 'Missing rendering NPI', fix: 'Add the rendering provider NPI.' }], run_id: 5 }, event: { tool, label: 'Scrubbed claim' }, action: null };
     return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(out) });
+  }
+  // Deploy #97: the global pending-approvals list — the brief's own card
+  // (id 21) plus a conversation-less wizard card (id 33), oldest first.
+  if (!disabledMode && u.includes('/api/agent/actions/pending')) {
+    return Promise.resolve({
+      ok: true, status: 200,
+      json: () => Promise.resolve({
+        actions: [
+          {
+            id: 33, kind: 'draft_appeal', title: 'Draft appeal — claim CLM-9001', status: 'pending',
+            preview: 'October 27, 2026\n\nAppeals Department\nAetna\n\nRe: Formal Appeal — Denied Claim CLM-9001\n\nWe are writing to formally appeal the denial of the above-referenced claim.',
+            payload: { claim_id: 5, claim_number: 'CLM-9001', payer: 'Aetna', category: 'medical_necessity', subject: 'Appeal of Denied Claim CLM-9001' },
+            result: null, created_at: '2026-10-27 15:00:00', decided_at: null, executed_at: null,
+          },
+          {
+            id: 21, kind: 'draft_appeal', title: 'Draft appeal — claim CLM-1002', status: 'pending',
+            preview: 'October 28, 2026\n\nAppeals Department\nAetna\n\nRe: Formal Appeal — Denied Claim CLM-1002\n\nWe are writing to formally appeal the denial of the above-referenced claim on the basis of medical necessity.',
+            payload: { claim_id: 6, claim_number: 'CLM-1002', payer: 'Aetna', category: 'medical_necessity', subject: 'Appeal of Denied Claim CLM-1002' },
+            result: null, created_at: '2026-10-28 12:00:00', decided_at: null, executed_at: null,
+          },
+        ],
+      }),
+    });
   }
   if (!disabledMode && u.includes('/api/agent/actions/propose')) {
     return Promise.resolve({
@@ -477,22 +502,50 @@ async function render({ loggedIn }) {
 
     // Morning brief (Phase 2): section renders above the thread from the
     // mocked /api/agent/brief — dated header, narrative, while-you-were-
-    // away tiles, ranked plan, and the brief's own approval card.
+    // away tiles, ranked plan. Deploy #97: the brief no longer embeds
+    // approval cards; they render once, in the approvals section fed by
+    // /api/agent/actions/pending (brief card + wizard card together).
     await until(() => doc.body.textContent.includes('Morning brief'), 9000, 'morning brief section');
     const briefText = doc.body.textContent;
     if (!briefText.includes('Six new denials landed overnight')) fail('brief narrative summary missing');
     if (!briefText.includes('New denials')) fail('brief while-away tiles missing');
     if (!briefText.includes("Today's plan")) fail('brief plan section missing');
     if (!briefText.includes('Follow up appeal — CLM-2005')) fail('brief plan top item missing');
-    if (!briefText.includes('Drafts ready for your approval')) fail('brief drafts header missing');
-    if (!briefText.includes('Draft appeal — claim CLM-1002')) fail('brief approval card missing');
-    console.log('  PASS morning brief renders (narrative + tiles + plan + inline approval card)');
+    if (briefText.includes('Drafts ready for your approval')) fail('brief must no longer embed its own approval cards');
+    console.log('  PASS morning brief renders (narrative + tiles + plan, no embedded cards)');
+
+    // Approvals section (Deploy #97): both pending cards render here —
+    // the brief-proposed one and the conversation-less wizard one — and
+    // the brief card renders exactly once on the whole page.
+    const approvalsEl = await until(() => doc.getElementById('agent-approvals'), 9000, 'approvals section');
+    if (!approvalsEl.textContent.includes('Awaiting your approval')) fail('approvals section title missing');
+    if (!approvalsEl.textContent.includes('Draft appeal — claim CLM-1002')) fail('brief card missing from approvals section');
+    if (!approvalsEl.textContent.includes('Draft appeal — claim CLM-9001')) fail('wizard (conversation-less) card missing from approvals section');
+    const c1002 = (doc.body.textContent.match(/Draft appeal — claim CLM-1002/g) || []).length;
+    if (c1002 !== 1) fail(`brief card should render exactly once (approvals section), saw ${c1002}`);
+    // Fresh text here (not the briefText snapshot): the pending list may
+    // land a beat after the brief, and the plan rows key off it.
+    if (!doc.body.textContent.includes('Draft waiting')) fail('plan row for the already-drafted denial should show Draft waiting');
+    if (!doc.body.textContent.includes('Open claim')) fail('plan row Open claim button missing');
+    console.log('  PASS approvals section renders brief + wizard cards exactly once; plan rows are actionable');
 
     // Watchdog alerts strip (Phase 4): today's computed items above the brief.
     await until(() => doc.body.textContent.includes('Needs attention'), 9000, 'watchdog alerts strip');
     if (!doc.body.textContent.includes('1 approval waiting')) fail('alerts strip approvals part missing');
     if (!doc.body.textContent.includes('$410 at filing risk')) fail('alerts strip filing-risk part missing');
     console.log('  PASS watchdog alerts strip renders (approvals + filing risk)');
+
+    // Deploy #97: the strip expands into actionable rows — approvals get
+    // a scroll-to-section button; filing-risk rows carry the claim, its
+    // deadline, and claim actions (denied -> draft wiring present).
+    const stripBtn = await until(() => [...doc.querySelectorAll('button')].find((b) => b.textContent.includes('Needs attention')), 9000, 'alerts strip toggle');
+    stripBtn.dispatchEvent(new app.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await until(() => doc.body.textContent.includes('Review approvals'), 9000, 'alerts panel approvals button');
+    const alertsPanelText = doc.body.textContent;
+    if (!alertsPanelText.includes('Filing risk — deadline within 14 days')) fail('alerts panel filing-risk category missing');
+    if (!alertsPanelText.includes('CLM-1013')) fail('alerts panel filing-risk row missing');
+    if (!alertsPanelText.includes('10d left')) fail('alerts panel filing-risk days-left missing');
+    console.log('  PASS alerts strip expands to actionable category rows');
 
     // Document intake (Phase 5): the section lists the document, the
     // review shows problems + matched highlight + the unmatched claim

@@ -227,7 +227,7 @@ function Workspace() {
   });
   const [dueCount, setDueCount] = useState(0);
   const [authzAlertCount, setAuthzAlertCount] = useState(0);
-  // Cross-page deep links: { page, appealId, claimId, startAppealClaimId, settingsTab }
+  // Cross-page deep links: { page, appealId, claimId, startAppealClaimId, settingsTab, agentSection }
   const [deepLink, setDeepLink] = useState(() => {
     const q = new URLSearchParams(window.location.search);
     return q.get('settings') === 'payments' ? { settingsTab: 'payments' } : null;
@@ -263,11 +263,13 @@ function Workspace() {
           onOpenAppeal={(appealId) => go('denials', { appealId })}
           onOpenClaim={(claimId) => go('claims', { claimId })}
           onStartAppeal={(claimId) => go('denials', { startAppealClaimId: claimId })}
+          onReviewAgentDrafts={() => go('agent', { agentSection: 'approvals' })}
         />
       )}
       {page === 'digest' && <Digest />}
       {page === 'dashboard' && <Dashboard goDenials={() => go('denials')} />}
       {page === 'claims' && <Claims initialClaimId={deepLink?.claimId} onConsumed={() => setDeepLink(null)}
+        onReviewAgentDrafts={() => go('agent', { agentSection: 'approvals' })}
         onCheckEligibility={(claim) => go('elig', { prefill: { payerId: claim.payer_id, serviceDate: claim.service_date, patientName: claim.patient_name } })} />}
       {page === 'reports' && <Reports />}
       {page === 'playbook' && <Playbook />}
@@ -292,7 +294,15 @@ function Workspace() {
       {page === 'filing' && <FilingRules />}
       {page === 'team' && <Team />}
       {page === 'ai' && <AIAssistant />}
-      {page === 'agent' && <Agent onUpgrade={() => go('billing')} />}
+      {page === 'agent' && (
+        <Agent
+          onUpgrade={() => go('billing')}
+          onOpenClaim={(claimId) => go('claims', { claimId })}
+          onOpenEra={() => go('era')}
+          initialSection={deepLink?.agentSection}
+          onConsumed={() => setDeepLink(null)}
+        />
+      )}
       </ErrorBoundary>
     </Shell>
     <FloatingChat />

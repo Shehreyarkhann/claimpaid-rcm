@@ -393,6 +393,9 @@ export const api = {
   // ---- In-app agent (Phase 1; dark-shipped behind AGENT_ENABLED + key) ----
   agent: {
     brief: () => get('/api/agent/brief'),
+    // Deploy #97: every pending approval in the org — the Agent page's
+    // approvals section source of truth (brief/thread cards can orphan).
+    pendingActions: () => get('/api/agent/actions/pending'),
     conversations: () => get('/api/agent/conversations'),
     conversation: (id) => get(`/api/agent/conversations/${id}`),
     chat: (convoId, message) =>

@@ -71,6 +71,22 @@ router.get('/brief', async (req, res) => {
   }
 });
 
+// --- Pending approvals (deploy #97): EVERY pending action in the org,
+// oldest first — the Agent page's single source of truth for approval
+// cards. Brief cards render only when their ids are in today's brief and
+// thread cards only inside their conversation, so actions proposed on a
+// previous day or outside chat (Rescue wizard, claim panel, intake) were
+// counted by /alerts but rendered nowhere. This endpoint is the surface
+// that can never orphan one. Decisions stay on the canDecide-gated
+// approve/reject routes below — listing is not deciding.
+router.get('/actions/pending', (req, res) => {
+  const rows = db.prepare(`
+    SELECT * FROM agent_actions WHERE org_id = ? AND status = 'pending'
+    ORDER BY created_at ASC, id ASC
+  `).all(req.orgId);
+  res.json({ actions: rows.map(serializeAction) });
+});
+
 // --- Insights (Phase 3): dashboard-level predictions from predict.js ---
 router.get('/insights', (req, res) => {
   try {

@@ -123,7 +123,63 @@ export function ActionCard({ action, busy, onDecide }) {
   );
 }
 
-function BriefSection({ brief, actions, decidingId, onDecide }) {
+// Deploy #97: the action buttons on plan rows and alerts-panel rows —
+// Open claim (App deep link into the Claims page) and, for denials,
+// Draft appeal (propose -> the card lands in the approvals section) or
+// "Draft waiting ↑" when a pending draft for the claim already exists.
+export function pendingDraftFor(pendingActions, claimId) {
+  if (claimId == null) return null;
+  return (pendingActions || []).find((a) => a.kind === 'draft_appeal' && a.status === 'pending'
+    && a.payload && a.payload.claim_id === claimId) || null;
+}
+
+function ClaimRowActions({ claimId, denied, pendingActions, proposingId, onOpenClaim, onProposeDraft, onScrollApprovals }) {
+  if (claimId == null) return null;
+  const waiting = denied ? pendingDraftFor(pendingActions, claimId) : null;
+  return (
+    <span className="flex shrink-0 items-center gap-1.5">
+      {denied && (waiting ? (
+        <button type="button" className="btn btn-outline btn-sm" onClick={onScrollApprovals}>Draft waiting ↑</button>
+      ) : (
+        <button type="button" className="btn btn-dark btn-sm" disabled={proposingId === claimId}
+          onClick={() => onProposeDraft && onProposeDraft(claimId)}>
+          {proposingId === claimId ? 'Drafting…' : 'Draft appeal'}
+        </button>
+      ))}
+      {onOpenClaim && (
+        <button type="button" className="btn btn-outline btn-sm" onClick={() => onOpenClaim(claimId)}>Open claim</button>
+      )}
+    </span>
+  );
+}
+
+// Deploy #97: the approvals section — every pending agent action in the
+// org, from the dedicated endpoint. Brief-proposed, chat-proposed,
+// wizard-proposed and intake cards ALL render here and only here, so a
+// pending draft can never be counted by the alerts strip yet visible
+// nowhere (the previous-day brief / conversation-less orphan bug).
+function ApprovalsSection({ actions, decidingId, onDecide }) {
+  if (!actions.length) return null;
+  const pendingCount = actions.filter((a) => a.status === 'pending').length;
+  return (
+    <div id="agent-approvals" className="card p-5 mb-5">
+      <div className="flex items-baseline gap-3 flex-wrap">
+        <div className="font-display font-semibold text-stone-900 text-lg">Awaiting your approval</div>
+        {pendingCount > 0 && (
+          <span className="bg-amber-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">{pendingCount} pending</span>
+        )}
+        <div className="text-xs text-stone-400">Every draft the agent prepares — brief, chat, wizard, intake — waits here. Nothing saves until you decide.</div>
+      </div>
+      <div className="space-y-3 mt-4">
+        {actions.map((a) => (
+          <ActionCard key={a.id} action={a} busy={decidingId === a.id} onDecide={onDecide} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BriefSection({ brief, pendingActions, onOpenClaim, onProposeDraft, proposingId, onScrollApprovals }) {
   const w = brief.while_away || {};
   const tiles = [
     { label: 'New denials', value: w.new_denials ? w.new_denials.count : 0 },
@@ -144,11 +200,12 @@ function BriefSection({ brief, actions, decidingId, onDecide }) {
       return new Date(`${brief.brief_date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
     } catch { return brief.brief_date; }
   })();
-  // Queue clear (Phase 4): the brief proposed drafts and none are left
-  // pending — the server only returns pending cards, so an empty list
-  // alongside non-empty proposed ids means every one was decided.
+  // Queue clear (Phase 4, reworked #97): the brief proposed drafts and
+  // none of those ids are still pending in the GLOBAL pending list —
+  // the brief no longer carries its own card list to compare against.
   const proposedIds = brief.proposed_draft_action_ids || [];
-  const queueClear = proposedIds.length > 0 && !actions.some((a) => a.status === 'pending');
+  const queueClear = proposedIds.length > 0
+    && !pendingActions.some((a) => a.status === 'pending' && proposedIds.includes(a.id));
   return (
     <div className="card p-5 mb-5">
       <div className="flex items-baseline gap-3 flex-wrap">
@@ -176,26 +233,25 @@ function BriefSection({ brief, actions, decidingId, onDecide }) {
           <div className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-2">Today's plan</div>
           <ol className="space-y-1.5">
             {brief.plan.map((p, i) => (
-              <li key={p.key || p.rank} className="motion-fade-slide flex items-baseline gap-2.5 text-sm" style={{ animationDelay: `${Math.min(i * 60, 480)}ms` }}>
+              <li key={p.key || p.rank} className="motion-fade-slide flex items-center gap-2.5 text-sm" style={{ animationDelay: `${Math.min(i * 60, 480)}ms` }}>
                 <span className="font-display font-semibold text-emerald-700 w-5 shrink-0">{p.rank}.</span>
-                <span className="min-w-0">
+                <span className="min-w-0 flex-1">
                   <span className="font-medium text-stone-800">{p.title}</span>
                   {p.reason && <span className="text-stone-500"> — {p.reason}</span>}
                 </span>
-                {p.amount != null && <span className="ml-auto shrink-0 font-medium text-stone-700">${Number(p.amount).toLocaleString()}</span>}
+                {p.amount != null && <span className="shrink-0 font-medium text-stone-700">${Number(p.amount).toLocaleString()}</span>}
+                <ClaimRowActions
+                  claimId={p.claim_id != null ? p.claim_id : null}
+                  denied={p.type === 'denial'}
+                  pendingActions={pendingActions}
+                  proposingId={proposingId}
+                  onOpenClaim={onOpenClaim}
+                  onProposeDraft={onProposeDraft}
+                  onScrollApprovals={onScrollApprovals}
+                />
               </li>
             ))}
           </ol>
-        </div>
-      )}
-      {actions.length > 0 && (
-        <div className="mt-4">
-          <div className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-2">Drafts ready for your approval</div>
-          <div className="space-y-3">
-            {actions.map((a) => (
-              <ActionCard key={a.id} action={a} busy={decidingId === a.id} onDecide={onDecide} />
-            ))}
-          </div>
         </div>
       )}
     </div>
@@ -285,13 +341,15 @@ function TeamSection() {
   );
 }
 
-export default function Agent({ onUpgrade }) {
+export default function Agent({ onUpgrade, onOpenClaim, onOpenEra, initialSection, onConsumed }) {
   const toast = useToast();
   const [disabled, setDisabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [brief, setBrief] = useState(null);
-  const [briefActions, setBriefActions] = useState([]);
+  const [pendingActions, setPendingActions] = useState([]);
   const [alerts, setAlerts] = useState(null);
+  const [alertsOpen, setAlertsOpen] = useState(false);
+  const [proposingId, setProposingId] = useState(null);
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -334,40 +392,96 @@ export default function Agent({ onUpgrade }) {
 
   useEffect(() => { loadConversations().catch(() => setLoading(false)); }, [loadConversations]);
 
-  // Morning brief: generated lazily server-side on the first read of the
-  // org-local day. A failure (other than the disabled state) just hides
-  // the section — the chat below is unaffected.
-  useEffect(() => {
-    (async () => {
-      try {
-        const r = await api.agent.brief();
-        setBrief(r.brief || null);
-        setBriefActions(r.actions || []);
-      } catch (e) {
-        if (e.code === 'AGENT_DISABLED') setDisabled(true);
-      }
-    })();
+  // Deploy #97: ONE shared refresh for the page's three live surfaces —
+  // the global pending-approvals list, the watchdog alerts strip, and
+  // the morning brief. It runs on mount, on window focus, and after
+  // every decide / propose on this page, so a card created or decided
+  // anywhere shows up (or leaves) everywhere at once. keepDecided keeps
+  // a just-decided card on screen in its decided state (the stamp
+  // animation + result note) instead of vanishing mid-gesture; a plain
+  // refresh (mount / focus) replaces the list wholesale.
+  // Brief failures (other than disabled) just leave the last brief —
+  // the chat below is unaffected; alerts failures leave the strip as-is.
+  const refreshSurfaces = useCallback(async ({ keepDecided = false } = {}) => {
+    try {
+      const r = await api.agent.pendingActions();
+      setPendingActions((prev) => {
+        const fresh = r.actions || [];
+        if (!keepDecided) return fresh;
+        const freshIds = new Set(fresh.map((a) => a.id));
+        const decided = prev.filter((a) => a.status !== 'pending' && !freshIds.has(a.id));
+        return [...fresh, ...decided];
+      });
+      setDisabled(false);
+    } catch (e) {
+      if (e.code === 'AGENT_DISABLED') setDisabled(true);
+    }
+    try {
+      const r = await api.agent.alerts();
+      setAlerts(r.items || null);
+    } catch { /* strip stays as-is */ }
+    try {
+      const r = await api.agent.brief();
+      setBrief(r.brief || null);
+    } catch (e) {
+      if (e.code === 'AGENT_DISABLED') setDisabled(true);
+    }
   }, []);
 
-  // Watchdog alerts strip (Phase 4): the same items the morning digest
-  // email carries, computed for this user. Silent on any failure.
+  useEffect(() => { refreshSurfaces(); }, [refreshSurfaces]);
+
   useEffect(() => {
-    (async () => {
-      try {
-        const r = await api.agent.alerts();
-        setAlerts(r.items || null);
-      } catch { /* strip just stays hidden */ }
-    })();
+    const onFocus = () => refreshSurfaces();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [refreshSurfaces]);
+
+  const scrollToApprovals = useCallback(() => {
+    setTimeout(() => {
+      const el = document.getElementById('agent-approvals');
+      if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
   }, []);
 
-  const decideBrief = async (action, decision) => {
+  // Arriving from the Rescue wizard's "Review & approve" route: once the
+  // approvals section exists (a pending card is loaded), land on it —
+  // once, then hand the deep link back as consumed.
+  const focusConsumedRef = useRef(false);
+  useEffect(() => {
+    if (initialSection !== 'approvals' || focusConsumedRef.current) return;
+    if (!pendingActions.some((a) => a.status === 'pending')) return;
+    focusConsumedRef.current = true;
+    scrollToApprovals();
+    if (onConsumed) onConsumed();
+  }, [initialSection, pendingActions, scrollToApprovals, onConsumed]);
+
+  // Draft appeal from a plan / alerts row: propose through the standard
+  // endpoint (the draft is a PENDING card — proposing never approves),
+  // refresh every surface, and land the user on the new card.
+  const proposeDraft = async (claimId) => {
+    if (claimId == null || proposingId != null) return;
+    setProposingId(claimId);
+    try {
+      await api.agent.propose({ kind: 'draft_appeal', claim_id: claimId });
+      toast.success('Draft created — it is waiting in Awaiting your approval');
+      await refreshSurfaces({ keepDecided: true });
+      scrollToApprovals();
+    } catch (e) {
+      toast.error(e.message || 'Could not draft that appeal');
+    } finally {
+      setProposingId(null);
+    }
+  };
+
+  const decidePending = async (action, decision) => {
     setDecidingId(action.id);
     try {
       const r = decision === 'approve' ? await api.agent.approveAction(action.id) : await api.agent.rejectAction(action.id);
-      setBriefActions((list) => list.map((a) => (a.id === action.id ? r.action : a)));
+      setPendingActions((list) => list.map((a) => (a.id === action.id ? r.action : a)));
       if (decision === 'approve' && r.action.status === 'executed') toast.success('Approved and applied');
       if (decision === 'approve' && r.action.status === 'failed') toast.error('Approval recorded, but saving failed');
       if (decision === 'reject') toast.success('Rejected — nothing was changed');
+      refreshSurfaces({ keepDecided: true });
     } catch (e) {
       toast.error(e.message || 'Could not record that decision');
     } finally {
@@ -424,6 +538,8 @@ export default function Agent({ onUpgrade }) {
         setActions((a) => [...a, ...r.actions]);
       }
       loadConversations().catch(() => {});
+      // Chat-proposed cards also belong to the global approvals list.
+      refreshSurfaces({ keepDecided: true });
       scrollDown();
     } catch (e) {
       if (e.code === 'AGENT_DISABLED') { setDisabled(true); return; }
@@ -456,6 +572,7 @@ export default function Agent({ onUpgrade }) {
       if (decision === 'approve' && r.action.status === 'failed') toast.error('Approval recorded, but saving failed');
       if (decision === 'reject') toast.success('Rejected — nothing was changed');
       loadConversations().catch(() => {});
+      refreshSurfaces({ keepDecided: true });
     } catch (e) {
       toast.error(e.message || 'Could not record that decision');
     } finally {
@@ -500,15 +617,117 @@ export default function Agent({ onUpgrade }) {
         )}
       />
       {alerts && alerts.total > 0 && (
-        <div className="motion-fade-slide mb-5 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-amber-300 bg-amber-50/80 px-4 py-3 text-sm text-amber-900">
-          <span className="font-semibold">⚡ Needs attention</span>
-          {alerts.pending_approvals.count > 0 && <span>{alerts.pending_approvals.count} approval{alerts.pending_approvals.count === 1 ? '' : 's'} waiting on you</span>}
-          {alerts.filing_risk.count > 0 && <span>${Number(alerts.filing_risk.amount).toLocaleString()} at filing risk ({alerts.filing_risk.count} claim{alerts.filing_risk.count === 1 ? '' : 's'})</span>}
-          {alerts.followups_overdue.count > 0 && <span>{alerts.followups_overdue.count} follow-up{alerts.followups_overdue.count === 1 ? '' : 's'} overdue</span>}
-          {alerts.era_exceptions.count > 0 && <span>{alerts.era_exceptions.count} ERA exception{alerts.era_exceptions.count === 1 ? '' : 's'} on hold</span>}
+        <div className="motion-fade-slide mb-5 rounded-2xl border border-amber-300 bg-amber-50/80 px-4 py-3 text-sm text-amber-900">
+          <button type="button" onClick={() => setAlertsOpen((o) => !o)} aria-expanded={alertsOpen}
+            className="flex flex-wrap items-center gap-x-3 gap-y-1 w-full text-left">
+            <span className="font-semibold">⚡ Needs attention</span>
+            {alerts.pending_approvals.count > 0 && <span>{alerts.pending_approvals.count} approval{alerts.pending_approvals.count === 1 ? '' : 's'} waiting on you</span>}
+            {alerts.filing_risk.count > 0 && <span>${Number(alerts.filing_risk.amount).toLocaleString()} at filing risk ({alerts.filing_risk.count} claim{alerts.filing_risk.count === 1 ? '' : 's'})</span>}
+            {alerts.followups_overdue.count > 0 && <span>{alerts.followups_overdue.count} follow-up{alerts.followups_overdue.count === 1 ? '' : 's'} overdue</span>}
+            {alerts.era_exceptions.count > 0 && <span>{alerts.era_exceptions.count} ERA exception{alerts.era_exceptions.count === 1 ? '' : 's'} on hold</span>}
+            <span className="ml-auto text-xs font-semibold underline underline-offset-2">{alertsOpen ? 'Hide details' : 'Show details'}</span>
+          </button>
+          {alertsOpen && (
+            <div className="mt-3 border-t border-amber-200 pt-3 space-y-4">
+              {alerts.pending_approvals.count > 0 && (
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-widest text-amber-700 mb-1.5">Approvals waiting</div>
+                  <ul className="space-y-1">
+                    {(alerts.pending_approvals.highlights || []).map((t, i) => (
+                      <li key={i} className="text-[13px]">{t}</li>
+                    ))}
+                  </ul>
+                  {alerts.pending_approvals.count > (alerts.pending_approvals.highlights || []).length && (
+                    <div className="text-xs text-amber-800 mt-1">+ {alerts.pending_approvals.count - (alerts.pending_approvals.highlights || []).length} more below</div>
+                  )}
+                  <button type="button" className="btn btn-primary btn-sm mt-2" onClick={scrollToApprovals}>Review approvals ↓</button>
+                </div>
+              )}
+              {alerts.filing_risk.count > 0 && (
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-widest text-amber-700 mb-1.5">Filing risk — deadline within 14 days</div>
+                  <div className="space-y-1.5">
+                    {(alerts.filing_risk.highlights || []).map((h) => (
+                      <div key={h.claim_id || h.claim_number} className="flex items-center gap-2 text-[13px]">
+                        <span className="min-w-0 flex-1">
+                          <span className="font-medium">{h.claim_number}</span>
+                          <span className="text-amber-800"> — {h.days_left < 0 ? `expired ${-h.days_left}d ago` : `${h.days_left}d left`} · ${Number(h.amount).toLocaleString()}</span>
+                        </span>
+                        <ClaimRowActions
+                          claimId={h.claim_id != null ? h.claim_id : null}
+                          denied={h.status === 'denied'}
+                          pendingActions={pendingActions}
+                          proposingId={proposingId}
+                          onOpenClaim={onOpenClaim}
+                          onProposeDraft={proposeDraft}
+                          onScrollApprovals={scrollToApprovals}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  {alerts.filing_risk.count > (alerts.filing_risk.highlights || []).length && (
+                    <div className="text-xs text-amber-800 mt-1">+ {alerts.filing_risk.count - (alerts.filing_risk.highlights || []).length} more in My Work</div>
+                  )}
+                </div>
+              )}
+              {alerts.followups_overdue.count > 0 && (
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-widest text-amber-700 mb-1.5">Follow-ups overdue</div>
+                  <div className="space-y-1.5">
+                    {(alerts.followups_overdue.highlights || []).map((h) => (
+                      <div key={h.appeal_id || h.claim_number} className="flex items-center gap-2 text-[13px]">
+                        <span className="min-w-0 flex-1">
+                          <span className="font-medium">{h.claim_number}</span>
+                          <span className="text-amber-800"> — follow-up was due {h.due}</span>
+                        </span>
+                        <ClaimRowActions
+                          claimId={h.claim_id != null ? h.claim_id : null}
+                          denied={false}
+                          pendingActions={pendingActions}
+                          proposingId={proposingId}
+                          onOpenClaim={onOpenClaim}
+                          onProposeDraft={proposeDraft}
+                          onScrollApprovals={scrollToApprovals}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  {alerts.followups_overdue.count > (alerts.followups_overdue.highlights || []).length && (
+                    <div className="text-xs text-amber-800 mt-1">+ {alerts.followups_overdue.count - (alerts.followups_overdue.highlights || []).length} more in My Work</div>
+                  )}
+                </div>
+              )}
+              {alerts.era_exceptions.count > 0 && (
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-widest text-amber-700 mb-1.5">ERA exceptions on hold</div>
+                  <div className="space-y-1.5">
+                    {(alerts.era_exceptions.highlights || []).map((h) => (
+                      <div key={h.era_line_id} className="text-[13px]">
+                        <span className="font-medium">{h.claim_number}</span>
+                        <span className="text-amber-800"> — {fmtMoney2(h.amount)} billed on a held remittance line</span>
+                      </div>
+                    ))}
+                  </div>
+                  {onOpenEra && (
+                    <button type="button" className="btn btn-outline btn-sm mt-2" onClick={onOpenEra}>Open ERA inbox →</button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
-      {brief && <BriefSection brief={brief} actions={briefActions} decidingId={decidingId} onDecide={decideBrief} />}
+      <ApprovalsSection actions={pendingActions} decidingId={decidingId} onDecide={decidePending} />
+      {brief && (
+        <BriefSection
+          brief={brief}
+          pendingActions={pendingActions}
+          onOpenClaim={onOpenClaim}
+          onProposeDraft={proposeDraft}
+          proposingId={proposingId}
+          onScrollApprovals={scrollToApprovals}
+        />
+      )}
       <DocumentIntake ActionCard={ActionCard} />
       <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)] items-start">
         {/* Conversation list */}
