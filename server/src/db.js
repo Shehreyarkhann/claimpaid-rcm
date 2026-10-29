@@ -1114,6 +1114,60 @@ function initSchema() {
     console.error('[migration] appeal-letter-repair-98 FAILED (will retry next boot):', e.message);
    }
   }
+  // ---- Appeal-letter labeling (deploy #99, one-time) ----
+  // Companion to the #98 repair: that pass only ever MOVED one letter per
+  // appeal (the longest qualifying note) into appeals.letter. Appeals that
+  // gained a letter that way — or already had one — can still carry OTHER
+  // full draft letters in their notes, where they read like the old
+  // pre-#98 notes-dump comments. This pass labels each such leftover with
+  // the exact prefix the agent executor itself uses when it preserves an
+  // additional draft as a note ('Additional draft letter (agent)'), so
+  // every full letter sitting in the notes is visibly a draft.
+  // PREFIX ONLY: nothing is moved or deleted; the same conservative
+  // letter heuristic as #98 decides what qualifies; notes already
+  // carrying the prefix are skipped; appeals WITHOUT a letter are never
+  // touched (the #98 repair owns those). Runs once (marker row).
+  if (!db.prepare('SELECT name FROM data_migrations WHERE name = ?').get('appeal-letter-label-99')) {
+   try {
+    const PREFIX = 'Additional draft letter (agent)';
+    let labeled = 0, uncertain = 0;
+    const lettered = db.prepare(
+      "SELECT id, org_id, claim_id FROM appeals WHERE letter IS NOT NULL AND TRIM(letter) <> ''"
+    ).all();
+    for (const a of lettered) {
+      const notes = db.prepare('SELECT id, note FROM appeal_notes WHERE appeal_id = ?').all(a.id)
+        .filter((n) => (n.note || '').length > 400 && !(n.note || '').startsWith(PREFIX));
+      if (!notes.length) continue;
+      // Same evidence standard as the #98 repair: exact agent-payload
+      // match for this claim, or the Re:/Dear structural markers.
+      const payloadLetters = new Set();
+      const acts = db.prepare(
+        "SELECT payload FROM agent_actions WHERE org_id = ? AND kind = 'draft_appeal'"
+      ).all(a.org_id);
+      for (const act of acts) {
+        try {
+          const p = JSON.parse(act.payload || '{}');
+          if (p.claim_id === a.claim_id && typeof p.letter === 'string' && p.letter) payloadLetters.add(p.letter);
+        } catch { /* unparseable payload — not evidence */ }
+      }
+      const isLetter = (t) => payloadLetters.has(t)
+        || (/(^|\n)\s*Re:/.test(t) && /\nDear /.test(`\n${t}`));
+      let any = false;
+      for (const n of notes) {
+        if (isLetter(n.note)) {
+          db.prepare('UPDATE appeal_notes SET note = ? WHERE id = ?')
+            .run(`${PREFIX}\n\n${n.note}`, n.id);
+          labeled++; any = true;
+        }
+      }
+      if (!any) uncertain++;
+    }
+    db.prepare("INSERT INTO data_migrations (name) VALUES ('appeal-letter-label-99')").run();
+    console.log(`[migration] appeal-letter-label-99: labeled ${labeled} leftover draft letter note(s) as additional drafts; ${uncertain} lettered appeal(s) had long notes that did not clearly read as letters and were left untouched`);
+   } catch (e) {
+    console.error('[migration] appeal-letter-label-99 FAILED (will retry next boot):', e.message);
+   }
+  }
 }
 
 // Thin wrapper so route code keeps working with .prepare().get()/.all()/.run()

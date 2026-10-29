@@ -42,9 +42,16 @@ function AppealDrawer({ appealId, onClose, onChanged, team, onShowDetails }) {
   const [submitVia, setSubmitVia] = useState('payer_portal');
   const [submitFollowUp, setSubmitFollowUp] = useState('');
   const [submitBusy, setSubmitBusy] = useState(false);
+  // Deploy #99: saving the GENERATED letter onto the appeal.
+  const [genSaving, setGenSaving] = useState(false);
+  const [genSaved, setGenSaved] = useState(false);
+  const [confirmOverwrite, setConfirmOverwrite] = useState(false);
   const canWrite = ['owner', 'biller'].includes(user?.role);
 
-  useEffect(() => { setEditingLetter(false); setShowSubmit(false); }, [appealId]);
+  useEffect(() => {
+    setEditingLetter(false); setShowSubmit(false);
+    setGenSaved(false); setConfirmOverwrite(false);
+  }, [appealId]);
 
   const load = () => authFetch(`/api/appeals/${appealId}`).then((r) => r.json()).then(setAppeal);
   useEffect(() => { load(); }, [appealId]);
@@ -88,8 +95,34 @@ function AppealDrawer({ appealId, onClose, onChanged, team, onShowDetails }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setLetter(data);
+      setGenSaved(false);
+      setConfirmOverwrite(false);
     } catch (e) { toast.error(e.message); }
     finally { setLetterBusy(false); }
+  };
+
+  // Deploy #99: the generated letter used to be copy/print-only — it
+  // evaporated when the drawer closed. Save it onto the appeal through
+  // the same PUT the letter editor uses, so it lands in the #98 letter
+  // panel (Edit / Print / Mark as submitted). When the appeal already
+  // carries a letter, the save fires only after the inline overwrite
+  // confirm below — never a silent replace.
+  const saveGeneratedLetter = async () => {
+    if (!letter) return;
+    setGenSaving(true);
+    try {
+      const res = await authFetch(`/api/appeals/${appealId}/letter`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ letter: letter.text }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setAppeal(await res.json());
+      setGenSaved(true);
+      setConfirmOverwrite(false);
+      toast.success('Letter saved to the appeal');
+      onChanged();
+    } catch (e) { toast.error(e.message); }
+    finally { setGenSaving(false); }
   };
 
   // Deploy #98: saved-letter actions — edit in place, print the document,
@@ -251,6 +284,14 @@ function AppealDrawer({ appealId, onClose, onChanged, team, onShowDetails }) {
                 <div className="text-[11px] text-stone-400">Auto-drafted from denial reason · review before sending</div>
               </div>
               <div className="flex gap-2">
+                {canWrite && (genSaved ? (
+                  <span className="text-emerald-300 text-xs font-semibold px-1 self-center">✓ Saved to the appeal letter</span>
+                ) : (
+                  <button onClick={() => (appeal.letter ? setConfirmOverwrite(true) : saveGeneratedLetter())} disabled={genSaving}
+                    className="btn !bg-emerald-500 hover:!bg-emerald-600 !text-white !py-1.5 !text-xs">
+                    {genSaving ? 'Saving…' : 'Save to appeal letter'}
+                  </button>
+                ))}
                 <button onClick={() => { navigator.clipboard.writeText(letter.text); toast.success('Letter copied to clipboard'); }}
                   className="btn !bg-white/10 hover:!bg-white/20 !text-white !py-1.5 !text-xs">Copy</button>
                 <button onClick={() => {
@@ -261,6 +302,17 @@ function AppealDrawer({ appealId, onClose, onChanged, team, onShowDetails }) {
                 <button onClick={() => setLetter(null)} className="btn !bg-white/10 hover:!bg-white/20 !text-white !py-1.5 !text-xs">✕</button>
               </div>
             </div>
+            {confirmOverwrite && !genSaved && canWrite && (
+              <div className="bg-amber-50 border-b border-amber-200 px-5 py-3 flex flex-wrap items-center gap-3">
+                <span className="text-sm text-amber-900">This appeal already has a saved letter — saving this draft will <b>replace the current saved letter</b> with the generated text. The replaced letter is not kept.</span>
+                <span className="flex gap-2 ml-auto">
+                  <button onClick={saveGeneratedLetter} disabled={genSaving}
+                    className="btn btn-primary !py-1.5 !text-xs">{genSaving ? 'Saving…' : 'Replace saved letter'}</button>
+                  <button onClick={() => setConfirmOverwrite(false)}
+                    className="btn btn-outline !py-1.5 !text-xs">Cancel</button>
+                </span>
+              </div>
+            )}
             <div className="bg-white px-6 py-5 max-h-[320px] overflow-y-auto">
               <pre className="whitespace-pre-wrap font-serif text-[13px] leading-relaxed text-stone-700">{letter.text}</pre>
             </div>
