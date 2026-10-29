@@ -8,6 +8,7 @@
    present, go straight to the app. Logged out (or token expired) = landing. */
 (function(){try{var t=localStorage.getItem('pulse_token');if(!t)return;var b=t.split('.')[1];if(!b)return;var p=JSON.parse(decodeURIComponent(escape(atob(b.replace(/-/g,'+').replace(/_/g,'/')))));if(p.exp&&p.exp*1000>Date.now()){location.replace('/app/');}}catch(e){}})();
 </script>
+<script>document.documentElement.classList.add('js')</script>
 <title>ClaimPaid — AI Agent for Medical Billing & Denial Management | Get your claims paid.</title>
 <meta name="description" content="ClaimPaid's AI agent opens each day with a brief and a ranked work queue, drafts appeals for your approval, checks eligibility, scrubs and codes claims, and learns your payers from your own decided claims. Full RCM platform — 30-day free trial, no card."/>
 <meta name="keywords" content="AI medical billing agent, AI-powered medical billing software, denial management software, medical billing software for small practices, revenue cycle management software, claim scrubber, timely filing tracker, AI medical coding assistant, 835 ERA, 837P claims, appeal letter drafting, payer policy handbook, billing company software"/>
@@ -70,6 +71,7 @@ html{scroll-behavior:smooth}
 body{background:var(--paper);color:var(--ink);font-family:'Inter',system-ui,sans-serif;overflow-x:hidden}
 h1,h2,h3,.disp{font-family:'Fraunces',Georgia,serif}
 ::selection{background:var(--green);color:#fff}
+:focus-visible{outline:3px solid rgba(14,159,110,.55);outline-offset:2px}
 .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
 .grad{color:var(--green-dk)}
 /* ---------- nav ---------- */
@@ -97,6 +99,9 @@ nav.scrolled{box-shadow:0 8px 30px rgba(33,26,19,.10)}
 /* ---------- hero ---------- */
 #hero{position:relative;display:flex;align-items:center;overflow:hidden;padding:130px 0 80px;background:radial-gradient(1100px 520px at 85% -10%,rgba(217,119,6,.10),transparent 60%),radial-gradient(900px 500px at -10% 20%,rgba(14,159,110,.08),transparent 55%),var(--paper)}
 #hero .wrap{position:relative;z-index:2;width:100%}
+.hero-stamp{position:absolute;top:44px;right:-84px;width:min(600px,62vw);height:auto;opacity:.06;pointer-events:none;z-index:1}
+@media (prefers-reduced-motion: no-preference){.hero-stamp{animation:stampFloat 16s ease-in-out infinite}}
+@keyframes stampFloat{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-14px) rotate(1.5deg)}}
 .hero-badge{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--green-dk);border:1px solid rgba(14,159,110,.4);background:var(--green-tint);padding:8px 16px;border-radius:100px;margin-bottom:26px;animation:fadeDown .8s ease both}
 .hero-badge .dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 1.8s infinite}
 @keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.5}}
@@ -141,7 +146,10 @@ h1 .w{display:inline-block;opacity:0;animation:wordUp .7s cubic-bezier(.22,1,.36
 .fcard .lbl{font-size:11px;color:var(--mut);margin-top:8px}
 /* ---------- marquee ---------- */
 .marquee{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:20px 0;overflow:hidden;background:var(--paper2)}
-.marquee .track{display:flex;gap:56px;width:max-content;animation:scroll 26s linear infinite}
+.marquee .track{display:flex;width:max-content;animation:scroll 48s linear infinite}
+.mq-half{display:flex;gap:30px;padding-right:30px;align-items:center}
+.marquee span.mq-sep{font-family:'Inter',sans-serif;font-size:13px;color:var(--green);letter-spacing:0}
+@media (prefers-reduced-motion: reduce){.marquee .track,.ticker .track{animation:none}}
 .marquee:hover .track{animation-play-state:paused}
 .marquee span{font-family:'Fraunces',serif;font-weight:700;font-size:15px;color:var(--mut);white-space:nowrap;letter-spacing:.5px;transition:color .25s}
 .marquee span:hover{color:var(--green-dk)}
@@ -193,16 +201,65 @@ h2{font-size:clamp(32px,4.4vw,52px);font-weight:900;letter-spacing:-1px;line-hei
 .glink:hover{color:var(--ink);text-decoration:underline}
 .bcard.wide{grid-column:span 2}
 @media(max-width:600px){.bcard.wide{grid-column:span 1}}
-/* ---------- platform clusters ---------- */
-.clusters{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-@media(max-width:800px){.clusters{grid-template-columns:1fr}}
-.cluster h3{font-size:23px;margin-bottom:8px;position:relative;z-index:1}
-.cluster .lead{font-size:15.5px;font-weight:600;color:var(--ink);line-height:1.6;position:relative;z-index:1}
+/* ---------- platform accordion ---------- */
+.acc{display:flex;flex-direction:column;gap:14px}
+.acc-panel{background:var(--card);border:1px solid var(--line);border-radius:22px;overflow:hidden;transition:border-color .3s,box-shadow .3s}
+.acc-panel:hover{border-color:rgba(14,159,110,.4)}
+.acc-panel.open{border-color:rgba(14,159,110,.55);box-shadow:0 24px 54px rgba(33,26,19,.09)}
+.acc-h{margin:0}
+.acc-btn{display:flex;align-items:center;gap:18px;width:100%;min-height:44px;text-align:left;background:none;border:none;cursor:pointer;padding:24px 28px;color:var(--ink);font-family:'Inter',sans-serif;-webkit-tap-highlight-color:transparent}
+.acc-idx{font-family:'Fraunces',serif;font-weight:900;font-size:14px;letter-spacing:.5px;color:var(--green-dk);background:var(--green-tint);border:1px solid rgba(14,159,110,.4);border-radius:100px;padding:6px 12px;flex-shrink:0}
+.acc-titles{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.acc-title{font-family:'Fraunces',serif;font-size:23px;font-weight:700;letter-spacing:-.3px;line-height:1.15}
+.acc-lead{font-size:14.5px;font-weight:500;color:var(--mut);line-height:1.5}
+.acc-ico{width:38px;height:38px;flex-shrink:0;border-radius:50%;border:1px solid var(--line2);position:relative;transition:transform .45s cubic-bezier(.22,1,.36,1),background .3s,border-color .3s}
+.acc-ico::before,.acc-ico::after{content:'';position:absolute;left:50%;top:50%;background:var(--green-dk);border-radius:2px}
+.acc-ico::before{width:14px;height:2.5px;transform:translate(-50%,-50%)}
+.acc-ico::after{width:2.5px;height:14px;transform:translate(-50%,-50%)}
+.acc-panel.open .acc-ico{transform:rotate(135deg);background:var(--green-tint);border-color:rgba(14,159,110,.45)}
+.acc-body{display:block}
+.js .acc-body{display:grid;grid-template-rows:0fr}
+.js .acc-panel.open .acc-body{grid-template-rows:1fr}
+.acc-inner{overflow:hidden;min-height:0;padding:0 28px}
+.acc-inner .flist{padding-bottom:16px}
+@media(min-width:900px){.acc-inner .flist{display:grid;grid-template-columns:1fr 1fr;column-gap:40px}}
+@media(max-width:640px){.acc-btn{padding:20px;gap:12px}.acc-title{font-size:20px}.acc-inner{padding:0 20px}.acc-idx{font-size:12px;padding:5px 10px}}
+@media (prefers-reduced-motion: no-preference){
+  .js .acc-body{transition:grid-template-rows .55s cubic-bezier(.22,1,.36,1)}
+  .js .acc-panel.open .flist li{animation:accRow .5s cubic-bezier(.22,1,.36,1) both}
+  .js .acc-panel.open .flist li:nth-child(2){animation-delay:.05s}
+  .js .acc-panel.open .flist li:nth-child(3){animation-delay:.1s}
+  .js .acc-panel.open .flist li:nth-child(4){animation-delay:.15s}
+  .js .acc-panel.open .flist li:nth-child(5){animation-delay:.2s}
+  .js .acc-panel.open .flist li:nth-child(6){animation-delay:.25s}
+  .js .acc-panel.open .flist li:nth-child(7){animation-delay:.3s}
+}
+@keyframes accRow{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 .flist{list-style:none;position:relative;z-index:1}
 .flist li{padding:10px 0;border-top:1px solid var(--line);font-size:14.5px;line-height:1.6;color:var(--mut)}
 .flist li:first-child{margin-top:6px}
 .flist strong{color:var(--ink);font-weight:600}
 .flist .glink{margin-top:0}
+/* ---------- dark bands: agent + audit ---------- */
+#agent{background:radial-gradient(1000px 520px at 12% -5%,rgba(14,159,110,.14),transparent 60%),var(--navy);color:#F0E9D8}
+#agent h2{color:#FBF7EC}
+#agent .grad{color:#34D399}
+#agent .sec-sub{color:#B9AE97}
+#agent .sec-tag{color:#E8B04B}
+#agent .bcard{background:rgba(255,253,248,.05);border-color:rgba(240,233,216,.22)}
+#agent .bcard h3{color:#FBF7EC}
+#agent .bcard p{color:#B9AE97}
+#agent .bcard .ico{background:rgba(14,159,110,.16);border-color:rgba(14,159,110,.45)}
+#agent .bcard .tag{background:rgba(217,119,6,.16);color:#E8B04B;border-color:rgba(217,119,6,.45)}
+#agent .bcard:hover{border-color:rgba(14,159,110,.55);box-shadow:0 26px 60px rgba(0,0,0,.35)}
+#audit{background:radial-gradient(900px 480px at 88% 110%,rgba(14,159,110,.12),transparent 60%),var(--navy);color:#F0E9D8}
+#audit h2{color:#FBF7EC}
+#audit .grad{color:#34D399}
+#audit .sec-sub{color:#B9AE97}
+#audit .sec-tag{color:#E8B04B}
+#audit .glink{color:#34D399}
+#audit .glink:hover{color:#FBF7EC}
+#audit .sec-note{background:rgba(255,253,248,.05);border-color:rgba(240,233,216,.3);color:#B9AE97}
 /* ---------- trust band ---------- */
 .trustband{background:var(--paper2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:34px 0}
 .trust-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
@@ -298,7 +355,8 @@ table.ptable{width:100%;border-collapse:collapse;min-width:660px;font-size:14px}
 #cta p{position:relative;color:#B9AE97;font-size:18px;max-width:560px;margin:0 auto 38px;line-height:1.65}
 #cta .btn{position:relative;font-size:17px;padding:17px 44px}
 /* ---------- footer ---------- */
-footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-size:13.5px;background:var(--paper2)}
+footer{border-top:1px solid var(--line);padding:54px 0;color:var(--mut);font-size:13.5px;background:var(--paper2)}
+.foot-stamp{width:44px;height:44px;flex-shrink:0}
 .foot{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px}
 .foot a{color:var(--mut);text-decoration:none;margin-left:22px;transition:color .25s}
 .foot a:hover{color:var(--green-dk)}
@@ -358,6 +416,7 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
 
 <div id="hero">
   
+  <img class="hero-stamp" src="/favicon.svg" alt="" aria-hidden="true"/>
   <div class="float-cards">
     <div class="fcard">
       <div class="row"><span class="cid">CLM-100122 · Medicaid NY</span><span class="pill denied">DENIED</span></div>
@@ -395,9 +454,10 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
 </div>
 
 <div class="marquee">
-  <div class="mq-label">BUILT FOR THE PAYERS YOU BILL EVERY DAY</div>
+  <div class="mq-label">Timely-filing rules built in for</div>
   <div class="track" id="payerTrack">
-    <span>BLUECROSS BLUESHIELD</span><span>UNITEDHEALTHCARE</span><span>ANTHEM</span><span>AETNA</span><span>CIGNA</span><span>HUMANA</span><span>KAISER PERMANENTE</span><span>CENTENE</span><span>MOLINA HEALTHCARE</span><span>HIGHMARK</span><span>WELLCARE</span><span>MEDICARE</span><span>MEDICAID</span><span>BLUECROSS BLUESHIELD</span><span>UNITEDHEALTHCARE</span><span>ANTHEM</span><span>AETNA</span><span>CIGNA</span><span>HUMANA</span><span>KAISER PERMANENTE</span><span>CENTENE</span><span>MOLINA HEALTHCARE</span><span>HIGHMARK</span><span>WELLCARE</span><span>MEDICARE</span><span>MEDICAID</span>
+    <div class="mq-half"><span>Aetna</span><span class="mq-sep">·</span><span>Cigna</span><span class="mq-sep">·</span><span>UnitedHealthcare</span><span class="mq-sep">·</span><span>Anthem</span><span class="mq-sep">·</span><span>Humana</span><span class="mq-sep">·</span><span>Medicare</span><span class="mq-sep">·</span><span>NY Medicaid</span><span class="mq-sep">·</span></div>
+    <div class="mq-half" aria-hidden="true"><span>Aetna</span><span class="mq-sep">·</span><span>Cigna</span><span class="mq-sep">·</span><span>UnitedHealthcare</span><span class="mq-sep">·</span><span>Anthem</span><span class="mq-sep">·</span><span>Humana</span><span class="mq-sep">·</span><span>Medicare</span><span class="mq-sep">·</span><span>NY Medicaid</span><span class="mq-sep">·</span></div>
   </div>
 </div>
 
@@ -426,9 +486,9 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
   <h2 class="reveal">Payers are betting you<br/>miss the <span class="grad">deadline.</span></h2>
   <p class="sec-sub reveal">You did the work. You saw the patient. Then a payer keeps the money over a missing modifier or a 90-day clock you never saw coming. Every denial left unworked is a write-off you chose.</p>
   <div class="prob-grid">
-    <div class="prob reveal"><div class="big">90 days</div><h3>UHC's filing guillotine</h3><p>The tightest commercial window in the industry. Miss it by a day and the claim is dead — you can't even bill the patient. ClaimPaid's filing radar flags these before they expire.</p></div>
+    <div class="prob reveal"><div class="big"><span class="count" data-to="90">90</span> days</div><h3>UHC's filing guillotine</h3><p>The tightest commercial window in the industry. Miss it by a day and the claim is dead — you can't even bill the patient. ClaimPaid's filing radar flags these before they expire.</p></div>
     <div class="prob reveal"><div class="big">CO-29</div><h3>Death by timely filing</h3><p>The most painful denial code in billing. Entirely preventable, completely unrecoverable without proof of submission. ClaimPaid tracks every deadline per payer, automatically.</p></div>
-    <div class="prob reveal"><div class="big">21+ days</div><h3>Appeals that stall out</h3><p>An appeal sitting untouched for three weeks is an appeal you've forgotten. The agent's morning brief and watchdog digest put stale appeals and passed follow-ups in front of your team every day.</p></div>
+    <div class="prob reveal"><div class="big" data-countup="21">21+ days</div><h3>Appeals that stall out</h3><p>An appeal sitting untouched for three weeks is an appeal you've forgotten. The agent's morning brief and watchdog digest put stale appeals and passed follow-ups in front of your team every day.</p></div>
   </div>
 </div></section>
 
@@ -452,11 +512,11 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
   <div class="sec-tag reveal">THE PLATFORM</div>
   <h2 class="reveal">One workspace.<br/><span class="grad">Every dollar chased.</span></h2>
   <p class="sec-sub reveal">Not another dashboard to glance at. A work engine your billers open every morning — prioritized, drafted, and tracked to paid.</p>
-  <div class="clusters">
-    <div class="bcard cluster reveal">
-      <h3>Work the queue</h3>
-      <p class="lead">Every denial ranked by deadline and dollars — with the next move already drafted.</p>
-      <ul class="flist">
+    <div class="acc">
+    <div class="acc-panel open">
+      <h3 class="acc-h"><button class="acc-btn" id="acc-btn-1" aria-expanded="true" aria-controls="acc-body-1"><span class="acc-idx">01</span><span class="acc-titles"><span class="acc-title">Work the queue</span><span class="acc-lead">Every denial ranked by deadline and dollars — with the next move already drafted.</span></span><span class="acc-ico" aria-hidden="true"></span></button></h3>
+      <div class="acc-body" id="acc-body-1" role="region" aria-labelledby="acc-btn-1"><div class="acc-inner">
+<ul class="flist">
         <li><strong>Smart Worklist — “My Work”</strong> — Every claim, appeal, and follow-up scored by dollars at stake and days until the filing deadline — with the agent's overturn prediction on the row, from your own decided history.</li>
         <li><strong>Timely Filing Radar</strong> — Deadlines for 7 major payers (UHC 90d, Aetna 120d, Cigna 180d, Anthem 180d, Medicare 365d, NY Medicaid 90d, Humana 180d) tracked against every open claim, plus custom deadlines for any payer. Red alerts before revenue becomes unrecoverable. <a class="glink" href="/blog/timely-filing-limits-by-payer-2026/">Timely-filing limits by payer →</a></li>
         <li><strong>Denial Rescue Wizard</strong> — Pick a denied claim and walk it end to end in five steps: snapshot and odds, eligibility, scrub findings, the drafted appeal, and the submission checklist.</li>
@@ -464,33 +524,36 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
         <li><strong>Appeal Letters, Ready to Approve</strong> — One click generates a payer-ready appeal letter for 8 denial categories — your letterhead, signature block, and the right argument for the denial code. The agent pre-drafts them into your approval queue. <a class="glink" href="/blog/how-to-appeal-denied-claim/">How to appeal a denied claim →</a></li>
         <li><strong>Payer-Call Prep</strong> — The agent builds the call brief — identifiers ready, the questions for that denial family — and logs the rep's name, reference number, and promise into the claim timeline, follow-up set.</li>
       </ul>
+      </div></div>
     </div>
-    <div class="bcard cluster reveal">
-      <h3>Before the claim goes out</h3>
-      <p class="lead">Eligibility, scrubbing, and coding checks that stop the denial before it happens.</p>
-      <ul class="flist">
+    <div class="acc-panel">
+      <h3 class="acc-h"><button class="acc-btn" id="acc-btn-2" aria-expanded="false" aria-controls="acc-body-2"><span class="acc-idx">02</span><span class="acc-titles"><span class="acc-title">Before the claim goes out</span><span class="acc-lead">Eligibility, scrubbing, and coding checks that stop the denial before it happens.</span></span><span class="acc-ico" aria-hidden="true"></span></button></h3>
+      <div class="acc-body" id="acc-body-2" role="region" aria-labelledby="acc-btn-2"><div class="acc-inner">
+<ul class="flist">
         <li><strong>Eligibility Checks</strong> — Coverage checked before claims go out — in the workspace, or ask the agent to run a check on any claim. Results live on the claim, so CO-50 non-covered-service denials get stopped at the door. <a class="glink" href="/blog/eligibility-verification-checklist/">Eligibility verification checklist →</a></li>
         <li><strong>15-Rule Claim Scrubber</strong> — Fifteen validation rules catch coding errors, missing modifiers, and eligibility gaps before the claim leaves the building. The agent runs the same scrubber on any claim and explains every finding.</li>
         <li><strong>Quote-Verified Coding</strong> — A 370-code library with a strict rule: a code is Valid only when your documentation actually supports it, quoted back to you. Weak evidence gets Review. No evidence gets an honest Abstain. Applying codes takes your approval — never the AI's say-so. <a class="glink" href="/blog/medical-billing-modifiers-guide/">Medical billing modifiers guide →</a></li>
         <li><strong>Prior-Auth Tracking</strong> — Prior-auth pipeline with expiration countdowns and denial-to-auth cross-links, so missing authorizations never become write-offs.</li>
         <li><strong>Payer Policy Handbook</strong> — Timely-filing limits, appeal windows, and denial-code rules for major payers — ask the agent mid-appeal and get the answer with the source cited, not a guess.</li>
       </ul>
+      </div></div>
     </div>
-    <div class="bcard cluster reveal">
-      <h3>Money in</h3>
-      <p class="lead">Remittances posted, exceptions resolved, paper read — and every recovered dollar counted.</p>
-      <ul class="flist">
+    <div class="acc-panel">
+      <h3 class="acc-h"><button class="acc-btn" id="acc-btn-3" aria-expanded="false" aria-controls="acc-body-3"><span class="acc-idx">03</span><span class="acc-titles"><span class="acc-title">Money in</span><span class="acc-lead">Remittances posted, exceptions resolved, paper read — and every recovered dollar counted.</span></span><span class="acc-ico" aria-hidden="true"></span></button></h3>
+      <div class="acc-body" id="acc-body-3" role="region" aria-labelledby="acc-btn-3"><div class="acc-inner">
+<ul class="flist">
         <li><strong>835 ERA Import + Auto-Posting</strong> — Drop in remittance files — payments auto-post, CAS denial codes auto-parse and link straight into appeals. <a class="glink" href="/blog/how-to-read-835-remittance-advice/">How to read an 835 remittance →</a></li>
         <li><strong>ERA Exception Resolution</strong> — Variance holds and flagged lines don't rot in an inbox. The agent works out the disposition from the remittance's own adjustment codes — contractual, patient responsibility, rebill, write-off — arithmetic shown, and posts it only when you approve.</li>
         <li><strong>Document Intake</strong> — Paper EOBs and payer denial letters are read, matched to your claims, and turned into held remittances and draft appeals — every figure checked, anything unclear flagged for a human, never filled in.</li>
         <li><strong>Patient Statements</strong> — Patient-responsibility balances become clean statements from the same workspace — generated from posted remittances, not re-typed.</li>
         <li><strong>Recovered-Dollars Scoreboard</strong> — Your workspace tracks the dollars recovered through decided appeals — including the ones the agent drafted — on the Dashboard, where your team can see the number grow.</li>
       </ul>
+      </div></div>
     </div>
-    <div class="bcard cluster reveal">
-      <h3>Set up in an afternoon, covered from day one</h3>
-      <p class="lead">Import, onboarding, and the compliance paperwork — handled inside the product.</p>
-      <ul class="flist">
+    <div class="acc-panel">
+      <h3 class="acc-h"><button class="acc-btn" id="acc-btn-4" aria-expanded="false" aria-controls="acc-body-4"><span class="acc-idx">04</span><span class="acc-titles"><span class="acc-title">Set up in an afternoon, covered from day one</span><span class="acc-lead">Import, onboarding, and the compliance paperwork — handled inside the product.</span></span><span class="acc-ico" aria-hidden="true"></span></button></h3>
+      <div class="acc-body" id="acc-body-4" role="region" aria-labelledby="acc-btn-4"><div class="acc-inner">
+<ul class="flist">
         <li><strong>Import Wizard</strong> — Bring your open A/R with you: CSV or 837 files mapped, validated row by row, duplicates flagged, and committed only at the final step. Running by this afternoon, not next quarter.</li>
         <li><strong>837P Generation</strong> — Real 837P (005010X222A1) claim files generated from your claims, structurally validated, with 999 and 277CA acknowledgment handling — ready to send through your current submission path. <a class="glink" href="/blog/837p-vs-835-explained/">837P vs 835, explained →</a></li>
         <li><strong>5-Step Onboarding Wizard — Real 30-Day Trial</strong> — Welcome → Workspace → Goals → Plan → Success: a guided setup that gets your workspace live on a real 30-day trial. No credit card — sign in with Google and start working claims the same day.</li>
@@ -499,6 +562,7 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
         <li><strong>Reports + Payer Playbook</strong> — Five exportable reports, denial-pattern analytics by payer × reason, and a living playbook of what actually wins against each payer — built from your own outcomes.</li>
         <li><strong>Two-Way Support Helpdesk</strong> — A built-in helpdesk with a 24-hour response SLA. Ask a question from inside the app and get a real answer — not a chatbot loop.</li>
       </ul>
+      </div></div>
     </div>
   </div>
 </div></section>
@@ -671,6 +735,7 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
 </div></div></section>
 
 <footer><div class="wrap foot">
+  <img class="foot-stamp" src="/favicon.svg" alt="" aria-hidden="true"/>
   <a class="logo" href="/" style="font-size:17px"><img src="claimpaid-icon.webp" alt="ClaimPaid" style="width:28px;height:28px"/><span class="wm">Claim<em>Paid</em></span></a>
   <div>© 2026 ClaimPaid · Get your claims paid. · <a href="/blog/">Blog</a> · <a href="/compare/">Compare</a> · <a href="mailto:support@claimpaid.io">support@claimpaid.io</a></div>
 </div></footer>
@@ -739,6 +804,14 @@ const cio = new IntersectionObserver(es => es.forEach(e => {
     e.target.textContent = Math.round(to*ease); if(p<1) requestAnimationFrame(tick); })(t0);
 }), {threshold:.5});
 document.querySelectorAll('.count').forEach(el => cio.observe(el));
+/* ---------- problem-card count-ups (numeric prefix counts, suffix text preserved) ---------- */
+const pio = new IntersectionObserver(es => es.forEach(e => {
+  if(!e.isIntersecting) return; pio.unobserve(e.target);
+  const el = e.target, to = +el.dataset.countup, suffix = el.textContent.replace(/^\d+/, ''), t0 = performance.now();
+  (function tick(t){ const p = Math.min((t-t0)/1400,1), ease = 1-Math.pow(1-p,3);
+    el.textContent = Math.round(to*ease) + suffix; if(p<1) requestAnimationFrame(tick); })(t0);
+}), {threshold:.5});
+document.querySelectorAll('[data-countup]').forEach(el => pio.observe(el));
 /* ---------- bento mouse glow ---------- */
 document.querySelectorAll('.bcard').forEach(c => c.addEventListener('mousemove', e => {
   const r = c.getBoundingClientRect();
@@ -904,6 +977,38 @@ document.querySelectorAll('.bcard').forEach(c => c.addEventListener('mousemove',
       btn.innerHTML = 'Request demo →';
     }
   });
+})();
+
+/* ---------- platform accordion (single-open; no-JS = all panels open) ---------- */
+(function(){
+  var panels = document.querySelectorAll('.acc-panel');
+  if(!panels.length) return;
+  panels.forEach(function(panel){
+    var btn = panel.querySelector('.acc-btn');
+    if(!btn) return;
+    btn.addEventListener('click', function(){
+      var wasOpen = panel.classList.contains('open');
+      panels.forEach(function(p){
+        p.classList.remove('open');
+        var b = p.querySelector('.acc-btn');
+        if(b) b.setAttribute('aria-expanded','false');
+      });
+      if(!wasOpen){
+        panel.classList.add('open');
+        btn.setAttribute('aria-expanded','true');
+      }
+    });
+  });
+})();
+
+/* ---------- hero float-card parallax (rAF, reduced-motion off) ---------- */
+(function(){
+  if(!window.matchMedia || !matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+  var fc = document.querySelector('.float-cards');
+  if(!fc) return;
+  var ticking = false;
+  function upd(){ ticking = false; if(scrollY < innerHeight) fc.style.transform = 'translateY(' + (scrollY * 0.07) + 'px)'; }
+  addEventListener('scroll', function(){ if(!ticking){ ticking = true; requestAnimationFrame(upd); } }, {passive:true});
 })();
 </script>
 </body>
