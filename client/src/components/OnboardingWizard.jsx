@@ -28,7 +28,7 @@ const PLANS = [
     features: ['Private AI chat over your documents', 'Cited answers from your knowledge base', 'Unlimited knowledge bases', 'Share links + embed widget'],
   },
 ];
-const PLAN_NAMES = { starter: 'RCM Starter', pro: 'RCM Pro + AI', ai: 'ClaimPaid AI' };
+const PLAN_NAMES = { starter: 'RCM Starter', pro: 'RCM Pro + AI', ai: 'ClaimPaid AI', enterprise: 'Enterprise' };
 
 const STEPS = ['Welcome', 'Workspace', 'Goals', 'Plan', 'Done'];
 
@@ -83,7 +83,7 @@ const inputCls =
   'focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20 transition text-[15px]';
 const selectCls = inputCls + ' appearance-none [&>option]:text-stone-900';
 
-export default function OnboardingWizard({ orgName = '', initialPlan = null, onComplete }) {
+export default function OnboardingWizard({ orgName = '', initialPlan = null, accountPlan = null, onComplete }) {
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState(1);
   const [companyName, setCompanyName] = useState(orgName || '');
@@ -125,6 +125,28 @@ export default function OnboardingWizard({ orgName = '', initialPlan = null, onC
     }
   };
 
+  // Deploy #100: the account already has a plan — no plan is chosen here.
+  // Completing without a plan tells the server to mirror the account plan
+  // onto this workspace.
+  const finishWithAccountPlan = async () => {
+    setBusy('account');
+    setError(null);
+    try {
+      const r = await api.onboardingComplete({
+        companyName: companyName.trim(),
+        teamSize,
+        role,
+        goals,
+      });
+      setResult(r);
+      go(4);
+    } catch (e) {
+      setError(e.message || 'Something went wrong. Please try again.');
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const trialEndDate = result?.trial_ends_at
     ? new Date(result.trial_ends_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
     : '';
@@ -144,7 +166,9 @@ export default function OnboardingWizard({ orgName = '', initialPlan = null, onC
             </p>
             <div className="text-left max-w-md mx-auto space-y-3.5 mb-10">
               {[
-                ['🎯', 'Pick your plan', 'Start with a 30-day free trial — no credit card required.'],
+                accountPlan
+                  ? ['🎯', 'Your plan carries over', `This workspace joins your ${PLAN_NAMES[accountPlan.plan] || 'current'} plan — plans are chosen once per account.`]
+                  : ['🎯', 'Pick your plan', 'Start with a 30-day free trial — no credit card required.'],
                 ['🏢', 'Tell us about your team', 'So we can tailor the workspace to how you bill.'],
                 ['💰', 'Start recovering revenue', 'Scrub claims, fight denials, and get paid faster.'],
               ].map(([emoji, title, desc]) => (
@@ -269,8 +293,49 @@ export default function OnboardingWizard({ orgName = '', initialPlan = null, onC
           </div>
         )}
 
-        {/* ── Step 3: Plan ────────────────────────────────── */}
-        {step === 3 && (
+        {/* ── Step 3 (account plan): read-only — plans are chosen once per
+            account (deploy #100), a new workspace simply joins it ── */}
+        {step === 3 && accountPlan && (
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mb-2 text-center">
+              Your plan
+            </h1>
+            <p className="text-stone-400 text-center mb-8">
+              Plans are chosen once per account — this workspace joins the plan you already have.
+            </p>
+            {error && (
+              <div className="max-w-md mx-auto mb-6 text-sm text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-xl px-4 py-3">
+                {error}
+              </div>
+            )}
+            <div className="max-w-md mx-auto rounded-3xl border-2 border-emerald-400/60 bg-white/5 p-6 text-center">
+              <div className="text-white font-bold text-lg">
+                On your {PLAN_NAMES[accountPlan.plan] || 'current'} plan
+                {accountPlan.workspaces
+                  ? ` · ${accountPlan.workspaces.used} of ${accountPlan.workspaces.limit === null || accountPlan.workspaces.limit === undefined ? 'unlimited' : accountPlan.workspaces.limit} workspaces`
+                  : ''}
+              </div>
+              <p className="text-stone-400 text-sm mt-2">
+                {accountPlan.plan_status === 'trialing' && accountPlan.trial_ends_at
+                  ? `Your free trial ends ${new Date(accountPlan.trial_ends_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} — this workspace shares the same trial, claims pool and AI uses.`
+                  : 'This workspace shares your account\u2019s claims pool, AI uses and team seats.'}
+              </p>
+              <button
+                onClick={finishWithAccountPlan}
+                disabled={busy !== null}
+                className="btn btn-primary w-full !py-3 !rounded-2xl mt-6"
+              >
+                {busy === 'account' ? 'Setting up…' : `Continue with ${PLAN_NAMES[accountPlan.plan] || 'your plan'} →`}
+              </button>
+            </div>
+            <div className="text-center">
+              <BackLink onClick={() => go(2)} />
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 3: Plan (first run only — the account's one plan choice) ── */}
+        {step === 3 && !accountPlan && (
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mb-2 text-center">
               Choose your plan
@@ -334,9 +399,10 @@ export default function OnboardingWizard({ orgName = '', initialPlan = null, onC
               You're all set! 🎉
             </h1>
             <p className="text-stone-300 text-lg mb-2">
-              You're on <span className="font-bold text-white">{PLAN_NAMES[result?.plan] || 'your plan'}</span> — free for 30 days.
+              You're on <span className="font-bold text-white">{PLAN_NAMES[result?.plan] || 'your plan'}</span>
+              {result?.is_trialing ? ' — on your free trial.' : '.'}
             </p>
-            {trialEndDate && (
+            {trialEndDate && result?.is_trialing && (
               <p className="text-stone-400 mb-10">
                 Your trial ends <span className="text-emerald-300 font-semibold">{trialEndDate}</span>.
                 Add a payment method anytime before then to keep going.

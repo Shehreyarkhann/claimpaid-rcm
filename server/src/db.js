@@ -385,6 +385,10 @@ function initSchema() {
   // can never mint a second trial. Orgs mirror the owner's window.
   if (!columnExists('users', 'trial_started_at')) db.exec('ALTER TABLE users ADD COLUMN trial_started_at TEXT');
   if (!columnExists('users', 'trial_ends_at')) db.exec('ALTER TABLE users ADD COLUMN trial_ends_at TEXT');
+  // Deploy #100 (account model): "share team across workspaces" lives on the
+  // account holder's user row — when on, the account roster is auto-added to
+  // every workspace the holder owns (see server/src/account.js).
+  if (!columnExists('users', 'share_team_across_workspaces')) db.exec('ALTER TABLE users ADD COLUMN share_team_across_workspaces INTEGER NOT NULL DEFAULT 0');
   if (!columnExists('demo_requests', 'notes')) db.exec('ALTER TABLE demo_requests ADD COLUMN notes TEXT DEFAULT \'\'');  db.exec(`
     CREATE TABLE IF NOT EXISTS support_tickets (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

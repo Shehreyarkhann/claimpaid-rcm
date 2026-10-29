@@ -26,8 +26,8 @@
 
 ## Pricing
 
-- **RCM Starter** — $199/month: full RCM platform (claims, denials, appeals, worklists, timely filing radar, 15-rule scrubber, 835 import / 837P generation, reports). Up to 3 team seats.
-- **RCM Pro + AI** — $499/month: everything in Starter plus the ClaimPaid agent (morning brief, ranked queue, drafts for your approval), the Payer Policy Handbook with cited answers, the quote-verified coding assistant, predictions and winning-angle learning from your own history, the watchdog digest, and the Denial Rescue wizard. Up to 15 team seats.
+- **RCM Starter** — $199/month: full RCM platform (claims, denials, appeals, worklists, timely filing radar, 15-rule scrubber, 835 import / 837P generation, reports). Up to 5 team seats. 1 workspace.
+- **RCM Pro + AI** — $499/month: everything in Starter plus the ClaimPaid agent (morning brief, ranked queue, drafts for your approval), the Payer Policy Handbook with cited answers, the quote-verified coding assistant, predictions and winning-angle learning from your own history, the watchdog digest, and the Denial Rescue wizard. Up to 15 team seats. Up to 3 workspaces.
 - **ClaimPaid AI** (standalone) — $99/month: the knowledge layer only — Payer Policy Handbook, quote-verified coding assistant, and cited answers over your own documents — at claimpaid.io/ai/.
 - **Enterprise** — custom pricing.
 - All paid plans include a 1-month free trial.

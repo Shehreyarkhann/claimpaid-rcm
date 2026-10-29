@@ -144,6 +144,7 @@ function AuthGate({ children }) {
       <OnboardingWizard
         orgName={onboarding.orgName || ''}
         initialPlan={planIntent || onboarding.plan}
+        accountPlan={onboarding.accountPlan || null}
         onComplete={() => {
           window.history.replaceState({}, '', '/app/');
           window.location.reload();

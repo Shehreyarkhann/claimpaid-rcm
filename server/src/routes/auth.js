@@ -2,7 +2,9 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const { db } = require('../db');
 const { signToken, authRequired, roleRequired } = require('../auth');
-const { checkSeatQuota } = require('../usage');
+const { checkSeatQuota, quotaExceeded } = require('../usage');
+const account = require('../account');
+const { limitsForPlan } = require('../config/planLimits');
 const {
   passwordError,
   clientIp,
@@ -428,14 +430,18 @@ router.post('/team', authRequired, roleRequired('owner'), checkSeatQuota, (req, 
   if (!email) return res.status(400).json({ error: 'Email is required' });
   if (!['owner', 'biller', 'viewer'].includes(role)) return res.status(400).json({ error: 'Invalid role' });
 
-  // Seat cap: enforced before any insert. seatUsage is the source of truth
-  // (server/src/config/planLimits.js). Existing members re-added to the same
-  // workspace don't consume a new seat.
+  // Seat cap (deploy #100): seats are UNIQUE PEOPLE on the account roster.
+  // Inviting someone already on the roster into another workspace consumes
+  // NO seat and is never blocked; only a brand-new person at the roster cap
+  // is. (The checkSeatQuota middleware 402s that case first with the
+  // plan-limit shape; this route check is the backstop.)
   const { seatUsage } = require('../config/planLimits');
   const seats = seatUsage(db, req.orgId);
+  const holderId = account.ownerOfOrg(req.orgId);
   const existing = db.prepare('SELECT id, name FROM users WHERE LOWER(email) = LOWER(?)').get(email.trim());
   const already = existing && db.prepare('SELECT 1 FROM user_orgs WHERE user_id = ? AND org_id = ?').get(existing.id, req.orgId);
-  if (!already && seats.atCap) {
+  const onRoster = !!(existing && holderId && account.rosterUserIds(holderId).includes(existing.id));
+  if (!onRoster && seats.atCap) {
     const planLabel = { starter: 'Starter', pro: 'Pro', ai: 'AI', enterprise: 'Enterprise' }[seats.plan] || seats.plan;
     return res.status(403).json({
       error: `Seat limit reached — ${seats.used} of ${seats.limit} seats used on the ${planLabel} plan. Remove a team member or upgrade your plan to invite more people.`,
@@ -447,6 +453,10 @@ router.post('/team', authRequired, roleRequired('owner'), checkSeatQuota, (req, 
     if (already) return res.status(409).json({ error: 'This person is already in this workspace' });
     db.prepare('INSERT INTO user_orgs (user_id, org_id, role) VALUES (?, ?, ?)')
       .run(existing.id, req.orgId, role);
+    // Share-team ON: a roster member joins every account workspace.
+    if (holderId && account.shareTeamEnabled(holderId)) {
+      account.addUserToAllAccountOrgs(holderId, existing.id, role);
+    }
     return res.status(201).json({ id: existing.id, email: email.trim().toLowerCase(), name: existing.name, role, addedToWorkspace: true });
   }
 
@@ -461,6 +471,10 @@ router.post('/team', authRequired, roleRequired('owner'), checkSeatQuota, (req, 
   );
   db.prepare('INSERT OR IGNORE INTO user_orgs (user_id, org_id, role) VALUES (?, ?, ?)')
     .run(id, req.orgId, role);
+  // Share-team ON: a new invite joins every account workspace.
+  if (holderId && account.shareTeamEnabled(holderId)) {
+    account.addUserToAllAccountOrgs(holderId, id, role);
+  }
   res.status(201).json(db.prepare('SELECT id, email, name, role, created_at FROM users WHERE id = ?').get(id));
 });
 
@@ -489,11 +503,110 @@ router.delete('/team/:id', authRequired, roleRequired('owner'), (req, res) => {
   // Unassign their appeals in this workspace
   db.prepare('UPDATE appeals SET assigned_to = NULL WHERE assigned_to = ? AND org_id = ?').run(member.user_id, req.orgId);
   db.prepare('DELETE FROM user_orgs WHERE user_id = ? AND org_id = ?').run(member.user_id, req.orgId);
-  // If they belong to no workspaces left, remove the login entirely —
-  // FK-safely (a bare DELETE fails on any user with activity rows).
-  const remaining = db.prepare('SELECT COUNT(*) c FROM user_orgs WHERE user_id = ?').get(member.user_id).c;
-  if (remaining === 0) require('../orgDelete').purgeUser(member.user_id);
+  // Deploy #100 (account model): removing a member from a workspace never
+  // deletes their login. If it was their last workspace they stay a user
+  // with no workspace and land on the org-less flow (deploy #59). Logins
+  // are deleted only through the explicit super-admin user delete, which
+  // uses orgDelete.purgeUser.
   res.json({ deleted: true });
+});
+
+// --- Account team (deploy #100) ---
+// The roster lives at ACCOUNT level: the caller must be an account holder
+// (owns at least one workspace). A member who owns nothing manages nothing
+// here — their Team page keeps the per-workspace list.
+function accountTeamPayload(userId) {
+  const { seatUsage } = require('../config/planLimits');
+  const orgIds = account.orgIdsOwnedBy(userId);
+  const planOrg = account.planOfRecordOrg(orgIds);
+  const { orgs, members } = account.rosterForOwner(userId);
+  const nameById = new Map(orgs.map((o) => [o.id, o.name]));
+  return {
+    plan: planOrg ? planOrg.plan : null,
+    plan_status: planOrg ? planOrg.plan_status : null,
+    share_team: account.shareTeamEnabled(userId),
+    seats: planOrg ? seatUsage(db, planOrg.id) : { used: members.length, limit: null, plan: null, atCap: false },
+    workspaces: account.workspaceUsage(userId, planOrg ? planOrg.plan : null),
+    orgs,
+    members: members.map((m) => ({
+      ...m,
+      workspaces: m.workspaces.map((w) => ({ ...w, name: nameById.get(w.org_id) || `Workspace ${w.org_id}` })),
+    })),
+  };
+}
+
+function requireAccountHolder(req, res, next) {
+  if (!account.orgIdsOwnedBy(req.user.id).length) {
+    return res.status(403).json({ error: 'The account team is managed by the account owner.' });
+  }
+  return next();
+}
+
+router.get('/account/team', authRequired, requireAccountHolder, (req, res) => {
+  res.json(accountTeamPayload(req.user.id));
+});
+
+// Grant a person access to one of the account's workspaces. Granting an
+// existing roster member consumes no seat; granting a NEW person at the
+// roster cap is blocked with the plan-limit (402) shape.
+router.post('/account/team/access', authRequired, requireAccountHolder, (req, res) => {
+  const { user_id, org_id, role } = req.body || {};
+  const uid = Number(user_id); const oid = Number(org_id);
+  if (!Number.isInteger(uid) || !Number.isInteger(oid)) {
+    return res.status(400).json({ error: 'user_id and org_id are required' });
+  }
+  if (!account.orgIdsOwnedBy(req.user.id).includes(oid)) {
+    return res.status(404).json({ error: 'Workspace not found in your account' });
+  }
+  const target = db.prepare('SELECT id, name, email FROM users WHERE id = ?').get(uid);
+  if (!target) return res.status(404).json({ error: 'User not found' });
+  const existingMembership = db.prepare('SELECT role FROM user_orgs WHERE user_id = ? AND org_id = ?').get(uid, oid);
+  if (existingMembership) return res.json({ ok: true, already: true, member: account.rosterForOwner(req.user.id).members.find((m) => m.id === uid) || null });
+
+  const onRoster = account.rosterUserIds(req.user.id).includes(uid);
+  if (!onRoster) {
+    const { seatUsage } = require('../config/planLimits');
+    const planOrg = account.planOfRecordOrg(account.orgIdsOwnedBy(req.user.id));
+    const seats = planOrg ? seatUsage(db, planOrg.id) : { used: 0, limit: null, atCap: false };
+    if (seats.atCap) return quotaExceeded(res, 'seat_limit_reached', seats.plan, seats.limit, seats.used);
+  }
+  const grantRole = uid === req.user.id
+    ? 'owner'
+    : (['owner', 'biller', 'viewer'].includes(role) ? role : account.resolvedRoleFor(req.user.id, uid));
+  account.addUserToOrg(uid, oid, grantRole);
+  const member = account.rosterForOwner(req.user.id).members.find((m) => m.id === uid) || null;
+  return res.status(201).json({ ok: true, member });
+});
+
+// Revoke a person's access to ONE workspace of the account. The account
+// holder themself can never be revoked. The user is NEVER deleted: losing
+// their last membership leaves them workspace-less (org-less flow, #59).
+router.post('/account/team/access/revoke', authRequired, requireAccountHolder, (req, res) => {
+  const { user_id, org_id } = req.body || {};
+  const uid = Number(user_id); const oid = Number(org_id);
+  if (!Number.isInteger(uid) || !Number.isInteger(oid)) {
+    return res.status(400).json({ error: 'user_id and org_id are required' });
+  }
+  if (uid === req.user.id) return res.status(400).json({ error: 'You cannot revoke your own access' });
+  if (!account.orgIdsOwnedBy(req.user.id).includes(oid)) {
+    return res.status(404).json({ error: 'Workspace not found in your account' });
+  }
+  const membership = db.prepare('SELECT role FROM user_orgs WHERE user_id = ? AND org_id = ?').get(uid, oid);
+  if (!membership) return res.status(404).json({ error: 'That person is not a member of this workspace' });
+  db.prepare('UPDATE appeals SET assigned_to = NULL WHERE assigned_to = ? AND org_id = ?').run(uid, oid);
+  db.prepare('DELETE FROM user_orgs WHERE user_id = ? AND org_id = ?').run(uid, oid);
+  const member = account.rosterForOwner(req.user.id).members.find((m) => m.id === uid) || null;
+  return res.json({ ok: true, member });
+});
+
+// "Share team across workspaces" switch. Turning it ON backfills the whole
+// roster into every account workspace; turning it OFF revokes nothing —
+// propagation simply stops.
+router.put('/account/team/share', authRequired, requireAccountHolder, (req, res) => {
+  const enabled = !!(req.body && req.body.enabled);
+  account.setShareTeam(req.user.id, enabled);
+  if (enabled) account.backfillRoster(req.user.id);
+  res.json(accountTeamPayload(req.user.id));
 });
 
 // --- Workspaces (multi-tenant switching) ---
@@ -507,14 +620,44 @@ router.get('/orgs', authRequired, (req, res) => {
   res.json(orgs);
 });
 
-// Create a new workspace (seeds default payers + filing rules)
+// Create a new workspace (seeds default payers + filing rules).
+// Deploy #100 (account model): the workspace belongs to the CREATOR's
+// account. The account's workspace limit gates creation ONLY (accounts
+// already over the limit keep everything — grandfathered). The new
+// workspace INHERITS the account plan + trial window from the account's
+// plan-of-record workspace; no plan is ever chosen per workspace.
 router.post('/orgs', authRequired, (req, res) => {
   const { name } = req.body || {};
   if (!name || !name.trim()) return res.status(400).json({ error: 'Workspace name is required' });
 
-  const orgId = Number(db.prepare('INSERT INTO orgs (name) VALUES (?)').run(name.trim()).lastInsertRowid);
+  const ownedIds = account.orgIdsOwnedBy(req.user.id);
+  const planOrg = account.planOfRecordOrg(ownedIds);
+  const inherit = planOrg ? account.planFieldsOf(planOrg) : null;
+
+  if (planOrg && !req.isSuperAdmin) {
+    const ws = account.workspaceUsage(req.user.id, planOrg.plan);
+    if (ws.limit !== null && ws.used >= ws.limit) {
+      const planLabel = { starter: 'RCM Starter', pro: 'RCM Pro + AI', ai: 'ClaimPaid AI', enterprise: 'Enterprise' }[planOrg.plan] || 'your';
+      return res.status(403).json({
+        error: `Workspace limit reached — ${ws.used} of ${ws.limit} workspaces used on the ${planLabel} plan. Upgrade your plan to add another workspace.`,
+        code: 'WORKSPACE_LIMIT',
+        plan: planOrg.plan,
+        workspaces: ws,
+        upgrade: '/app/billing',
+      });
+    }
+  }
+
+  const orgId = inherit
+    ? Number(db.prepare(
+      'INSERT INTO orgs (name, plan, plan_status, trial_started_at, trial_ends_at) VALUES (?, ?, ?, ?, ?)',
+    ).run(name.trim(), inherit.plan, inherit.plan_status, inherit.trial_started_at, inherit.trial_ends_at).lastInsertRowid)
+    : Number(db.prepare('INSERT INTO orgs (name) VALUES (?)').run(name.trim()).lastInsertRowid);
   db.prepare('INSERT INTO user_orgs (user_id, org_id, role) VALUES (?, ?, ?)')
     .run(req.user.id, orgId, 'owner');
+
+  // Share-team ON: the whole account roster joins the new workspace.
+  if (account.shareTeamEnabled(req.user.id)) account.addRosterToOrg(req.user.id, orgId);
 
   const defaultPayers = [
     ['Aetna', 'Commercial', 120], ['Cigna', 'Commercial', 180], ['UnitedHealthcare', 'Commercial', 90],
@@ -528,7 +671,7 @@ router.post('/orgs', authRequired, (req, res) => {
     insRule.run(orgId, pid, days);
   }
 
-  res.status(201).json({ id: orgId, name: name.trim(), role: 'owner' });
+  res.status(201).json({ id: orgId, name: name.trim(), role: 'owner', plan: inherit ? inherit.plan : null });
 });
 
 // Delete a workspace permanently (owner of that workspace only).

@@ -83,9 +83,10 @@ function PlanIncludes({ ent, usage, onUpgrade }) {
   if (ent.rcm) included.push('RCM app — smart worklist, eligibility checks, ERA auto-posting, patient statements, document intake, deadline audit, watchdog digest');
   if (ent.agent) included.push('ClaimPaid agent — morning brief, approval-gated drafts, predictions from your own data');
   if (ent.ai) included.push('ClaimPaid AI app — Payer Policy Handbook answers with citations + quote-verified coding');
-  if (ent.rcm) included.push(`Claims${usedOf('claims', ent.claimsPerMonth)} (${fmtEntLimit(ent.claimsPerMonth)} / month)`);
+  if (ent.rcm) included.push(`Claims${usedOf('claims', ent.claimsPerMonth)} (${fmtEntLimit(ent.claimsPerMonth)} / month — pooled across your workspaces)`);
   included.push(`Team seats${usedOf('seats', ent.seats)} (${fmtEntLimit(ent.seats)})`);
-  included.push(`AI uses${usedOf('aiQueries', ent.aiUsesPerMonth)} (${fmtEntLimit(ent.aiUsesPerMonth)} / month — agent + AI app, counted together)`);
+  included.push(`Workspaces${usedOf('workspaces', ent.workspaces)} (${fmtEntLimit(ent.workspaces)})`);
+  included.push(`AI uses${usedOf('aiQueries', ent.aiUsesPerMonth)} (${fmtEntLimit(ent.aiUsesPerMonth)} / month — agent + AI app, counted together, pooled across your workspaces)`);
 
   const notIncluded = [];
   if (ent.rcm && !ent.ai) notIncluded.push({ label: 'ClaimPaid AI app — the standalone knowledge layer', cta: 'Included with RCM Pro + AI' });
@@ -535,7 +536,34 @@ export default function Billing({ onBaaRequired }) {
               included={usage.aiQueries.limit !== 0}
               onUpgrade={() => plansRef.current?.scrollIntoView({ behavior: 'smooth' })}
             />
+            {usage.workspaces && (
+              <UsageBar
+                label="Workspaces"
+                used={usage.workspaces.used}
+                limit={usage.workspaces.limit}
+                onUpgrade={() => plansRef.current?.scrollIntoView({ behavior: 'smooth' })}
+              />
+            )}
           </div>
+          {/* Deploy #100: quotas are account pools — show which workspace
+              consumed what. */}
+          {Array.isArray(usage.used_by_workspace) && usage.used_by_workspace.length > 1 && (
+            <div className="mt-4 rounded-xl bg-stone-50 border border-stone-100 px-4 py-3">
+              <div className="text-[11px] font-semibold uppercase tracking-widest text-stone-500 mb-2">
+                By workspace — limits pool across your whole account
+              </div>
+              <ul className="space-y-1">
+                {usage.used_by_workspace.map((w) => (
+                  <li key={w.org_id} className="flex items-center justify-between text-sm">
+                    <span className="text-stone-700 font-medium">{w.name}</span>
+                    <span className="text-stone-500 tabular-nums">
+                      {Number(w.claims).toLocaleString('en-US')} claims · {Number(w.aiQueries).toLocaleString('en-US')} AI uses
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
 
@@ -562,11 +590,11 @@ export default function Billing({ onBaaRequired }) {
           </div>
           <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
             {planCard('starter', 'RCM Starter', 'For small billing teams', <><>$199</><span className="text-sm font-normal text-stone-500">/mo</span></>,
-              ['RCM app — every workflow feature', '1,000 claims/month', 'ClaimPaid agent included', '100 AI uses/month', 'Up to 3 team seats', '✕ ClaimPaid AI app not included'])}
+              ['RCM app — every workflow feature', '1,000 claims/month', 'ClaimPaid agent included', '100 AI uses/month', 'Up to 5 team seats', '1 workspace', '✕ ClaimPaid AI app not included'])}
             {planCard('pro', 'RCM Pro + AI', 'For teams serious about denial recovery', <><>$499</><span className="text-sm font-normal text-stone-500">/mo</span></>,
-              ['Everything in Starter', '10,000 claims/month', '2,000 AI uses/month', 'ClaimPaid AI app included', 'Up to 15 team seats'])}
+              ['Everything in Starter', '10,000 claims/month', '2,000 AI uses/month', 'ClaimPaid AI app included', 'Up to 15 team seats', 'Up to 3 workspaces'])}
             {planCard('ai', 'ClaimPaid AI', 'Just the AI assistant', <><>$99</><span className="text-sm font-normal text-stone-500">/mo</span></>,
-              ['ClaimPaid AI app — handbook + verified coding', 'Cited answers over your own documents', '1,000 AI uses/month', 'Public share links + embed widget', 'Up to 5 team seats', '✕ RCM app not included'])}
+              ['ClaimPaid AI app — handbook + verified coding', 'Cited answers over your own documents', '1,000 AI uses/month', 'Public share links + embed widget', 'Up to 5 team seats', '1 workspace', '✕ RCM app not included'])}
             <div className="card p-6 flex flex-col">
               <div className="font-bold">Enterprise</div>
               <div className="text-xs text-stone-500 mt-0.5">For large billing companies & MSOs</div>

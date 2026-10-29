@@ -79,7 +79,7 @@ async function req(method, p, { token, body, form } = {}) {
 
     // --- seats ---
     r = await req('GET', '/api/settings/seats', { token: ownerToken });
-    ok('seat usage math (1 of 3, trial)', r.status === 200 && r.json.used === 1 && r.json.limit === 3 && r.json.atCap === false,
+    ok('seat usage math (1 of 5, trial)', r.status === 200 && r.json.used === 1 && r.json.limit === 5 && r.json.atCap === false,
       JSON.stringify(r.json));
 
     // --- API keys: generate ---
@@ -125,7 +125,7 @@ async function req(method, p, { token, body, form } = {}) {
     const billerToken = b0.token;
     // move biller into test org as biller
     r = await req('POST', '/api/auth/team', { token: ownerToken, body: { email: 'b0@test.io', role: 'biller' } });
-    ok('biller added to org (2 of 3 seats)', r.status === 201, `status=${r.status}`);
+    ok('biller added to org (2 of 5 seats)', r.status === 201, `status=${r.status}`);
     const billerSwitch = await req('POST', '/api/auth/switch', { token: billerToken, body: { org_id: orgId } });
     const billerOrgToken = billerSwitch.json.token;
     r = await req('POST', '/api/settings/api-keys', { token: billerOrgToken, body: { name: 'x' } });
@@ -135,12 +135,21 @@ async function req(method, p, { token, body, form } = {}) {
     r = await req('DELETE', `/api/settings/api-keys/${keyId}`, { token: billerOrgToken });
     ok('non-owner cannot revoke key', r.status === 403, `status=${r.status}`);
 
-    // --- seat cap on invite ---
+    // --- seat cap on invite (deploy #100: Starter = 5 roster seats) ---
     r = await req('POST', '/api/auth/team', { token: ownerToken, body: { name: 'C', email: 'c@test.io', password: 'TestPass123!', role: 'viewer' } });
-    ok('3rd member added (3 of 3)', r.status === 201, `status=${r.status}`);
-    r = await req('GET', '/api/settings/seats', { token: ownerToken });
-    ok('at cap', r.json.used === 3 && r.json.atCap === true, JSON.stringify(r.json));
+    ok('3rd member added (3 of 5)', r.status === 201, `status=${r.status}`);
     r = await req('POST', '/api/auth/team', { token: ownerToken, body: { name: 'D', email: 'd@test.io', password: 'TestPass123!', role: 'viewer' } });
+    ok('4th member added (4 of 5)', r.status === 201, `status=${r.status}`);
+    r = await req('POST', '/api/auth/team', { token: ownerToken, body: { name: 'E', email: 'e@test.io', password: 'TestPass123!', role: 'viewer' } });
+    ok('5th member added (5 of 5)', r.status === 201, `status=${r.status}`);
+    r = await req('GET', '/api/settings/seats', { token: ownerToken });
+    ok('at cap', r.json.used === 5 && r.json.atCap === true, JSON.stringify(r.json));
+    // A brand-new person at the roster cap is blocked. (This org never
+    // picked a plan, so limitsForPlan is the grandfathered row and the
+    // route-level seatUsage backstop fires the 403; plan-carrying orgs are
+    // blocked earlier by the quota middleware's 402 — covered in the
+    // account-model suite.)
+    r = await req('POST', '/api/auth/team', { token: ownerToken, body: { name: 'F', email: 'f@test.io', password: 'TestPass123!', role: 'viewer' } });
     ok('invite at cap → 403 clear error', r.status === 403 && /Seat limit reached/.test(r.json.error || ''), `status=${r.status} ${JSON.stringify(r.json).slice(0, 120)}`);
 
     // --- notifications persist + gate support send path ---

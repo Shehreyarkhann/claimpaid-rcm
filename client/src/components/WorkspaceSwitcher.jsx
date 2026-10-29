@@ -9,6 +9,7 @@ export default function WorkspaceSwitcher({ collapsed }) {
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
+  const [createError, setCreateError] = useState(null);
   const [busy, setBusy] = useState(false);
   const ref = useRef(null);
 
@@ -42,6 +43,7 @@ export default function WorkspaceSwitcher({ collapsed }) {
   const doCreate = async () => {
     if (!newName.trim() || busy) return;
     setBusy(true);
+    setCreateError(null);
     try {
       const org = await api.createOrg(newName.trim());
       const r = await api.switchOrg(org.id);
@@ -49,7 +51,13 @@ export default function WorkspaceSwitcher({ collapsed }) {
       window.location.reload();
     } catch (e) {
       if (e.mfaRequired) { setBusy(false); return; }
-      alert(e.message);
+      // Deploy #100: at the account's workspace limit the server 403s with
+      // code WORKSPACE_LIMIT — surface the upgrade gate inline, not an alert.
+      if (e.code === 'WORKSPACE_LIMIT') {
+        setCreateError(e.message);
+      } else {
+        alert(e.message);
+      }
       setBusy(false);
     }
   };
@@ -111,8 +119,19 @@ export default function WorkspaceSwitcher({ collapsed }) {
                 <button className="btn btn-primary !text-xs !py-1.5 flex-1" onClick={doCreate} disabled={busy || !newName.trim()}>
                   {busy ? 'Creating…' : 'Create & switch'}
                 </button>
-                <button className="btn btn-ghost !text-xs !py-1.5" onClick={() => setCreating(false)}>Cancel</button>
+                <button className="btn btn-ghost !text-xs !py-1.5" onClick={() => { setCreating(false); setCreateError(null); }}>Cancel</button>
               </div>
+              {createError && (
+                <div className="mt-2 text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-2.5 py-2">
+                  {createError}{' '}
+                  <button
+                    className="font-semibold text-emerald-300 hover:underline"
+                    onClick={() => { window.location.href = '/app/billing'; }}
+                  >
+                    See plans →
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <button

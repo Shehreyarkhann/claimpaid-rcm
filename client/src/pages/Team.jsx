@@ -27,7 +27,7 @@ function InviteModal({ onClose, onAdded }) {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) throw new Error(data.message || data.error);
       toast.success(data.addedToWorkspace ? `${data.name} added to this workspace (they keep their existing login)` : `${form.name} added to your team`);
       onAdded();
     } catch (e) { setError(e.message); }
@@ -60,6 +60,160 @@ function InviteModal({ onClose, onAdded }) {
   );
 }
 
+// Account team (deploy #100) — the roster across ALL of the account's
+// workspaces. Rendered only for the account holder (the API 403s anyone
+// else and the section stays hidden). Seats count people, not memberships.
+function AccountTeamSection({ onMembershipChanged }) {
+  const toast = useToast();
+  const [account, setAccount] = useState(null);
+  const [busyKey, setBusyKey] = useState(null);
+
+  const loadAccount = () => {
+    api.accountTeam().then(setAccount).catch(() => setAccount(null));
+  };
+  useEffect(() => { loadAccount(); }, []);
+
+  if (!account) return null;
+
+  const fmtLimit = (v) => (v === null || v === undefined ? '∞' : v);
+
+  const grant = async (member, org) => {
+    setBusyKey(`g-${member.id}-${org.id}`);
+    try {
+      await api.accountGrantAccess({ user_id: member.id, org_id: org.id });
+      toast.success(`${member.name} added to ${org.name}`);
+      loadAccount();
+      onMembershipChanged && onMembershipChanged();
+    } catch (e) { toast.error(e.message); }
+    finally { setBusyKey(null); }
+  };
+
+  const revoke = async (member, org) => {
+    if (!(await confirmDialog({
+      title: `Remove ${member.name} from ${org.name}?`,
+      body: 'They keep access to their other workspaces. If this is their last workspace they keep their login and can create their own workspace.',
+      confirmLabel: 'Revoke access',
+    }))) return;
+    setBusyKey(`r-${member.id}-${org.id}`);
+    try {
+      await api.accountRevokeAccess({ user_id: member.id, org_id: org.id });
+      toast.success(`${member.name} removed from ${org.name}`);
+      loadAccount();
+      onMembershipChanged && onMembershipChanged();
+    } catch (e) { toast.error(e.message); }
+    finally { setBusyKey(null); }
+  };
+
+  const toggleShare = async (enabled) => {
+    setBusyKey('share');
+    try {
+      const updated = await api.accountShareTeam(enabled);
+      setAccount(updated);
+      toast.success(enabled
+        ? 'Team sharing on — everyone on your roster now has access to every workspace.'
+        : 'Team sharing off — existing access stays as-is; new invites join one workspace at a time.');
+      onMembershipChanged && onMembershipChanged();
+    } catch (e) { toast.error(e.message); }
+    finally { setBusyKey(null); }
+  };
+
+  return (
+    <div className="card p-5 mb-5">
+      <div className="flex items-start justify-between gap-4 mb-1">
+        <div>
+          <div className="text-sm font-semibold text-stone-800">Account team</div>
+          <p className="text-xs text-stone-500 mt-0.5">
+            Everyone across your workspaces. Seats count people, not memberships — a person in 3 workspaces is 1 seat.
+          </p>
+        </div>
+        <div className="text-sm tabular-nums text-stone-600 whitespace-nowrap">
+          <span className="font-bold text-stone-900">{account.seats.used}</span>
+          {' of '}
+          <span className="font-bold text-stone-900">{fmtLimit(account.seats.limit)}</span>
+          {' seats · '}
+          <span className="font-bold text-stone-900">{account.workspaces.used}</span>
+          {' of '}
+          <span className="font-bold text-stone-900">{fmtLimit(account.workspaces.limit)}</span>
+          {' workspaces'}
+        </div>
+      </div>
+
+      <label className="flex items-center gap-3 mt-3 mb-4 cursor-pointer select-none">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={account.share_team}
+          disabled={busyKey === 'share'}
+          onClick={() => toggleShare(!account.share_team)}
+          className={`relative w-11 h-6 rounded-full transition shrink-0 ${account.share_team ? 'bg-emerald-500' : 'bg-stone-300'}`}
+        >
+          <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${account.share_team ? 'left-[22px]' : 'left-0.5'}`} />
+        </button>
+        <span className="text-sm text-stone-700">
+          <span className="font-medium">Share team across all my workspaces</span>
+          <span className="text-stone-400"> — everyone on the roster joins every workspace, including new ones.</span>
+        </span>
+      </label>
+
+      <div className="overflow-x-auto">
+        <table className="w-full tbl">
+          <thead><tr><th>Person</th><th>Workspace access</th></tr></thead>
+          <tbody>
+            {account.members.map((m) => {
+              const byOrg = new Map(m.workspaces.map((w) => [w.org_id, w]));
+              return (
+                <tr key={m.id}>
+                  <td>
+                    <div className="flex items-center gap-3">
+                      <Avatar userId={m.id} name={m.name} className="w-9 h-9 text-xs" />
+                      <span>
+                        <span className="font-medium block">{m.name}{m.is_account_owner && <span className="text-xs text-stone-400 ml-2">(account owner)</span>}</span>
+                        <span className="text-xs text-stone-400">{m.email}</span>
+                      </span>
+                    </div>
+                  </td>
+                  <td>
+                    <div className="flex flex-wrap gap-1.5">
+                      {account.orgs.map((o) => {
+                        const w = byOrg.get(o.id);
+                        if (w) {
+                          return (
+                            <span key={o.id} className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs pl-2.5 pr-1.5 py-1">
+                              {o.name} · {ROLE_META[w.role]?.label || w.role}
+                              {!m.is_account_owner && (
+                                <button
+                                  title={`Revoke ${m.name} from ${o.name}`}
+                                  disabled={busyKey === `r-${m.id}-${o.id}`}
+                                  onClick={() => revoke(m, o)}
+                                  className="w-4 h-4 rounded-full hover:bg-emerald-200 text-emerald-700 leading-none"
+                                >×</button>
+                              )}
+                            </span>
+                          );
+                        }
+                        return (
+                          <button
+                            key={o.id}
+                            disabled={busyKey === `g-${m.id}-${o.id}`}
+                            onClick={() => grant(m, o)}
+                            className="inline-flex items-center gap-1 rounded-full border border-dashed border-stone-300 text-stone-500 hover:border-emerald-400 hover:text-emerald-700 text-xs px-2.5 py-1 transition"
+                          >
+                            {o.name} · Grant
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function Team() {
   const { user } = useAuth();
   const toast = useToast();
@@ -85,7 +239,7 @@ export default function Team() {
   };
 
   const remove = async (id, name) => {
-    if (!(await confirmDialog({ title: `Remove ${name} from your team?`, body: 'Their appeals will become unassigned.', confirmLabel: 'Remove member' }))) return;
+    if (!(await confirmDialog({ title: `Remove ${name} from this workspace?`, body: 'They lose access to this workspace and their appeals here become unassigned. Their login stays — they keep any other workspaces they belong to.', confirmLabel: 'Remove member' }))) return;
     try {
       const res = await authFetch(`/api/auth/team/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error((await res.json()).error);
@@ -105,6 +259,7 @@ export default function Team() {
 
       <SecuritySettings />
       {user?.role === 'owner' && <EdiSettings />}
+      {user?.role === 'owner' && <AccountTeamSection onMembershipChanged={load} />}
 
       {seats && (
         <div className="card p-5 mb-5">
@@ -126,6 +281,7 @@ export default function Team() {
               />
             </div>
           )}
+          <p className="text-[11px] text-stone-400 mt-2">Seats count unique people across all of your account's workspaces.</p>
           {seats.atCap && (
             <p className="text-xs text-rose-700 mt-2">Seat limit reached — remove a member or upgrade your plan to invite more people.</p>
           )}

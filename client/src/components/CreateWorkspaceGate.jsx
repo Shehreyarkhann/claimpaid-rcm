@@ -31,7 +31,7 @@ export default function CreateWorkspaceGate({ user }) {
         <h1 className="text-2xl font-extrabold text-stone-900">Create your workspace</h1>
         <p className="text-stone-500 text-sm mt-2 leading-relaxed">
           {user?.name ? `Hi ${user.name.split(' ')[0]} — ` : ''}your account doesn't have a workspace right now.
-          Name your practice or billing company to continue. You'll pick a plan in the next step.
+          Name your practice or billing company to continue — if your account already has a plan, the new workspace joins it automatically.
         </p>
         <label className="block text-xs font-bold tracking-wide text-stone-500 mt-6 mb-2">WORKSPACE NAME</label>
         <input

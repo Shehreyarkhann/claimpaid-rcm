@@ -2,7 +2,8 @@ const express = require('express');
 const { db } = require('../db');
 const { authRequired, roleRequired } = require('../auth');
 const { baaSignedForOrg } = require('./legal');
-const { limitsForPlan } = require('../config/planLimits');
+const { limitsForPlan, seatUsage } = require('../config/planLimits');
+const account = require('../account');
 
 const router = express.Router();
 
@@ -116,6 +117,7 @@ function entitlementsForPlan(plan) {
     claimsPerMonth: limits.claimsPerMonth,
     seats: limits.seats,
     aiUsesPerMonth: limits.aiQueriesPerMonth,
+    workspaces: limits.workspaces,
   };
 }
 function allEntitlements() {
@@ -164,7 +166,13 @@ function billingStatusFor(org) {
   const trialEndsAt = org.trial_ends_at || null;
   const msLeft = trialEndsAt ? new Date(trialEndsAt).getTime() - Date.now() : 0;
   const products = productsForOrg(org);
+  // Deploy #100: account-level workspace + seat usage, computed server-side
+  // (clients render, never hardcode). Seats = unique people on the roster.
+  const acct = account.accountForOrg(org.id);
+  const seatU = seatUsage(db, org.id);
   return {
+    workspaces: account.workspaceUsage(acct.ownerId, org.plan),
+    seats: { used: seatU.used, limit: seatU.limit },
     plan: org.plan || 'trial',
     plan_status: effStatus,
     trial_ends_at: trialEndsAt,
@@ -206,6 +214,8 @@ router.get('/status', authRequired, (req, res) => {
     out.products = { rcm: true, ai: true };
     out.entitlements = entitlementsForPlan('enterprise');
     out.unlimited = true;
+    out.workspaces = { used: out.workspaces.used, limit: null };
+    out.seats = { used: out.seats.used, limit: null };
   }
   res.json(out);
 });
@@ -331,6 +341,7 @@ router.post('/cancel', authRequired, roleRequired('owner'), async (req, res) => 
       }
     }
     db.prepare('UPDATE orgs SET stripe_cancel_at_period_end = 1 WHERE id = ?').run(org.id);
+    account.propagatePlanFields(org.id, { stripe_cancel_at_period_end: 1 });
     return res.json({
       ok: true, mode: 'trial_end', access_until: org.trial_ends_at,
       message: `Your trial will end on ${endDate} and won't convert to a paid plan — you keep full access until then. Changed your mind? Use "Keep my plan" anytime before then.`,
@@ -339,6 +350,7 @@ router.post('/cancel', authRequired, roleRequired('owner'), async (req, res) => 
 
   if (!org.stripe_subscription_id) {
     db.prepare("UPDATE orgs SET plan_status = 'canceled', stripe_cancel_at_period_end = 0 WHERE id = ?").run(org.id);
+    account.propagatePlanFields(org.id, { plan_status: 'canceled', stripe_cancel_at_period_end: 0 });
     return res.json({ ok: true, mode: 'immediate', access_until: null, message: 'Your subscription has been ended. Thanks for trying ClaimPaid.' });
   }
   if (!billingConfigured(res)) return;
@@ -347,12 +359,14 @@ router.post('/cancel', authRequired, roleRequired('owner'), async (req, res) => 
     if (mode === 'immediate') {
       await stripe.subscriptions.cancel(org.stripe_subscription_id);
       db.prepare("UPDATE orgs SET plan_status = 'canceled', stripe_subscription_id = NULL, stripe_cancel_at_period_end = 0 WHERE id = ?").run(org.id);
+      account.propagatePlanFields(org.id, { plan_status: 'canceled', stripe_cancel_at_period_end: 0 });
       return res.json({ ok: true, mode, access_until: null, message: 'Your subscription is canceled, effective immediately.' });
     }
     const sub = await stripe.subscriptions.update(org.stripe_subscription_id, { cancel_at_period_end: true });
     const until = sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : (org.current_period_end || null);
     db.prepare('UPDATE orgs SET stripe_cancel_at_period_end = 1, current_period_end = COALESCE(?, current_period_end) WHERE id = ?')
       .run(until, org.id);
+    account.propagatePlanFields(org.id, { stripe_cancel_at_period_end: 1 });
     return res.json({ ok: true, mode, access_until: until, message: `Your subscription will cancel on ${until ? until.slice(0, 10) : 'the period end'} — you keep full access until then.` });
   } catch (e) {
     console.error('Stripe cancel error:', e.message);
@@ -372,6 +386,7 @@ router.post('/reactivate', authRequired, roleRequired('owner'), async (req, res)
   // don't create a subscription to reactivate).
   if (!org.stripe_subscription_id) {
     db.prepare('UPDATE orgs SET stripe_cancel_at_period_end = 0 WHERE id = ?').run(org.id);
+    account.propagatePlanFields(org.id, { stripe_cancel_at_period_end: 0 });
     return res.json({ ok: true, message: 'Your trial will convert as planned — add a payment method before it ends to keep your plan.' });
   }
   if (!billingConfigured(res)) return;
@@ -379,6 +394,7 @@ router.post('/reactivate', authRequired, roleRequired('owner'), async (req, res)
   try {
     await stripe.subscriptions.update(org.stripe_subscription_id, { cancel_at_period_end: false });
     db.prepare('UPDATE orgs SET stripe_cancel_at_period_end = 0 WHERE id = ?').run(org.id);
+    account.propagatePlanFields(org.id, { stripe_cancel_at_period_end: 0 });
     return res.json({ ok: true, message: 'Your subscription will continue as normal.' });
   } catch (e) {
     console.error('Stripe reactivate error:', e.message);
@@ -435,6 +451,9 @@ router.post('/change-plan', authRequired, roleRequired('owner'), async (req, res
         .run(plan, updated.status || org.plan_status,
              updated.current_period_end ? new Date(updated.current_period_end * 1000).toISOString() : null,
              org.id);
+      // Deploy #100: the plan belongs to the account — mirror the switch
+      // onto every sibling workspace.
+      account.propagatePlanFields(org.id, account.planFieldsOf(getOrg(org.id)));
       const trialing = updated.status === 'trialing';
       return res.json({
         ok: true, mode: 'swapped', plan,
@@ -450,6 +469,9 @@ router.post('/change-plan', authRequired, roleRequired('owner'), async (req, res
 
   if (eff === 'trialing') {
     db.prepare('UPDATE orgs SET plan = ? WHERE id = ?').run(plan, org.id);
+    // Deploy #100: a trial plan switch changes the ACCOUNT plan — siblings
+    // mirror it (the trial window itself is untouched, deploy #61).
+    account.propagatePlanFields(org.id, { plan });
     return res.json({
       ok: true, mode: 'trial', plan,
       message: `You're now trialing ${planCfg.name} — same trial end date, no charge.`,
@@ -552,6 +574,8 @@ async function handleWebhook(req, res) {
                     stripe_customer_id = COALESCE(stripe_customer_id, ?),
                     stripe_subscription_id = ? WHERE id = ?`)
           .run(plan, planStatus, trialEndsAt, String(session.customer), subscriptionId || null, orgId);
+        // Deploy #100: subscription state is account-level — mirror it.
+        account.propagatePlanFields(orgId, account.planFieldsOf(getOrg(orgId)));
         console.log(`Billing: org ${orgId} subscribed to ${plan} (${planStatus})`);
       }
     } else if (event.type === 'customer.subscription.updated') {
@@ -567,6 +591,7 @@ async function handleWebhook(req, res) {
           .run(plan || null, sub.status, trialEndsAt,
                sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
                sub.id, orgId);
+        account.propagatePlanFields(orgId, account.planFieldsOf(getOrg(orgId)));
         console.log(`Billing: org ${orgId} subscription updated -> ${sub.status}`);
       }
     } else if (event.type === 'customer.subscription.deleted') {
@@ -575,6 +600,7 @@ async function handleWebhook(req, res) {
       if (orgId) {
         db.prepare(`UPDATE orgs SET plan_status = 'canceled', stripe_subscription_id = NULL WHERE id = ?`)
           .run(orgId);
+        account.propagatePlanFields(orgId, { plan_status: 'canceled' });
         console.log(`Billing: org ${orgId} subscription canceled`);
       }
     }

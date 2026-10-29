@@ -50,7 +50,9 @@ const fakeStripe = http.createServer((req, res) => {
     check('server up', await waitUp(), err.slice(-300));
     const U = await call('POST', '/api/auth/signup', { name: 'User U', email: 'u@test.co', password: 'Test1234!', orgName: 'U One' });
     const tok = U.body.token;
-    await call('POST', '/api/onboarding/complete', { plan: 'starter' }, tok);
+    // Deploy #100: the multi-workspace flow runs on Pro (3 workspaces) —
+    // Starter now allows exactly 1 workspace per account.
+    await call('POST', '/api/onboarding/complete', { plan: 'pro' }, tok);
     const st1 = await call('GET', '/api/billing/status', null, tok);
     const T1 = st1.body?.trial_ends_at;
     check('first workspace starts the trial', st1.body?.plan_status === 'trialing' && !!T1 && st1.body?.trial_days_left >= 29, st1.body);
@@ -60,12 +62,14 @@ const fakeStripe = http.createServer((req, res) => {
     check('trial window recorded on the USER', uRow?.trial_ends_at === T1, uRow);
     db.close();
 
-    // Second workspace, different plan: SAME window (the trial covers all plans)
+    // Second workspace: SAME window AND the account plan — deploy #100 made
+    // the plan account-level, so submitting a different plan here is ignored
+    // (the workspace mirrors the account's Pro plan, never its own Starter).
     const ws2 = await call('POST', '/api/auth/orgs', { name: 'U Two' }, tok);
     const sw2 = await call('POST', '/api/auth/switch', { org_id: ws2.body.id }, tok);
-    await call('POST', '/api/onboarding/complete', { plan: 'pro' }, sw2.body.token);
+    await call('POST', '/api/onboarding/complete', { plan: 'starter' }, sw2.body.token);
     const st2 = await call('GET', '/api/billing/status', null, sw2.body.token);
-    check('second workspace mirrors the same trial end (no extension)', st2.body?.trial_ends_at === T1 && st2.body?.plan === 'pro', { end: st2.body?.trial_ends_at, plan: st2.body?.plan });
+    check('second workspace mirrors the account plan + same trial end (no extension)', st2.body?.trial_ends_at === T1 && st2.body?.plan === 'pro', { end: st2.body?.trial_ends_at, plan: st2.body?.plan });
 
     // Burn the window
     const db2 = new DatabaseSync(DB);

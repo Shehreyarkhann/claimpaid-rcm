@@ -70,6 +70,23 @@ export const api = {
   unworkedDenials: () => get('/api/appeals/unworked-denials'),
   dueFollowups: () => get('/api/appeals/due'),
   team: () => get('/api/auth/team'),
+  // Account team (deploy #100) — roster across the account's workspaces.
+  accountTeam: () => get('/api/auth/account/team'),
+  accountGrantAccess: (data) =>
+    authFetch('/api/auth/account/team/access', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).then(handle),
+  accountRevokeAccess: (data) =>
+    authFetch('/api/auth/account/team/access/revoke', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).then(handle),
+  accountShareTeam: (enabled) =>
+    authFetch('/api/auth/account/team/share', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled }),
+    }).then(handle),
   worklist: (scope = 'all') => get(`/api/worklist?scope=${scope}`),
   touchClaim: (id) => authFetch(`/api/worklist/touch/${id}`, { method: 'POST' }).then(handle),
   bulkClaims: (claim_ids, action, value) =>

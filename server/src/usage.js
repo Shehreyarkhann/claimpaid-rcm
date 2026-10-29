@@ -1,10 +1,19 @@
 // Plan-usage counting + quota enforcement for the RCM app.
 // Limits come from server/src/config/planLimits.js (single source of truth).
 // Calendar months are UTC: claims.created_at is stored as datetime('now') (UTC).
+//
+// ACCOUNT POOLS (deploy #100): claims/month and AI-uses/month are pooled at
+// the ACCOUNT level — the limit applies to the SUM across every workspace
+// the account holder owns, never per workspace. Seats count unique people
+// on the account roster. usageForOrg reports account totals plus a
+// per-workspace breakdown (used_by_workspace); every enforcement point
+// consults the account total, so workspace B blocks when workspace A
+// consumed the pool.
 const { DatabaseSync } = require('node:sqlite');
 const path = require('path');
 const { db } = require('./db');
-const { limitsForPlan, atLimit, usagePct } = require('./config/planLimits');
+const { limitsForPlan, atLimit, usagePct, seatUsage } = require('./config/planLimits');
+const account = require('./account');
 
 const UPGRADE_PATH = '/app/billing';
 
@@ -32,8 +41,20 @@ function claimsUsedThisMonth(orgId, dbHandle = db, now = new Date()) {
   ).get(orgId, monthStartUtc(now)).c;
 }
 
+// Claims used this month per workspace + the account total.
+function claimsUsedByWorkspace(orgIds, now = new Date()) {
+  return orgIds.map((orgId) => ({ org_id: orgId, claims: claimsUsedThisMonth(orgId, db, now) }));
+}
+
+function accountClaimsUsedThisMonth(orgId, now = new Date()) {
+  return claimsUsedByWorkspace(account.accountOrgIdsForOrg(orgId), now)
+    .reduce((sum, w) => sum + w.claims, 0);
+}
+
+// Seats = unique people on the ACCOUNT roster (deploy #100). Delegates to
+// planLimits.seatUsage, which resolves the roster across the holder's orgs.
 function seatsUsed(orgId, dbHandle = db) {
-  return dbHandle.prepare('SELECT COUNT(*) AS c FROM user_orgs WHERE org_id = ?').get(orgId).c;
+  return seatUsage(dbHandle, orgId).used;
 }
 
 // ---- AI query usage (read-only, from the AI app's own database) ----
@@ -98,37 +119,75 @@ function recordAgentTurn(orgId, usage = {}, now = new Date()) {
   }
 }
 
-// Merged AI usage: AskBase chat queries (read from the AI DB) + agent turns
-// (this DB). `unknown` tracks the AskBase read only — when that read fails,
-// `used` is the agent-only partial and pct stays null, exactly like before.
+// Merged AI usage for ONE org: AskBase chat queries (read from the AI DB) +
+// agent turns (this DB). `unknown` tracks the AskBase read only — when that
+// read fails, `used` is the agent-only partial and pct stays null.
 function mergedAiQueriesUsed(orgId, now = new Date()) {
   const ai = aiQueriesUsedThisMonth(orgId, now);
   const agentTurns = agentTurnsThisMonth(orgId, now);
   return { used: (ai.used || 0) + agentTurns, unknown: ai.unknown, askbaseUsed: ai.used, agentTurns };
 }
 
+// Merged AI usage pooled across an account's orgs, with the per-workspace
+// split. `unknown` is true when the AskBase read fails for any org.
+function mergedAiUsedByWorkspace(orgIds, now = new Date()) {
+  const per = orgIds.map((orgId) => ({ org_id: orgId, ...mergedAiQueriesUsed(orgId, now) }));
+  return {
+    per,
+    used: per.reduce((sum, w) => sum + (w.used || 0), 0),
+    unknown: per.some((w) => w.unknown),
+    agentTurns: per.reduce((sum, w) => sum + (w.agentTurns || 0), 0),
+  };
+}
+
+function accountMergedAiUsed(orgId, now = new Date()) {
+  return mergedAiUsedByWorkspace(account.accountOrgIdsForOrg(orgId), now);
+}
+
 // Full usage snapshot for an org (powers the Billing usage bars and the 80%
-// warning banner). Never throws — a counter that can't be read reports unknown.
+// warning banner). Claims, AI uses and seats are ACCOUNT totals (deploy
+// #100) with a per-workspace breakdown in used_by_workspace. Never throws —
+// a counter that can't be read reports unknown.
 function usageForOrg(orgId) {
   const plan = orgPlan(orgId);
   const limits = limitsForPlan(plan);
-  const claimsUsed = claimsUsedThisMonth(orgId);
-  const seatsUsedCount = seatsUsed(orgId);
-  const ai = mergedAiQueriesUsed(orgId);
+  const { ownerId, orgIds } = account.accountForOrg(orgId);
 
-  const claims = { used: claimsUsed, limit: limits.claimsPerMonth, pct: usagePct(claimsUsed, limits.claimsPerMonth) };
+  const claimsByWs = claimsUsedByWorkspace(orgIds);
+  const claimsTotal = claimsByWs.reduce((sum, w) => sum + w.claims, 0);
+  const aiByWs = mergedAiUsedByWorkspace(orgIds);
+  const seatsUsedCount = seatsUsed(orgId);
+  const wsUsage = account.workspaceUsage(ownerId, plan);
+
+  const orgNames = new Map(
+    db.prepare(`SELECT id, name FROM orgs WHERE id IN (${orgIds.map(() => '?').join(',')})`).all(...orgIds)
+      .map((o) => [o.id, o.name]),
+  );
+  const aiByOrg = new Map(aiByWs.per.map((w) => [w.org_id, w.used]));
+  const used_by_workspace = claimsByWs.map((w) => ({
+    org_id: w.org_id,
+    name: orgNames.get(w.org_id) || `Workspace ${w.org_id}`,
+    claims: w.claims,
+    aiQueries: aiByOrg.get(w.org_id) || 0,
+  }));
+
+  const claims = { used: claimsTotal, limit: limits.claimsPerMonth, pct: usagePct(claimsTotal, limits.claimsPerMonth) };
   const seats = { used: seatsUsedCount, limit: limits.seats, pct: usagePct(seatsUsedCount, limits.seats) };
   const aiQueries = {
-    used: ai.used, limit: limits.aiQueriesPerMonth,
-    pct: ai.unknown ? null : usagePct(ai.used, limits.aiQueriesPerMonth),
-    unknown: ai.unknown,
-    agentTurns: ai.agentTurns,
+    used: aiByWs.used, limit: limits.aiQueriesPerMonth,
+    pct: aiByWs.unknown ? null : usagePct(aiByWs.used, limits.aiQueriesPerMonth),
+    unknown: aiByWs.unknown,
+    agentTurns: aiByWs.agentTurns,
   };
+  const workspaces = { used: wsUsage.used, limit: wsUsage.limit };
   const warn = [];
   for (const [key, u] of [['claims', claims], ['seats', seats], ['aiQueries', aiQueries]]) {
     if (u.pct !== null && u.pct >= 0.8) warn.push(key);
   }
-  return { plan: plan || 'trial', claims, seats, aiQueries, warn, monthStartUtc: monthStartUtc() };
+  return {
+    plan: plan || 'trial', claims, seats, aiQueries, workspaces, used_by_workspace,
+    warn, monthStartUtc: monthStartUtc(),
+  };
 }
 
 // ---- Quota enforcement middleware (402 = limit hit, client shows modal) ----
@@ -147,14 +206,16 @@ function quotaExceeded(res, kind, plan, limit, used) {
   });
 }
 
-// Blocks claim creation (and CSV bulk import) at 100% of the monthly claim quota.
+// Blocks claim creation (and CSV bulk import) at 100% of the monthly claim
+// quota — the ACCOUNT pool (deploy #100): claims created in any of the
+// account's workspaces count toward the same limit.
 function checkClaimQuota(req, res, next) {
   if (req.isSuperAdmin) return next(); // super-admin: no quotas (deploy #54)
   try {
     const plan = orgPlan(req.orgId);
     const { claimsPerMonth } = limitsForPlan(plan);
     if (claimsPerMonth === null) return next(); // enterprise/grandfathered: unlimited
-    const used = claimsUsedThisMonth(req.orgId);
+    const used = accountClaimsUsedThisMonth(req.orgId);
     if (atLimit(used, claimsPerMonth)) return quotaExceeded(res, 'claim_limit_reached', plan, claimsPerMonth, used);
     return next();
   } catch (e) {
@@ -162,12 +223,20 @@ function checkClaimQuota(req, res, next) {
   }
 }
 
-// Blocks team invites at the seat cap.
+// Blocks team invites at the seat cap. Seats are roster people (deploy
+// #100): inviting someone who is ALREADY on the account roster into another
+// workspace consumes no seat and is never blocked here.
 function checkSeatQuota(req, res, next) {
   try {
     const plan = orgPlan(req.orgId);
     const { seats } = limitsForPlan(plan);
     if (seats === null) return next();
+    const { ownerId } = account.accountForOrg(req.orgId);
+    const email = String((req.body && req.body.email) || '').trim().toLowerCase();
+    if (ownerId && email) {
+      const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+      if (existing && account.rosterUserIds(ownerId).includes(existing.id)) return next();
+    }
     const used = seatsUsed(req.orgId);
     if (atLimit(used, seats)) return quotaExceeded(res, 'seat_limit_reached', plan, seats, used);
     return next();
@@ -178,16 +247,17 @@ function checkSeatQuota(req, res, next) {
 
 // Agent-turn quota gate for the agent's AI-consumption paths (chat,
 // document extraction, tools/run, the brief's narrative call). Returns
-// { plan, limit, used } when the org is at/over its plan AI-use allowance,
-// else null. Decided policy (founder, 2026-10-28): the gate fires whenever
-// the plan carries a positive finite allowance — Starter 100, Pro 2,000,
-// AI 1,000 — counted against MERGED usage (agent turns + AskBase queries).
+// { plan, limit, used } when the ACCOUNT is at/over its plan AI-use
+// allowance (pooled across its workspaces, deploy #100), else null.
+// Decided policy (founder, 2026-10-28): the gate fires whenever the plan
+// carries a positive finite allowance — Starter 100, Pro 2,000, AI 1,000 —
+// counted against MERGED usage (agent turns + AskBase queries).
 // null (enterprise / legacy-grandfathered) never blocks.
 function checkAiQueryQuota(orgId) {
   const plan = orgPlan(orgId);
   const limit = limitsForPlan(plan).aiQueriesPerMonth;
   if (typeof limit !== 'number' || !Number.isFinite(limit) || limit <= 0) return null;
-  const { used } = mergedAiQueriesUsed(orgId);
+  const { used } = accountMergedAiUsed(orgId);
   return used >= limit ? { plan, limit, used } : null;
 }
 
@@ -196,11 +266,15 @@ module.exports = {
   monthKeyUtc,
   orgPlan,
   claimsUsedThisMonth,
+  claimsUsedByWorkspace,
+  accountClaimsUsedThisMonth,
   seatsUsed,
   aiQueriesUsedThisMonth,
   agentTurnsThisMonth,
   recordAgentTurn,
   mergedAiQueriesUsed,
+  mergedAiUsedByWorkspace,
+  accountMergedAiUsed,
   usageForOrg,
   quotaExceeded,
   checkAiQueryQuota,

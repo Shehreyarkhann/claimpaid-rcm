@@ -307,8 +307,8 @@ async function main() {
     // ---- Entitlements payload (deploy #89) ----
     const statusB = await api(base, 'GET', '/api/billing/status', null, tokB);
     const entB = statusB.data.entitlements || {};
-    check('entitlements: Starter = RCM + agent, NO AI app, 100 AI uses / 1,000 claims / 3 seats',
-      entB.rcm === true && entB.ai === false && entB.agent === true && entB.aiUsesPerMonth === 100 && entB.claimsPerMonth === 1000 && entB.seats === 3,
+    check('entitlements: Starter = RCM + agent, NO AI app, 100 AI uses / 1,000 claims / 5 seats / 1 workspace',
+      entB.rcm === true && entB.ai === false && entB.agent === true && entB.aiUsesPerMonth === 100 && entB.claimsPerMonth === 1000 && entB.seats === 5 && entB.workspaces === 1,
       JSON.stringify(entB));
     check('entitlements: by-plan table (Pro 2,000; AI plan has no agent; Enterprise unlimited)',
       !!statusB.data.entitlements_by_plan && statusB.data.entitlements_by_plan.pro.aiUsesPerMonth === 2000
