@@ -193,6 +193,16 @@ h2{font-size:clamp(32px,4.4vw,52px);font-weight:900;letter-spacing:-1px;line-hei
 .glink:hover{color:var(--ink);text-decoration:underline}
 .bcard.wide{grid-column:span 2}
 @media(max-width:600px){.bcard.wide{grid-column:span 1}}
+/* ---------- platform clusters ---------- */
+.clusters{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:800px){.clusters{grid-template-columns:1fr}}
+.cluster h3{font-size:23px;margin-bottom:8px;position:relative;z-index:1}
+.cluster .lead{font-size:15.5px;font-weight:600;color:var(--ink);line-height:1.6;position:relative;z-index:1}
+.flist{list-style:none;position:relative;z-index:1}
+.flist li{padding:10px 0;border-top:1px solid var(--line);font-size:14.5px;line-height:1.6;color:var(--mut)}
+.flist li:first-child{margin-top:6px}
+.flist strong{color:var(--ink);font-weight:600}
+.flist .glink{margin-top:0}
 /* ---------- trust band ---------- */
 .trustband{background:var(--paper2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:34px 0}
 .trust-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
@@ -442,30 +452,54 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--mut);font-siz
   <div class="sec-tag reveal">THE PLATFORM</div>
   <h2 class="reveal">One workspace.<br/><span class="grad">Every dollar chased.</span></h2>
   <p class="sec-sub reveal">Not another dashboard to glance at. A work engine your billers open every morning — prioritized, drafted, and tracked to paid.</p>
-  <div class="bento">
-    <div class="bcard reveal"><span class="tag">BEFORE THE CLAIM</span><span class="ico">✅</span><h3>Eligibility Checks</h3><p>Coverage checked before claims go out — in the workspace, or ask the agent to run a check on any claim. Results live on the claim, so CO-50 non-covered-service denials get stopped at the door. <a class="glink" href="/blog/eligibility-verification-checklist/">Eligibility verification checklist →</a></p></div>
-    <div class="bcard reveal"><span class="tag">BEFORE THE CLAIM</span><span class="ico">🔍</span><h3>15-Rule Claim Scrubber</h3><p>Fifteen validation rules catch coding errors, missing modifiers, and eligibility gaps before the claim leaves the building — not after the denial lands. The agent runs the same scrubber on any claim and explains every finding.</p></div>
-    <div class="bcard v reveal"><span class="tag ai">BEFORE THE CLAIM</span><span class="ico">🧾</span><h3>Quote-Verified Coding</h3><p>A 370-code library, with a rule no other assistant follows: a code is Valid only when your documentation actually supports it, quoted back to you. Weak evidence gets Review. No evidence gets an honest Abstain. Applying codes takes your approval — never the AI's say-so. <a class="glink" href="/blog/medical-billing-modifiers-guide/">Medical billing modifiers guide →</a></p></div>
-    <div class="bcard reveal"><span class="tag">BEFORE THE CLAIM</span><span class="ico">🛡️</span><h3>Prior-Auth Tracking</h3><p>Prior-auth pipeline with expiration countdowns and denial-to-auth cross-links, so missing authorizations never become write-offs.</p></div>
-    <div class="bcard wide reveal"><span class="tag">THE DAY'S WORK</span><span class="ico">🎯</span><h3>Smart Worklist — "My Work"</h3><p>Every claim, appeal, and follow-up scored by dollars at stake and days until the filing deadline dies — now with the agent's prediction on the row: how likely an appeal is to overturn, from your own decided history. Your team stops guessing what to work first.</p></div>
-    <div class="bcard reveal"><span class="tag">THE DAY'S WORK</span><span class="ico">⏰</span><h3>Timely Filing Radar</h3><p>Deadlines for 7 major payers (UHC 90d, Aetna 120d, Cigna 180d, Anthem 180d, Medicare 365d, NY Medicaid 90d, Humana 180d) tracked against every open claim — and you can add any payer with its own custom deadlines. Red alerts before revenue becomes unrecoverable. <a class="glink" href="/blog/timely-filing-limits-by-payer-2026/">Timely-filing limits by payer →</a></p></div>
-    <div class="bcard reveal"><span class="tag ai">THE DAY'S WORK</span><span class="ico">🛟</span><h3>Denial Rescue Wizard</h3><p>Pick a denied claim and walk it end to end in five steps: snapshot and odds, eligibility, scrub findings, the drafted appeal, and the submission checklist. One claim, rescued in minutes.</p></div>
-    <div class="bcard reveal"><span class="tag">DENIALS &amp; APPEALS</span><span class="ico">⚖️</span><h3>Denial Appeal Pipeline</h3><p>Open → in progress → submitted → won. Win an appeal and the claim auto-marks paid. Nothing falls through.</p></div>
-    <div class="bcard reveal"><span class="tag">DENIALS &amp; APPEALS</span><span class="ico">✉️</span><h3>Appeal Letters, Ready to Approve</h3><p>One click generates a payer-ready appeal letter for 8 denial categories — with your letterhead, signature block, and the right argument for the denial code. The agent pre-drafts them into your approval queue. <a class="glink" href="/blog/how-to-appeal-denied-claim/">How to appeal a denied claim →</a></p></div>
-    <div class="bcard reveal"><span class="tag ai">DENIALS &amp; APPEALS</span><span class="ico">📚</span><h3>Payer Policy Handbook</h3><p>Timely-filing limits, appeal windows, and denial-code rules for major payers — ask the agent mid-appeal and get the answer with the source cited, not a guess.</p></div>
-    <div class="bcard reveal"><span class="tag ai">DENIALS &amp; APPEALS</span><span class="ico">📞</span><h3>Payer-Call Prep</h3><p>Some fights still happen on the phone. The agent builds the call brief — identifiers ready, the questions for that denial family — and logs the rep's name, reference number, and promise straight into the claim timeline, follow-up set.</p></div>
-    <div class="bcard reveal"><span class="tag">MONEY IN</span><span class="ico">📄</span><h3>835 ERA Import + Auto-Posting</h3><p>Drop in remittance files — payments auto-post, CAS denial codes auto-parse and link straight into appeals. <a class="glink" href="/blog/how-to-read-835-remittance-advice/">How to read an 835 remittance →</a></p></div>
-    <div class="bcard reveal"><span class="tag ai">MONEY IN</span><span class="ico">🧮</span><h3>ERA Exception Resolution</h3><p>Variance holds and flagged lines don't rot in an inbox. The agent works out the disposition from the remittance's own adjustment codes — contractual, patient responsibility, rebill, write-off — arithmetic shown, and posts it only when you approve.</p></div>
-    <div class="bcard reveal"><span class="tag">MONEY IN</span><span class="ico">📬</span><h3>Document Intake</h3><p>Still getting paper EOBs? Drop them in. Scanned remittances and payer denial letters are read, matched to your claims, and turned into held remittances and draft appeals — every figure checked, anything unclear flagged for a human, never filled in.</p></div>
-    <div class="bcard reveal"><span class="tag">MONEY IN</span><span class="ico">🧾</span><h3>Patient Statements</h3><p>Patient-responsibility balances become clean statements from the same workspace — generated from posted remittances, not re-typed.</p></div>
-    <div class="bcard reveal"><span class="tag">MONEY IN</span><span class="ico">🏆</span><h3>Recovered-Dollars Scoreboard</h3><p>Your workspace tracks the dollars recovered through decided appeals — including the ones the agent drafted — on the Dashboard, where your team can see the number grow.</p></div>
-    <div class="bcard reveal"><span class="tag">SETUP &amp; SCALE</span><span class="ico">📥</span><h3>Import Wizard</h3><p>Bring your open A/R with you: CSV or 837 files mapped, validated row by row, duplicates flagged, and committed only at the final step. Running by this afternoon, not next quarter.</p></div>
-    <div class="bcard reveal"><span class="tag">SETUP &amp; SCALE</span><span class="ico">📤</span><h3>837P Generation</h3><p>Real 837P (005010X222A1) claim files generated from your claims, structurally validated, with 999 and 277CA acknowledgment handling — ready to send through your current submission path. <a class="glink" href="/blog/837p-vs-835-explained/">837P vs 835, explained →</a></p></div>
-    <div class="bcard wide reveal"><span class="tag">SETUP &amp; SCALE</span><span class="ico">🚀</span><h3>5-Step Onboarding Wizard — Real 30-Day Trial</h3><p>Welcome → Workspace → Goals → Plan → Success: a guided setup that gets your workspace live on a real 30-day trial. No credit card, ever — sign in with Google and start working claims the same day.</p></div>
-    <div class="bcard reveal"><span class="tag">SETUP &amp; SCALE</span><span class="ico">🏥</span><h3>athenahealth EHR Integration</h3><p>Connect athenahealth via OAuth2 to sync patient and claim data into your billing workspace. Honest scope: athenahealth is the supported EHR.</p></div>
-    <div class="bcard reveal"><span class="tag">SETUP &amp; SCALE</span><span class="ico">🖊️</span><h3>BAA E-Signing</h3><p>Sign Business Associate Agreements electronically right inside the app — compliance paperwork done before you touch your first real claim.</p></div>
-    <div class="bcard reveal"><span class="tag">SETUP &amp; SCALE</span><span class="ico">📊</span><h3>Reports + Payer Playbook</h3><p>Five exportable reports, denial-pattern analytics by payer × reason, and a living playbook of what actually wins against each payer — built from your own outcomes.</p></div>
-    <div class="bcard reveal"><span class="tag">SETUP &amp; SCALE</span><span class="ico">💬</span><h3>Two-Way Support Helpdesk</h3><p>A built-in helpdesk with a 24-hour response SLA. Ask a question from inside the app and get a real answer — not a chatbot loop.</p></div>
+  <div class="clusters">
+    <div class="bcard cluster reveal">
+      <h3>Work the queue</h3>
+      <p class="lead">Every denial ranked by deadline and dollars — with the next move already drafted.</p>
+      <ul class="flist">
+        <li><strong>Smart Worklist — “My Work”</strong> — Every claim, appeal, and follow-up scored by dollars at stake and days until the filing deadline — with the agent's overturn prediction on the row, from your own decided history.</li>
+        <li><strong>Timely Filing Radar</strong> — Deadlines for 7 major payers (UHC 90d, Aetna 120d, Cigna 180d, Anthem 180d, Medicare 365d, NY Medicaid 90d, Humana 180d) tracked against every open claim, plus custom deadlines for any payer. Red alerts before revenue becomes unrecoverable. <a class="glink" href="/blog/timely-filing-limits-by-payer-2026/">Timely-filing limits by payer →</a></li>
+        <li><strong>Denial Rescue Wizard</strong> — Pick a denied claim and walk it end to end in five steps: snapshot and odds, eligibility, scrub findings, the drafted appeal, and the submission checklist.</li>
+        <li><strong>Denial Appeal Pipeline</strong> — Open → in progress → submitted → won. Win an appeal and the claim auto-marks paid. Nothing falls through.</li>
+        <li><strong>Appeal Letters, Ready to Approve</strong> — One click generates a payer-ready appeal letter for 8 denial categories — your letterhead, signature block, and the right argument for the denial code. The agent pre-drafts them into your approval queue. <a class="glink" href="/blog/how-to-appeal-denied-claim/">How to appeal a denied claim →</a></li>
+        <li><strong>Payer-Call Prep</strong> — The agent builds the call brief — identifiers ready, the questions for that denial family — and logs the rep's name, reference number, and promise into the claim timeline, follow-up set.</li>
+      </ul>
+    </div>
+    <div class="bcard cluster reveal">
+      <h3>Before the claim goes out</h3>
+      <p class="lead">Eligibility, scrubbing, and coding checks that stop the denial before it happens.</p>
+      <ul class="flist">
+        <li><strong>Eligibility Checks</strong> — Coverage checked before claims go out — in the workspace, or ask the agent to run a check on any claim. Results live on the claim, so CO-50 non-covered-service denials get stopped at the door. <a class="glink" href="/blog/eligibility-verification-checklist/">Eligibility verification checklist →</a></li>
+        <li><strong>15-Rule Claim Scrubber</strong> — Fifteen validation rules catch coding errors, missing modifiers, and eligibility gaps before the claim leaves the building. The agent runs the same scrubber on any claim and explains every finding.</li>
+        <li><strong>Quote-Verified Coding</strong> — A 370-code library with a strict rule: a code is Valid only when your documentation actually supports it, quoted back to you. Weak evidence gets Review. No evidence gets an honest Abstain. Applying codes takes your approval — never the AI's say-so. <a class="glink" href="/blog/medical-billing-modifiers-guide/">Medical billing modifiers guide →</a></li>
+        <li><strong>Prior-Auth Tracking</strong> — Prior-auth pipeline with expiration countdowns and denial-to-auth cross-links, so missing authorizations never become write-offs.</li>
+        <li><strong>Payer Policy Handbook</strong> — Timely-filing limits, appeal windows, and denial-code rules for major payers — ask the agent mid-appeal and get the answer with the source cited, not a guess.</li>
+      </ul>
+    </div>
+    <div class="bcard cluster reveal">
+      <h3>Money in</h3>
+      <p class="lead">Remittances posted, exceptions resolved, paper read — and every recovered dollar counted.</p>
+      <ul class="flist">
+        <li><strong>835 ERA Import + Auto-Posting</strong> — Drop in remittance files — payments auto-post, CAS denial codes auto-parse and link straight into appeals. <a class="glink" href="/blog/how-to-read-835-remittance-advice/">How to read an 835 remittance →</a></li>
+        <li><strong>ERA Exception Resolution</strong> — Variance holds and flagged lines don't rot in an inbox. The agent works out the disposition from the remittance's own adjustment codes — contractual, patient responsibility, rebill, write-off — arithmetic shown, and posts it only when you approve.</li>
+        <li><strong>Document Intake</strong> — Paper EOBs and payer denial letters are read, matched to your claims, and turned into held remittances and draft appeals — every figure checked, anything unclear flagged for a human, never filled in.</li>
+        <li><strong>Patient Statements</strong> — Patient-responsibility balances become clean statements from the same workspace — generated from posted remittances, not re-typed.</li>
+        <li><strong>Recovered-Dollars Scoreboard</strong> — Your workspace tracks the dollars recovered through decided appeals — including the ones the agent drafted — on the Dashboard, where your team can see the number grow.</li>
+      </ul>
+    </div>
+    <div class="bcard cluster reveal">
+      <h3>Set up in an afternoon, covered from day one</h3>
+      <p class="lead">Import, onboarding, and the compliance paperwork — handled inside the product.</p>
+      <ul class="flist">
+        <li><strong>Import Wizard</strong> — Bring your open A/R with you: CSV or 837 files mapped, validated row by row, duplicates flagged, and committed only at the final step. Running by this afternoon, not next quarter.</li>
+        <li><strong>837P Generation</strong> — Real 837P (005010X222A1) claim files generated from your claims, structurally validated, with 999 and 277CA acknowledgment handling — ready to send through your current submission path. <a class="glink" href="/blog/837p-vs-835-explained/">837P vs 835, explained →</a></li>
+        <li><strong>5-Step Onboarding Wizard — Real 30-Day Trial</strong> — Welcome → Workspace → Goals → Plan → Success: a guided setup that gets your workspace live on a real 30-day trial. No credit card — sign in with Google and start working claims the same day.</li>
+        <li><strong>athenahealth EHR Integration</strong> — Connect athenahealth via OAuth2 to sync patient and claim data into your billing workspace. Honest scope: athenahealth is the supported EHR.</li>
+        <li><strong>BAA E-Signing</strong> — Sign Business Associate Agreements electronically right inside the app — compliance paperwork done before you touch your first real claim.</li>
+        <li><strong>Reports + Payer Playbook</strong> — Five exportable reports, denial-pattern analytics by payer × reason, and a living playbook of what actually wins against each payer — built from your own outcomes.</li>
+        <li><strong>Two-Way Support Helpdesk</strong> — A built-in helpdesk with a 24-hour response SLA. Ask a question from inside the app and get a real answer — not a chatbot loop.</li>
+      </ul>
+    </div>
   </div>
 </div></section>
 <section id="learns"><div class="wrap">
