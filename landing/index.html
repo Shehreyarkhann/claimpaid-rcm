@@ -129,10 +129,21 @@ h1 .w{display:inline-block;opacity:0;animation:wordUp .7s cubic-bezier(.22,1,.36
 .hero-shot .shot-bar i:first-child{background:#E8A09A}.hero-shot .shot-bar i:nth-child(2){background:#EDCE9A}.hero-shot .shot-bar i:nth-child(3){background:#A9D6BC}
 .hero-shot .shot-bar span{margin-left:10px;font-size:12.5px;color:var(--mut);font-weight:600;letter-spacing:.3px}
 .hero-shot img{display:block;width:100%;height:auto}
-/* hero two-column: copy left, agent screenshot right */
-.hero-grid{display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,.98fr);gap:52px;align-items:center}
-.hero-shot.side{margin-top:0;max-width:none}
-@media(max-width:1080px){.hero-grid{grid-template-columns:1fr;gap:38px}}
+/* floating claim cards */
+.float-cards{position:absolute;right:4%;top:120px;z-index:2;display:flex;flex-direction:column;gap:30px;width:250px}
+@media(max-width:1080px){.float-cards{display:none}}
+.fcard{background:rgba(255,253,248,.92);backdrop-filter:blur(12px);border:1px solid var(--line2);border-radius:16px;padding:16px 18px;box-shadow:0 20px 50px rgba(33,26,19,.14);animation:floaty 7s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.fcard .row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px}
+.fcard .cid{font-size:11px;color:var(--mut);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fcard .amt{font-family:'Fraunces',serif;font-size:21px;font-weight:900;color:var(--ink)}
+.pill{font-size:11px;font-weight:700;padding:5px 12px;border-radius:100px;letter-spacing:.6px}
+.pill.denied{background:rgba(194,65,12,.10);color:var(--rust);border:1px solid rgba(194,65,12,.35)}
+.pill.paid{background:var(--green-tint);color:var(--green-dk);border:1px solid rgba(14,159,110,.4)}
+.fcard .bar{height:6px;border-radius:4px;background:#EFE7D2;overflow:hidden;margin-top:12px}
+.fcard .bar i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--green),#34d399);width:0;animation:fillbar 3.2s ease-in-out infinite}
+@keyframes fillbar{0%{width:8%}55%{width:100%}100%{width:100%}}
+.fcard .lbl{font-size:11px;color:var(--mut);margin-top:8px}
 /* ---------- marquee ---------- */
 .marquee{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:20px 0;overflow:hidden;background:var(--paper2)}
 .marquee .track{display:flex;width:max-content;animation:scroll 48s linear infinite}
@@ -367,6 +378,7 @@ footer{border-top:1px solid var(--line);padding:54px 0;color:var(--mut);font-siz
   .burger.open span:nth-child(2){opacity:0}
   .burger.open span:nth-child(3){transform:translateY(-8px) rotate(-45deg)}
   .stats{grid-template-columns:1fr 1fr}
+  .float-cards{display:none}
   section{padding:72px 0}
 }
 /* ---------- demo modal ---------- */
@@ -406,9 +418,20 @@ footer{border-top:1px solid var(--line);padding:54px 0;color:var(--mut);font-siz
 <div id="hero">
   
   <img class="hero-stamp" src="/favicon.svg" alt="" aria-hidden="true"/>
+  <div class="float-cards">
+    <div class="fcard">
+      <div class="row"><span class="cid">CLM-100122 · Medicaid NY</span><span class="pill denied">DENIED</span></div>
+      <div class="amt">$5,183.64</div>
+      <div class="lbl">Coordination of benefits — appeal drafted, waiting for your approval</div>
+      <div class="bar"><i></i></div><div class="lbl">In this morning's brief…</div>
+    </div>
+    <div class="fcard">
+      <div class="row"><span class="cid">CLM-100091 · Aetna</span><span class="pill denied">11 DAYS LEFT</span></div>
+      <div class="amt">$8,275.36</div>
+      <div class="lbl">Filing deadline closing in — ranked #1 in today's plan</div>
+    </div>
+  </div>
   <div class="wrap">
-   <div class="hero-grid">
-    <div class="hero-copy">
     <div class="hero-badge"><span class="dot"></span>Revenue-cycle management, with an AI agent on the team</div>
     <h1 id="headline"><span class="w" style="animation-delay:.15s">Get</span> <span class="w" style="animation-delay:.28s">your</span> <span class="w" style="animation-delay:.41s">claims</span> <span class="w" style="animation-delay:.54s"><span class="grad">paid.</span></span></h1>
     <p class="hero-sub">Spreadsheets track denials. Dashboards display them. <b>ClaimPaid collects them.</b> An AI agent works the queue with your team: it opens the day with a brief and a ranked plan, drafts the appeals, runs eligibility, scrubbing, and coding checks before claims go out — and nothing is written without your approval.</p>
@@ -417,12 +440,6 @@ footer{border-top:1px solid var(--line);padding:54px 0;color:var(--mut);font-siz
       <a class="btn btn-ghost" href="#platform">See how it works</a>
     </div>
     <p class="reveal" style="margin:-34px 0 40px;font-size:13.5px;font-weight:600;color:var(--green-lt);animation:fadeDown .8s .7s ease both">Free for 30 days · No credit card required</p>
-    </div>
-    <div class="hero-shot side" style="animation:fadeDown .8s .8s ease both">
-      <div class="shot-bar"><i></i><i></i><i></i><span>claimpaid.io/app</span></div>
-      <img src="product-agent.webp" alt="ClaimPaid Agent — real product screenshot: the morning brief with appeal drafts awaiting approval"/>
-    </div>
-   </div>
     <div class="stats">
       <div class="stat"><span class="s-ico">🔍</span><b><span class="count hl" data-to="15">15</span></b><span>Claim-scrubber rules</span></div>
       <div class="stat"><span class="s-ico">🧾</span><b><span class="count hl" data-to="370">370</span></b><span>AI-assisted coding library</span></div>
@@ -484,6 +501,10 @@ footer{border-top:1px solid var(--line);padding:54px 0;color:var(--mut);font-siz
   <div class="sec-tag reveal">MEET YOUR AGENT</div>
   <h2 class="reveal">The queue works itself.<br/><span class="grad">You make the calls.</span></h2>
   <p class="sec-sub reveal">ClaimPaid's agent is a working member of the billing team — not a chatbot in a corner. It reads your queue, does the legwork, and brings you finished drafts. Every write waits for your click, and every decision lands in the audit log.</p>
+  <div class="hero-shot reveal" style="max-width:none">
+    <div class="shot-bar"><i></i><i></i><i></i><span>claimpaid.io/app</span></div>
+    <img src="product-agent.webp" alt="ClaimPaid Agent — real product screenshot: the morning brief with appeal drafts awaiting approval" loading="lazy"/>
+  </div>
   <div class="bento">
     <div class="bcard wide reveal"><span class="tag ai">AGENT</span><span class="ico">🌅</span><h3>The morning brief</h3><p>Your day starts with a brief, not a pile: what changed while you were away — new denials, ERA postings, exceptions on hold, follow-ups that slipped — and the first moves that matter, already worked out.</p></div>
     <div class="bcard reveal"><span class="tag ai">AGENT</span><span class="ico">🎯</span><h3>A ranked queue</h3><p>The plan ranks every item by deadline pressure times dollars at stake, and says why it's ranked there — including what your own history says about the odds of winning it.</p></div>
@@ -982,6 +1003,16 @@ document.querySelectorAll('.bcard').forEach(c => c.addEventListener('mousemove',
       }
     });
   });
+})();
+
+/* ---------- hero float-card parallax (rAF, reduced-motion off) ---------- */
+(function(){
+  if(!window.matchMedia || !matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+  var fc = document.querySelector('.float-cards');
+  if(!fc) return;
+  var ticking = false;
+  function upd(){ ticking = false; if(scrollY < innerHeight) fc.style.transform = 'translateY(' + (scrollY * 0.07) + 'px)'; }
+  addEventListener('scroll', function(){ if(!ticking){ ticking = true; requestAnimationFrame(upd); } }, {passive:true});
 })();
 </script>
 </body>
