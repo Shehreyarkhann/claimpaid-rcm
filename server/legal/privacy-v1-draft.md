@@ -66,7 +66,7 @@ To exercise rights over data your *employer* uploaded (e.g., as an end user), co
 
 ## 9. Cookies
 
-We use only functional cookies/session storage required for login and app function. No advertising or cross-site tracking cookies.
+We use only functional cookies/session storage required for login and app function. No advertising or cross-site tracking cookies. The full list of cookies and similar technologies we use — including the cookieless website analytics that runs only with your consent — is in our Cookie Policy: https://claimpaid.io/cookies/
 
 ## 10. Children
 
