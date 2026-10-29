@@ -7,6 +7,7 @@ import { useOrgSettings } from '../orgSettings';
 import CodingAssistant from '../components/CodingAssistant';
 import RescueWizard from '../components/RescueWizard';
 import CallCopilot from '../components/CallCopilot';
+import ClaimDetailsModal from '../components/ClaimDetailsModal';
 
 const STATUS_META = {
   paid: { label: 'Paid', badge: 'badge-green' },
@@ -36,7 +37,7 @@ export function FilingBadge({ days }) {
 // buttons create pending agent actions; approval still happens on the
 // standard cards in the Agent tab. Renders nothing when the agent is
 // disabled (AGENT_DISABLED) or while loading.
-function AgentClaimPanel({ claimId }) {
+function AgentClaimPanel({ claimId, onReviewAgentDrafts }) {
   const toast = useToast();
   const [data, setData] = useState(null);
   const [hidden, setHidden] = useState(false);
@@ -122,9 +123,15 @@ function AgentClaimPanel({ claimId }) {
                   {rec.detail && <div className="text-xs text-stone-500 mt-0.5">{rec.detail}</div>}
                 </div>
                 {rec.spawnable && (
-                  <button className="btn btn-primary btn-sm shrink-0" disabled={done || spawning === key} onClick={() => spawn(rec)}>
-                    {done ? 'Draft created ✓' : spawning === key ? 'Creating…' : 'Create draft'}
-                  </button>
+                  done && onReviewAgentDrafts ? (
+                    <button className="btn btn-dark btn-sm shrink-0" onClick={onReviewAgentDrafts}>
+                      Review in Agent tab →
+                    </button>
+                  ) : (
+                    <button className="btn btn-primary btn-sm shrink-0" disabled={done || spawning === key} onClick={() => spawn(rec)}>
+                      {done ? 'Draft created ✓' : spawning === key ? 'Creating…' : 'Create draft'}
+                    </button>
+                  )
                 )}
               </div>
             );
@@ -247,7 +254,7 @@ function ClaimModal({ claim, payers, onClose, onSaved, onCheckEligibility, onRev
               <input className="input font-mono" value={form.rendering_npi} onChange={set('rendering_npi')} placeholder="10 digits" maxLength={10} /></div>
           </div>
         </div>
-        {claim && <AgentClaimPanel claimId={claim.id} />}
+        {claim && <AgentClaimPanel claimId={claim.id} onReviewAgentDrafts={onReviewAgentDrafts} />}
         <div className="mt-6 flex justify-end gap-2">
           {claim && claim.status === 'denied' && (
             <button onClick={() => setShowRescue(true)} className="btn btn-dark mr-auto">🛟 Rescue</button>
@@ -382,7 +389,7 @@ function ScrubResultsModal({ result, onClose }) {
   );
 }
 
-export default function Claims({ onCheckEligibility, initialClaimId, onConsumed, onReviewAgentDrafts }) {
+export default function Claims({ onCheckEligibility, initialClaimId, onConsumed, onReviewAgentDrafts, onOpenAppeal }) {
   const { user } = useAuth();
   const toast = useToast();
   const [data, setData] = useState(null);
@@ -392,6 +399,7 @@ export default function Claims({ onCheckEligibility, initialClaimId, onConsumed,
   const [payer, setPayer] = useState('');
   const [page, setPage] = useState(1);
   const [modal, setModal] = useState(null);
+  const [detailsClaimId, setDetailsClaimId] = useState(null);
   const [uploadResult, setUploadResult] = useState(null);
   const [selected, setSelected] = useState(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -403,17 +411,13 @@ export default function Claims({ onCheckEligibility, initialClaimId, onConsumed,
 
   const fetchClaims = () => api.claims({ search, status, payer, page, limit }).then((d) => { setData(d); setSelected(new Set()); }).catch((e) => toast.error(e.message));
 
-  // Cross-page deep link (My Work "Open claim", EHR "View claim"): fetch the
-  // claim directly — it may sit on any page of the paginated list — and open
-  // it in the same modal the list's Edit button uses.
+  // Cross-page deep link (My Work "Open claim", EHR "View claim", Agent
+  // "Open claim"): opens the shared claim-DETAILS modal (deploy #98) — the
+  // full record, not the edit form. Editing is one click from inside it.
   useEffect(() => {
     if (!initialClaimId) return;
-    let cancelled = false;
-    api.claimDetail(initialClaimId)
-      .then((d) => { if (!cancelled) setModal(d); })
-      .catch(() => { if (!cancelled) toast.error('That claim could not be opened'); })
-      .finally(() => { if (!cancelled) onConsumed?.(); });
-    return () => { cancelled = true; };
+    setDetailsClaimId(initialClaimId);
+    onConsumed?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialClaimId]);
 
@@ -536,6 +540,14 @@ export default function Claims({ onCheckEligibility, initialClaimId, onConsumed,
       {modal && <ClaimModal claim={modal === 'add' ? null : modal} payers={payers}
         onClose={() => setModal(null)} onSaved={() => { setModal(null); fetchClaims(); }}
         onCheckEligibility={onCheckEligibility} onReviewAgentDrafts={onReviewAgentDrafts} />}
+      {detailsClaimId && (
+        <ClaimDetailsModal
+          claimId={detailsClaimId}
+          onClose={() => setDetailsClaimId(null)}
+          onEditClaim={canWrite ? (claim) => { setDetailsClaimId(null); setModal(claim); } : undefined}
+          onOpenAppeal={onOpenAppeal ? (appealId) => { setDetailsClaimId(null); onOpenAppeal(appealId); } : undefined}
+        />
+      )}
 
       <PageHeader
         title="Claims"
@@ -635,7 +647,7 @@ export default function Claims({ onCheckEligibility, initialClaimId, onConsumed,
                 <th>Claim #</th><th>Patient</th><th>Payer</th><th>Service date</th>
                 <th className="!text-right">Billed</th><th className="!text-right">Paid</th>
                 <th>Status</th><th>Readiness</th><th>Filing deadline</th><th className="!text-right">Days in A/R</th>
-                {canWrite && <th className="!text-center">Actions</th>}
+                <th className="!text-center">Actions</th>
               </tr></thead>
               <tbody>
                 {data.claims.map((c) => (
@@ -654,12 +666,15 @@ export default function Claims({ onCheckEligibility, initialClaimId, onConsumed,
                     <td><ScoreBadge score={c.readiness_score} compact /></td>
                     <td><FilingBadge days={c.days_until_filing} /></td>
                     <td className="!text-right text-stone-500">{c.days_in_ar}</td>
-                    {canWrite && (
-                      <td className="!text-center whitespace-nowrap">
-                        <button onClick={() => setModal(c)} className="text-amber-700 hover:text-amber-800 text-xs font-semibold mr-3">Edit</button>
-                        <button onClick={() => handleDelete(c.id, c.claim_number)} className="text-rose-600 hover:text-rose-800 text-xs font-semibold">Delete</button>
-                      </td>
-                    )}
+                    <td className="!text-center whitespace-nowrap">
+                      <button onClick={() => setDetailsClaimId(c.id)} className="text-emerald-700 hover:text-emerald-800 text-xs font-semibold mr-3">Details</button>
+                      {canWrite && (
+                        <>
+                          <button onClick={() => setModal(c)} className="text-amber-700 hover:text-amber-800 text-xs font-semibold mr-3">Edit</button>
+                          <button onClick={() => handleDelete(c.id, c.claim_number)} className="text-rose-600 hover:text-rose-800 text-xs font-semibold">Delete</button>
+                        </>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

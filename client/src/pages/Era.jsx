@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuth, authFetch } from '../auth';
 import { api, fmtMoney, fmtDate } from '../api';
 import { PageHeader, EmptyState, Modal, Skeleton, useToast } from '../components/ui';
+import ClaimDetailsModal from '../components/ClaimDetailsModal';
 
 const FLAG_LABELS = {
   unmatched: ['No matching claim', 'badge-rose'],
@@ -87,7 +88,7 @@ function MatchModal({ line, onClose, onDone }) {
   );
 }
 
-function LineRow({ line, canWrite, onChanged, onMatch }) {
+function LineRow({ line, canWrite, onChanged, onMatch, onShowDetails }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const act = async (fn, msg) => {
@@ -111,6 +112,12 @@ function LineRow({ line, canWrite, onChanged, onMatch }) {
           ? <span className="font-medium text-stone-800">{line.matched_claim_number}</span>
           : <span className="text-stone-400">—</span>}
         {line.match_method && <div className="text-xs text-stone-400">via {line.match_method.replace('_', ' ')}</div>}
+        {line.match_claim_id && onShowDetails && (
+          <button className="text-[11px] font-semibold text-emerald-700 hover:underline"
+            onClick={() => onShowDetails(line.match_claim_id)}>
+            Claim details
+          </button>
+        )}
       </td>
       <td className="py-2 pr-3 text-right text-sm">{fmtMoney(line.billed)}</td>
       <td className="py-2 pr-3 text-right text-sm">{fmtMoney(line.paid)}</td>
@@ -151,7 +158,7 @@ function LineRow({ line, canWrite, onChanged, onMatch }) {
   );
 }
 
-function RemittanceCard({ era, canWrite, onChanged, onMatch }) {
+function RemittanceCard({ era, canWrite, onChanged, onMatch, onShowDetails }) {
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState(null);
   const [label, cls] = ERA_STATUS[era.status] || ERA_STATUS.received;
@@ -202,7 +209,7 @@ function RemittanceCard({ era, canWrite, onChanged, onMatch }) {
               </thead>
               <tbody>
                 {detail.lines.map((l) => (
-                  <LineRow key={l.id} line={l} canWrite={canWrite} onChanged={refresh} onMatch={onMatch} />
+                  <LineRow key={l.id} line={l} canWrite={canWrite} onChanged={refresh} onMatch={onMatch} onShowDetails={onShowDetails} />
                 ))}
               </tbody>
             </table>
@@ -229,6 +236,7 @@ export default function Era() {
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState(null);
   const [matchLine, setMatchLine] = useState(null);
+  const [detailsClaimId, setDetailsClaimId] = useState(null);
 
   const load = () => {
     api.era.remittances().then((d) => setRemittances(d.remittances)).catch((e) => toast.error(e.message));
@@ -366,12 +374,15 @@ export default function Era() {
         />
       )}
       {(remittances || []).map((era) => (
-        <RemittanceCard key={era.id} era={era} canWrite={canWrite} onChanged={load} onMatch={setMatchLine} />
+        <RemittanceCard key={era.id} era={era} canWrite={canWrite} onChanged={load} onMatch={setMatchLine} onShowDetails={setDetailsClaimId} />
       ))}
 
       {matchLine && (
         <MatchModal line={matchLine} onClose={() => setMatchLine(null)}
           onDone={() => { setMatchLine(null); load(); }} />
+      )}
+      {detailsClaimId && (
+        <ClaimDetailsModal claimId={detailsClaimId} onClose={() => setDetailsClaimId(null)} />
       )}
     </div>
   );

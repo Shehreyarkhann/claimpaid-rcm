@@ -2,6 +2,10 @@ const express = require('express');
 const { db } = require('../db');
 const { authRequired, roleRequired, requireProduct } = require('../auth');
 const { generateLetter, listTemplates, getTemplate, getSignature, CATEGORY_LABELS, PLACEHOLDERS, SIGNATURE_PLACEHOLDERS, DEFAULT_TEMPLATES, DEFAULT_SIGNATURE } = require('../appealLetters');
+const { logActivity } = require('../activity');
+const { auditLog } = require('../audit');
+
+const VALID_SUBMIT_CHANNELS = ['payer_portal', 'fax', 'mail', 'clearinghouse'];
 
 const router = express.Router();
 router.use(authRequired, requireProduct('rcm'));
@@ -36,6 +40,8 @@ router.get('/', (req, res) => {
 
   const rows = db.prepare(`
     SELECT a.id, a.status, a.priority, a.follow_up_date, a.updated_at,
+           a.submitted_via, a.submitted_at,
+           (a.letter IS NOT NULL AND TRIM(a.letter) <> '') AS has_letter,
            c.claim_number, c.patient_name, p.name AS payer,
            c.billed_amount, c.paid_amount, c.denial_reason,
            (c.billed_amount - c.paid_amount) AS at_stake,
@@ -251,6 +257,77 @@ router.put('/:id', canWrite, (req, res) => {
     ORDER BY ar.created_at DESC
   `).all(updated.claim_id, req.orgId);
   res.json(updated);
+});
+
+// Full detail payload shared by the letter endpoints (same shape the
+// PUT /:id handler returns: detail + notes timeline + linked auths).
+function fullAppeal(id, orgId) {
+  const appeal = appealDetail(id, orgId);
+  if (!appeal) return null;
+  appeal.notes = db.prepare(`
+    SELECT n.id, n.note, n.created_at, u.name AS author
+    FROM appeal_notes n JOIN users u ON u.id = n.user_id
+    WHERE n.appeal_id = ? ORDER BY n.created_at ASC
+  `).all(appeal.id);
+  appeal.linked_auths = db.prepare(`
+    SELECT ar.id, ar.auth_number, ar.status, ar.cpt_codes, p.name AS payer
+    FROM auth_requests ar LEFT JOIN payers p ON p.id = ar.payer_id
+    WHERE ar.linked_claim_id = ? AND ar.org_id = ?
+    ORDER BY ar.created_at DESC
+  `).all(appeal.claim_id, orgId);
+  return appeal;
+}
+
+// --- Save an edited appeal letter (deploy #98) ---
+// The letter lives on the appeal (appeals.letter) — this is the save path
+// for the letter panel's Edit action. Activity- + audit-logged like every
+// other record change.
+router.put('/:id/letter', canWrite, (req, res) => {
+  const appeal = db.prepare('SELECT * FROM appeals WHERE id = ? AND org_id = ?').get(req.params.id, req.orgId);
+  if (!appeal) return res.status(404).json({ error: 'Appeal not found' });
+  const { letter } = req.body || {};
+  if (typeof letter !== 'string' || !letter.trim()) return res.status(400).json({ error: 'Letter text is required' });
+  if (letter.length > 100000) return res.status(400).json({ error: 'Letter is too long' });
+  db.prepare("UPDATE appeals SET letter = ?, updated_at = datetime('now') WHERE id = ? AND org_id = ?")
+    .run(letter, appeal.id, req.orgId);
+  const detail = appealDetail(appeal.id, req.orgId);
+  logActivity(req.orgId, appeal.claim_id, req.user.id, 'appeal_letter_edited',
+    `Appeal letter edited on claim ${detail ? detail.claim_number : appeal.claim_id}`);
+  auditLog(req, 'update', 'appeal_letter', appeal.id, detail ? detail.claim_number : null);
+  res.json(fullAppeal(appeal.id, req.orgId));
+});
+
+// --- Mark an appeal as submitted (deploy #98) ---
+// Records HOW and WHEN the letter actually left the building (nothing in
+// ClaimPaid transmits it — the submission pipe is not live). Sets the
+// follow-up that keeps the appeal in the work queue: the caller's date
+// when given, else +10 days.
+router.post('/:id/mark-submitted', canWrite, (req, res) => {
+  const appeal = db.prepare('SELECT * FROM appeals WHERE id = ? AND org_id = ?').get(req.params.id, req.orgId);
+  if (!appeal) return res.status(404).json({ error: 'Appeal not found' });
+  const { via, follow_up_date } = req.body || {};
+  if (!VALID_SUBMIT_CHANNELS.includes(via)) {
+    return res.status(400).json({ error: `via must be one of: ${VALID_SUBMIT_CHANNELS.join(', ')}` });
+  }
+  let followUp = follow_up_date || null;
+  if (followUp !== null && !/^\d{4}-\d{2}-\d{2}$/.test(followUp)) {
+    return res.status(400).json({ error: 'follow_up_date must be YYYY-MM-DD' });
+  }
+  if (!followUp) {
+    const d = new Date();
+    d.setDate(d.getDate() + 10);
+    followUp = d.toISOString().slice(0, 10);
+  }
+  db.prepare(`
+    UPDATE appeals SET status = 'submitted', submitted_via = ?, submitted_at = datetime('now'),
+      follow_up_date = ?, updated_at = datetime('now')
+    WHERE id = ? AND org_id = ?
+  `).run(via, followUp, appeal.id, req.orgId);
+  const detail = appealDetail(appeal.id, req.orgId);
+  logActivity(req.orgId, appeal.claim_id, req.user.id, 'appeal_submitted',
+    `Appeal on claim ${detail ? detail.claim_number : appeal.claim_id} marked submitted via ${via} — follow-up ${followUp}`);
+  auditLog(req, 'submit', 'appeal', appeal.id, detail ? detail.claim_number : null);
+  res.json(fullAppeal(appeal.id, req.orgId));
 });
 
 // --- Add a note to the timeline ---

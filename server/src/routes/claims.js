@@ -94,8 +94,9 @@ router.get('/template/csv', (req, res) => {
 
 router.get('/:id', (req, res) => {
   const row = db.prepare(`
-    SELECT c.*, p.name AS payer, p.type AS payer_type
+    SELECT c.*, p.name AS payer, p.type AS payer_type, ${FILING_SELECT}
     FROM claims c JOIN payers p ON p.id = c.payer_id
+    ${FILING_JOIN}
     WHERE c.id = ? AND c.org_id = ?
   `).get(req.params.id, req.orgId);
   if (!row) return res.status(404).json({ error: 'Claim not found' });
@@ -104,6 +105,28 @@ router.get('/:id', (req, res) => {
     FROM claim_activity ca LEFT JOIN users u ON u.id = ca.user_id
     WHERE ca.claim_id = ? AND ca.org_id = ?
     ORDER BY ca.created_at DESC LIMIT 30
+  `).all(req.params.id, req.orgId);
+  // Deploy #98: the shared claim-details modal needs the claim's linked
+  // records, not just its own columns — appeals (with letter/submission
+  // state) and the ERA lines that matched onto this claim (whose CAS
+  // adjustments carry the CARC codes behind a denial).
+  row.appeals = db.prepare(`
+    SELECT a.id, a.status, a.priority, a.follow_up_date, a.assigned_to,
+           a.submitted_via, a.submitted_at, a.created_at, a.updated_at,
+           (a.letter IS NOT NULL AND TRIM(a.letter) <> '') AS has_letter,
+           u.name AS assignee_name
+    FROM appeals a LEFT JOIN users u ON u.id = a.assigned_to
+    WHERE a.claim_id = ? AND a.org_id = ?
+    ORDER BY a.created_at DESC
+  `).all(req.params.id, req.orgId);
+  row.era_lines = db.prepare(`
+    SELECT l.id, l.era_id, l.clp_ref, l.patient_name, l.service_start, l.service_end,
+           l.status_code, l.billed, l.paid, l.patient_resp, l.allowed, l.adjustments,
+           l.total_adjustments, l.denial_reason, l.post_status, l.posted_at,
+           r.check_number, r.pay_date, r.payer_name AS era_payer
+    FROM era_claim_lines l JOIN era_remittances r ON r.id = l.era_id
+    WHERE l.match_claim_id = ? AND l.org_id = ?
+    ORDER BY l.id DESC LIMIT 10
   `).all(req.params.id, req.orgId);
   auditLog(req, 'view', 'claim', req.params.id, row.claim_number);
   res.json(row);

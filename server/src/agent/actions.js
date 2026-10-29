@@ -87,23 +87,42 @@ function executeDraftAppeal(req, action) {
   // Save through the EXISTING appeals flow: an appeal record in its initial
   // 'open' state (the pre-submission draft state — appeals only become
   // 'submitted' by an explicit user action in Denial Appeals) with the
-  // letter preserved on the appeal timeline as a note. Nothing is filed or
-  // sent to the payer. If an appeal already exists for the claim, the draft
-  // letter attaches to it instead of duplicating the record.
-  let appeal = db.prepare('SELECT id FROM appeals WHERE claim_id = ? AND org_id = ?')
+  // letter stored ON the appeal (appeals.letter, deploy #98) where the
+  // Denial Appeals letter panel renders it with Edit / Print / Mark as
+  // submitted. Nothing is filed or sent to the payer. If an appeal already
+  // exists for the claim, the draft attaches to it instead of duplicating
+  // the record; the notes timeline gets at most ONE short system line —
+  // never the full letter (pre-#98 behavior, repaired by the
+  // appeal-letter-repair-98 migration).
+  let appeal = db.prepare('SELECT id, letter FROM appeals WHERE claim_id = ? AND org_id = ?')
     .get(claim.id, action.org_id);
+  let letterLocation = 'appeal';
   if (!appeal) {
     const info = db.prepare(`
-      INSERT INTO appeals (org_id, claim_id, assigned_to, status, priority)
-      VALUES (?, ?, ?, 'open', 'medium')
-    `).run(action.org_id, claim.id, action.user_id);
-    appeal = { id: Number(info.lastInsertRowid) };
+      INSERT INTO appeals (org_id, claim_id, assigned_to, status, priority, letter)
+      VALUES (?, ?, ?, 'open', 'medium', ?)
+    `).run(action.org_id, claim.id, action.user_id, payload.letter);
+    appeal = { id: Number(info.lastInsertRowid), letter: payload.letter };
+    db.prepare('INSERT INTO appeal_notes (appeal_id, user_id, note) VALUES (?, ?, ?)')
+      .run(appeal.id, req.user.id, 'Appeal draft saved via agent approval — the letter is in the letter panel.');
+  } else if (!appeal.letter || !appeal.letter.trim()) {
+    db.prepare('UPDATE appeals SET letter = ? WHERE id = ?').run(payload.letter, appeal.id);
+    db.prepare('INSERT INTO appeal_notes (appeal_id, user_id, note) VALUES (?, ?, ?)')
+      .run(appeal.id, req.user.id, 'Appeal draft saved via agent approval — the letter is in the letter panel.');
+  } else if (appeal.letter.trim() !== payload.letter.trim()) {
+    // The appeal already carries a letter (a person's own, or an earlier
+    // approved draft). Keep it as THE letter; preserve this new draft as a
+    // clearly-titled note so nothing is silently overwritten or lost.
+    db.prepare('INSERT INTO appeal_notes (appeal_id, user_id, note) VALUES (?, ?, ?)')
+      .run(appeal.id, req.user.id, `Additional draft letter (agent)\n\n${payload.letter}`);
+    letterLocation = 'additional_note';
   }
-  db.prepare('INSERT INTO appeal_notes (appeal_id, user_id, note) VALUES (?, ?, ?)')
-    .run(appeal.id, req.user.id, payload.letter);
   logActivity(action.org_id, claim.id, req.user.id, 'appeal_drafted',
     `Appeal drafted by the agent and approved — saved on claim ${claim.claim_number} as a draft (not submitted)`);
-  return { appeal_id: appeal.id, appeal_status: 'open', letter_saved_as_note: true };
+  return {
+    appeal_id: appeal.id, appeal_status: 'open',
+    letter_saved_as_note: letterLocation === 'additional_note', letter_location: letterLocation,
+  };
 }
 
 // --- apply_codes (Phase 3): apply the human-approved Valid code set ---

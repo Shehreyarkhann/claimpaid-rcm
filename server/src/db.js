@@ -1006,6 +1006,14 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_agent_audits_org ON agent_audits(org_id, created_at);
   `);
   if (!columnExists('claims', 'patient_paid_amount')) db.exec('ALTER TABLE claims ADD COLUMN patient_paid_amount REAL NOT NULL DEFAULT 0');
+  // ---- Appeal letter as a first-class object (deploy #98) ----
+  // Until now the appeals table had nowhere to PUT a letter, so the agent
+  // executor preserved approved drafts by dumping the full letter into
+  // appeal_notes as a comment — uneditable, unprintable, with no record of
+  // submission. The letter, and its submission stamp, live on the appeal.
+  if (!columnExists('appeals', 'letter')) db.exec('ALTER TABLE appeals ADD COLUMN letter TEXT');
+  if (!columnExists('appeals', 'submitted_at')) db.exec('ALTER TABLE appeals ADD COLUMN submitted_at TEXT');
+  if (!columnExists('appeals', 'submitted_via')) db.exec('ALTER TABLE appeals ADD COLUMN submitted_via TEXT');
   // ---- Market-launch cleanup (deploy #52, one-time) ----
   // Removes pre-launch demo/junk data: the seeded Demo Billing Co. org, the
   // early test orgs (abc, asd, AB Recoveries), the demo login, demo-EHR
@@ -1056,6 +1064,54 @@ function initSchema() {
     console.error('[migration] demo-junk-cleanup-52 FAILED (will retry next boot):', e.message);
    } finally {
     try { db.exec('PRAGMA foreign_keys = ON'); } catch {}
+   }
+  }
+  // ---- Appeal-letter repair (deploy #98, one-time) ----
+  // Moves full letters that pre-#98 executor runs dumped into appeal_notes
+  // back onto their appeal (appeals.letter), replacing the dumped note with
+  // a one-line system note. CONSERVATIVE by design: a note is only moved
+  // when it is clearly a letter — either it exactly matches an agent draft
+  // letter stored in agent_actions for the same claim, or it is long
+  // (> 400 chars) and carries the letter's structural markers (a "Re:" line
+  // AND a "Dear " salutation). Anything ambiguous is left exactly as-is and
+  // counted. Runs once (marker row); safe to re-run manually after clearing
+  // the marker — appeals that already have a letter are never touched.
+  if (!db.prepare('SELECT name FROM data_migrations WHERE name = ?').get('appeal-letter-repair-98')) {
+   try {
+    let moved = 0, uncertain = 0;
+    const letterless = db.prepare(
+      "SELECT id, org_id, claim_id FROM appeals WHERE letter IS NULL OR TRIM(letter) = ''"
+    ).all();
+    for (const a of letterless) {
+      const notes = db.prepare('SELECT id, note FROM appeal_notes WHERE appeal_id = ?').all(a.id)
+        .filter((n) => (n.note || '').length > 400);
+      if (!notes.length) continue;
+      // Strongest evidence: the note IS an agent draft letter for this claim.
+      const payloadLetters = new Set();
+      const acts = db.prepare(
+        "SELECT payload FROM agent_actions WHERE org_id = ? AND kind = 'draft_appeal'"
+      ).all(a.org_id);
+      for (const act of acts) {
+        try {
+          const p = JSON.parse(act.payload || '{}');
+          if (p.claim_id === a.claim_id && typeof p.letter === 'string' && p.letter) payloadLetters.add(p.letter);
+        } catch { /* unparseable payload — not evidence */ }
+      }
+      const isLetter = (t) => payloadLetters.has(t)
+        || (/(^|\n)\s*Re:/.test(t) && /\nDear /.test(`\n${t}`));
+      const candidates = notes.filter((n) => isLetter(n.note));
+      if (!candidates.length) { uncertain++; continue; }
+      candidates.sort((x, y) => y.note.length - x.note.length);
+      const chosen = candidates[0];
+      db.prepare('UPDATE appeals SET letter = ? WHERE id = ?').run(chosen.note, a.id);
+      db.prepare('UPDATE appeal_notes SET note = ? WHERE id = ?')
+        .run('Appeal letter moved to the letter panel — it was previously saved here as a note.', chosen.id);
+      moved++;
+    }
+    db.prepare("INSERT INTO data_migrations (name) VALUES ('appeal-letter-repair-98')").run();
+    console.log(`[migration] appeal-letter-repair-98: moved ${moved} letter(s) from notes into appeals.letter; ${uncertain} appeal(s) had long notes that did not clearly read as letters and were left untouched`);
+   } catch (e) {
+    console.error('[migration] appeal-letter-repair-98 FAILED (will retry next boot):', e.message);
    }
   }
 }

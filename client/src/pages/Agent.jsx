@@ -3,6 +3,7 @@ import { api, fmtMoney2 } from '../api';
 import { PageHeader, EmptyState, Skeleton, useToast } from '../components/ui';
 import DocumentIntake from '../components/DocumentIntake';
 import AuditRunner from '../components/AuditReport';
+import ClaimDetailsModal from '../components/ClaimDetailsModal';
 
 // ClaimPaid Agent (Phase 1) — the in-app RCM agent. It reads the queue with
 // tools, drafts work, and proposes actions as approval cards; nothing is
@@ -41,7 +42,7 @@ const KIND_META = {
   draft_appeal: {
     pendingNote: 'The agent drafted this — nothing has been saved. Approving saves it to the claim as a draft appeal (never submitted to the payer).',
     approveLabel: 'Approve & save draft',
-    executedNote: (a) => (a.result?.appeal_id ? 'Saved as a draft appeal on the claim — find it in Denial Appeals.' : null),
+    executedNote: (a) => (a.result?.appeal_id ? 'Saved as an appeal draft on the claim — open it in Denial Appeals to edit, print, or mark submitted.' : null),
   },
   apply_codes: {
     pendingNote: 'The agent proposed these codes from the quote-verified coding engine — nothing has been applied. Approving applies ONLY the Valid codes listed to the claim; Review-status codes are never applied.',
@@ -68,7 +69,7 @@ const KIND_META = {
   },
 };
 
-export function ActionCard({ action, busy, onDecide }) {
+export function ActionCard({ action, busy, onDecide, onShowClaimDetails }) {
   const meta = STATUS_META[action.status] || STATUS_META.pending;
   const kind = KIND_META[action.kind] || KIND_META.draft_appeal;
   const decided = action.status !== 'pending';
@@ -119,6 +120,13 @@ export function ActionCard({ action, busy, onDecide }) {
           </button>
         </div>
       )}
+      {action.payload?.claim_id && onShowClaimDetails && (
+        <div className="mt-2.5">
+          <button type="button" className="btn btn-outline btn-sm" onClick={() => onShowClaimDetails(action.payload.claim_id)}>
+            Claim details
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -133,7 +141,7 @@ export function pendingDraftFor(pendingActions, claimId) {
     && a.payload && a.payload.claim_id === claimId) || null;
 }
 
-function ClaimRowActions({ claimId, denied, pendingActions, proposingId, onOpenClaim, onProposeDraft, onScrollApprovals }) {
+function ClaimRowActions({ claimId, denied, pendingActions, proposingId, onOpenClaim, onProposeDraft, onScrollApprovals, onShowDetails }) {
   if (claimId == null) return null;
   const waiting = denied ? pendingDraftFor(pendingActions, claimId) : null;
   return (
@@ -146,6 +154,9 @@ function ClaimRowActions({ claimId, denied, pendingActions, proposingId, onOpenC
           {proposingId === claimId ? 'Drafting…' : 'Draft appeal'}
         </button>
       ))}
+      {onShowDetails && (
+        <button type="button" className="btn btn-outline btn-sm" onClick={() => onShowDetails(claimId)}>Details</button>
+      )}
       {onOpenClaim && (
         <button type="button" className="btn btn-outline btn-sm" onClick={() => onOpenClaim(claimId)}>Open claim</button>
       )}
@@ -158,7 +169,7 @@ function ClaimRowActions({ claimId, denied, pendingActions, proposingId, onOpenC
 // wizard-proposed and intake cards ALL render here and only here, so a
 // pending draft can never be counted by the alerts strip yet visible
 // nowhere (the previous-day brief / conversation-less orphan bug).
-function ApprovalsSection({ actions, decidingId, onDecide }) {
+function ApprovalsSection({ actions, decidingId, onDecide, onShowClaimDetails }) {
   if (!actions.length) return null;
   const pendingCount = actions.filter((a) => a.status === 'pending').length;
   return (
@@ -172,14 +183,14 @@ function ApprovalsSection({ actions, decidingId, onDecide }) {
       </div>
       <div className="space-y-3 mt-4">
         {actions.map((a) => (
-          <ActionCard key={a.id} action={a} busy={decidingId === a.id} onDecide={onDecide} />
+          <ActionCard key={a.id} action={a} busy={decidingId === a.id} onDecide={onDecide} onShowClaimDetails={onShowClaimDetails} />
         ))}
       </div>
     </div>
   );
 }
 
-function BriefSection({ brief, pendingActions, onOpenClaim, onProposeDraft, proposingId, onScrollApprovals }) {
+function BriefSection({ brief, pendingActions, onOpenClaim, onProposeDraft, proposingId, onScrollApprovals, onShowDetails }) {
   const w = brief.while_away || {};
   const tiles = [
     { label: 'New denials', value: w.new_denials ? w.new_denials.count : 0 },
@@ -248,6 +259,7 @@ function BriefSection({ brief, pendingActions, onOpenClaim, onProposeDraft, prop
                   onOpenClaim={onOpenClaim}
                   onProposeDraft={onProposeDraft}
                   onScrollApprovals={onScrollApprovals}
+                  onShowDetails={onShowDetails}
                 />
               </li>
             ))}
@@ -261,7 +273,7 @@ function BriefSection({ brief, pendingActions, onOpenClaim, onProposeDraft, prop
 // Manager's agent (Phase 5, WS3) — rendered ONLY when the owner-gated
 // endpoint succeeds. Members get a 403 and this section never mounts;
 // there is no client-side role check to get wrong.
-function TeamSection() {
+function TeamSection({ onShowDetails }) {
   const [data, setData] = useState(null);
   useEffect(() => {
     let live = true;
@@ -313,9 +325,14 @@ function TeamSection() {
           <div className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-2">Reassignment suggestions</div>
           <div className="space-y-2">
             {data.suggestions.map((s) => (
-              <div key={s.claim_id} className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm">
-                <span className="font-medium text-stone-800">Move claim {s.claim_number}</span>
-                <span className="text-stone-600"> ({fmtMoney2(s.balance)}, filing deadline in {s.days_left}d) from <b>{s.from_name}</b> to <b>{s.to_name}</b> — {s.reason}</span>
+              <div key={s.claim_id} className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm flex items-center gap-2">
+                <span className="min-w-0 flex-1">
+                  <span className="font-medium text-stone-800">Move claim {s.claim_number}</span>
+                  <span className="text-stone-600"> ({fmtMoney2(s.balance)}, filing deadline in {s.days_left}d) from <b>{s.from_name}</b> to <b>{s.to_name}</b> — {s.reason}</span>
+                </span>
+                {onShowDetails && (
+                  <button type="button" className="btn btn-outline btn-sm shrink-0" onClick={() => onShowDetails(s.claim_id)}>Details</button>
+                )}
               </div>
             ))}
           </div>
@@ -328,10 +345,13 @@ function TeamSection() {
           <div className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-2">Stalled — no activity in 7+ days</div>
           <div className="space-y-1.5">
             {data.stalled.slice(0, 10).map((c) => (
-              <div key={c.claim_id} className="flex items-baseline gap-2 text-sm">
+              <div key={c.claim_id} className="flex items-center gap-2 text-sm">
                 <span className="font-medium text-stone-800">{c.claim_number}</span>
                 <span className="text-stone-500 truncate">{c.patient_name} · {c.payer} · idle {c.idle_days}d{c.owner_name ? ` · with ${c.owner_name}` : ' · unassigned'}</span>
                 <span className="ml-auto shrink-0 font-medium text-stone-700">{fmtMoney2(c.balance)}</span>
+                {onShowDetails && (
+                  <button type="button" className="btn btn-outline btn-sm shrink-0" onClick={() => onShowDetails(c.claim_id)}>Details</button>
+                )}
               </div>
             ))}
           </div>
@@ -358,6 +378,8 @@ export default function Agent({ onUpgrade, onOpenClaim, onOpenEra, initialSectio
   const [sending, setSending] = useState(false);
   const [decidingId, setDecidingId] = useState(null);
   const [showAudit, setShowAudit] = useState(false);
+  const [detailsClaimId, setDetailsClaimId] = useState(null);
+  const showClaimDetails = useCallback((claimId) => { if (claimId != null) setDetailsClaimId(claimId); }, []);
   // Deploy #89: the 402 AI-use cap gets a persistent in-page upgrade
   // notice (the server's plan-limit body), not a vanishing error toast.
   const [quotaNotice, setQuotaNotice] = useState(null);
@@ -661,6 +683,7 @@ export default function Agent({ onUpgrade, onOpenClaim, onOpenEra, initialSectio
                           onOpenClaim={onOpenClaim}
                           onProposeDraft={proposeDraft}
                           onScrollApprovals={scrollToApprovals}
+                          onShowDetails={showClaimDetails}
                         />
                       </div>
                     ))}
@@ -688,6 +711,7 @@ export default function Agent({ onUpgrade, onOpenClaim, onOpenEra, initialSectio
                           onOpenClaim={onOpenClaim}
                           onProposeDraft={proposeDraft}
                           onScrollApprovals={scrollToApprovals}
+                          onShowDetails={showClaimDetails}
                         />
                       </div>
                     ))}
@@ -717,7 +741,7 @@ export default function Agent({ onUpgrade, onOpenClaim, onOpenEra, initialSectio
           )}
         </div>
       )}
-      <ApprovalsSection actions={pendingActions} decidingId={decidingId} onDecide={decidePending} />
+      <ApprovalsSection actions={pendingActions} decidingId={decidingId} onDecide={decidePending} onShowClaimDetails={showClaimDetails} />
       {brief && (
         <BriefSection
           brief={brief}
@@ -726,6 +750,7 @@ export default function Agent({ onUpgrade, onOpenClaim, onOpenEra, initialSectio
           onProposeDraft={proposeDraft}
           proposingId={proposingId}
           onScrollApprovals={scrollToApprovals}
+          onShowDetails={showClaimDetails}
         />
       )}
       <DocumentIntake ActionCard={ActionCard} />
@@ -776,7 +801,7 @@ export default function Agent({ onUpgrade, onOpenClaim, onOpenEra, initialSectio
               </div>
             ))}
             {actions.map((a) => (
-              <ActionCard key={a.id} action={a} busy={decidingId === a.id} onDecide={decide} />
+              <ActionCard key={a.id} action={a} busy={decidingId === a.id} onDecide={decide} onShowClaimDetails={showClaimDetails} />
             ))}
             {sending && (
               <div className="flex justify-start">
@@ -820,8 +845,11 @@ export default function Agent({ onUpgrade, onOpenClaim, onOpenEra, initialSectio
           </div>
         </div>
       </div>
-      <TeamSection />
+      <TeamSection onShowDetails={showClaimDetails} />
       {showAudit && <AuditRunner onClose={() => setShowAudit(false)} />}
+      {detailsClaimId && (
+        <ClaimDetailsModal claimId={detailsClaimId} onClose={() => setDetailsClaimId(null)} />
+      )}
     </div>
   );
 }

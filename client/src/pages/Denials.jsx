@@ -3,6 +3,11 @@ import { useAuth, authFetch } from '../auth';
 import { api, fmtMoney2, fmtDate } from '../api';
 import { Modal, EmptyState, PageHeader, Skeleton } from '../components/ui';
 import { useToast } from '../components/ui';
+import ClaimDetailsModal from '../components/ClaimDetailsModal';
+
+const SUBMIT_VIA = {
+  payer_portal: 'Payer portal', fax: 'Fax', mail: 'Mail', clearinghouse: 'Clearinghouse',
+};
 
 const STATUS_META = {
   open: { label: 'Open', badge: 'badge-slate' },
@@ -19,7 +24,7 @@ const PRIORITY_META = {
   low: { label: 'Low', badge: 'badge-slate' },
 };
 
-function AppealDrawer({ appealId, onClose, onChanged, team }) {
+function AppealDrawer({ appealId, onClose, onChanged, team, onShowDetails }) {
   const { user } = useAuth();
   const toast = useToast();
   const [appeal, setAppeal] = useState(null);
@@ -29,6 +34,17 @@ function AppealDrawer({ appealId, onClose, onChanged, team }) {
   const [showAuths, setShowAuths] = useState(false);
   const [letter, setLetter] = useState(null);
   const [letterBusy, setLetterBusy] = useState(false);
+  // Deploy #98: the SAVED letter (appeals.letter) — editor + submit form.
+  const [editingLetter, setEditingLetter] = useState(false);
+  const [letterText, setLetterText] = useState('');
+  const [letterSaving, setLetterSaving] = useState(false);
+  const [showSubmit, setShowSubmit] = useState(false);
+  const [submitVia, setSubmitVia] = useState('payer_portal');
+  const [submitFollowUp, setSubmitFollowUp] = useState('');
+  const [submitBusy, setSubmitBusy] = useState(false);
+  const canWrite = ['owner', 'biller'].includes(user?.role);
+
+  useEffect(() => { setEditingLetter(false); setShowSubmit(false); }, [appealId]);
 
   const load = () => authFetch(`/api/appeals/${appealId}`).then((r) => r.json()).then(setAppeal);
   useEffect(() => { load(); }, [appealId]);
@@ -76,6 +92,53 @@ function AppealDrawer({ appealId, onClose, onChanged, team }) {
     finally { setLetterBusy(false); }
   };
 
+  // Deploy #98: saved-letter actions — edit in place, print the document,
+  // and record the real-world submission (channel + follow-up).
+  const saveLetter = async () => {
+    setLetterSaving(true);
+    try {
+      const res = await authFetch(`/api/appeals/${appealId}/letter`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ letter: letterText }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setAppeal(await res.json());
+      setEditingLetter(false);
+      toast.success('Letter saved');
+      onChanged();
+    } catch (e) { toast.error(e.message); }
+    finally { setLetterSaving(false); }
+  };
+
+  const printSavedLetter = () => {
+    const w = window.open('', '_blank');
+    w.document.write(`<html><head><title>Appeal letter — ${appeal.claim_number}</title><style>body{font-family:Georgia,serif;max-width:700px;margin:40px auto;padding:0 24px;line-height:1.7;white-space:pre-wrap}</style></head><body>${(appeal.letter || '').replace(/</g, '&lt;')}</body></html>`);
+    w.document.close(); w.print();
+  };
+
+  const openSubmitForm = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 10);
+    setSubmitFollowUp(d.toISOString().slice(0, 10));
+    setShowSubmit(true);
+  };
+
+  const markSubmitted = async () => {
+    setSubmitBusy(true);
+    try {
+      const res = await authFetch(`/api/appeals/${appealId}/mark-submitted`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ via: submitVia, follow_up_date: submitFollowUp || undefined }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setAppeal(await res.json());
+      setShowSubmit(false);
+      toast.success(`Marked submitted via ${SUBMIT_VIA[submitVia]} — follow-up set`);
+      onChanged();
+    } catch (e) { toast.error(e.message); }
+    finally { setSubmitBusy(false); }
+  };
+
   if (!appeal) return <Modal onClose={onClose}><div className="p-8"><Skeleton className="h-64" /></div></Modal>;
 
   const sm = STATUS_META[appeal.status];
@@ -100,7 +163,85 @@ function AppealDrawer({ appealId, onClose, onChanged, team }) {
             className="btn btn-outline !py-1.5 !text-xs !ml-auto">
             {letterBusy ? 'Drafting…' : '✉️ Generate appeal letter'}
           </button>
+          {onShowDetails && appeal.claim_id && (
+            <button onClick={() => onShowDetails(appeal.claim_id)}
+              className="btn btn-outline !py-1.5 !text-xs">
+              Claim details
+            </button>
+          )}
         </div>
+
+        {/* Deploy #98: the SAVED letter — a document with its own actions,
+            not a comment in the notes timeline. */}
+        {appeal.letter && (
+          <div className="mb-6 border border-stone-200 rounded-2xl overflow-hidden">
+            <div className="bg-stone-900 text-white px-5 py-3 flex flex-wrap items-center gap-2">
+              <div>
+                <div className="font-semibold text-sm">Appeal letter</div>
+                <div className="text-[11px] text-stone-400">
+                  {appeal.status === 'submitted' && appeal.submitted_via
+                    ? `Submitted via ${SUBMIT_VIA[appeal.submitted_via] || appeal.submitted_via}${appeal.submitted_at ? ` · ${new Date(String(appeal.submitted_at).replace(' ', 'T') + 'Z').toLocaleDateString()}` : ''}`
+                    : 'Saved on this appeal — edit it, print it, then mark it submitted once it has been sent'}
+                </div>
+              </div>
+              {appeal.status === 'open' && <span className="badge badge-amber">Appeal drafted — not submitted</span>}
+              <div className="flex gap-2 ml-auto">
+                {editingLetter ? (
+                  <>
+                    <button onClick={saveLetter} disabled={letterSaving || !letterText.trim()}
+                      className="btn !bg-emerald-500 hover:!bg-emerald-600 !text-white !py-1.5 !text-xs">
+                      {letterSaving ? 'Saving…' : 'Save letter'}
+                    </button>
+                    <button onClick={() => setEditingLetter(false)}
+                      className="btn !bg-white/10 hover:!bg-white/20 !text-white !py-1.5 !text-xs">Cancel</button>
+                  </>
+                ) : (
+                  <>
+                    {canWrite && (
+                      <button onClick={() => { setLetterText(appeal.letter); setEditingLetter(true); }}
+                        className="btn !bg-white/10 hover:!bg-white/20 !text-white !py-1.5 !text-xs">Edit letter</button>
+                    )}
+                    <button onClick={printSavedLetter}
+                      className="btn !bg-emerald-500 hover:!bg-emerald-600 !text-white !py-1.5 !text-xs">Print letter</button>
+                    {canWrite && appeal.status !== 'submitted' && (
+                      <button onClick={() => (showSubmit ? setShowSubmit(false) : openSubmitForm())}
+                        className="btn !bg-white/10 hover:!bg-white/20 !text-white !py-1.5 !text-xs">Mark as submitted</button>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+            {editingLetter ? (
+              <div className="bg-white px-5 py-4">
+                <textarea className="input font-serif !text-[13px] leading-relaxed" rows={16}
+                  value={letterText} onChange={(e) => setLetterText(e.target.value)} />
+                <div className="text-[11px] text-stone-400 mt-2">Saving replaces the letter on this appeal. The previous text is not kept — copy it first if you need it.</div>
+              </div>
+            ) : (
+              <div className="bg-white px-6 py-5 max-h-[320px] overflow-y-auto">
+                <pre className="whitespace-pre-wrap font-serif text-[13px] leading-relaxed text-stone-700">{appeal.letter}</pre>
+              </div>
+            )}
+            {showSubmit && !editingLetter && (
+              <div className="bg-[#FAF5EB] border-t border-stone-200 px-5 py-4 flex flex-wrap items-end gap-3">
+                <div>
+                  <label className="label">Sent via</label>
+                  <select className="input !w-auto" value={submitVia} onChange={(e) => setSubmitVia(e.target.value)}>
+                    {Object.entries(SUBMIT_VIA).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Follow up on</label>
+                  <input type="date" className="input !w-auto" value={submitFollowUp} onChange={(e) => setSubmitFollowUp(e.target.value)} />
+                </div>
+                <button className="btn btn-primary !py-2" disabled={submitBusy} onClick={markSubmitted}>
+                  {submitBusy ? 'Recording…' : 'Record submission'}
+                </button>
+                <span className="text-xs text-stone-500">ClaimPaid doesn't transmit the appeal — this records how you sent it and puts the follow-up in the queue.</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {letter && (
           <div className="mb-6 border border-stone-200 rounded-2xl overflow-hidden">
@@ -279,7 +420,7 @@ function AppealDrawer({ appealId, onClose, onChanged, team }) {
   );
 }
 
-function StartAppealModal({ denials, preselectClaimId, onClose, onStarted, team }) {
+function StartAppealModal({ denials, preselectClaimId, onClose, onStarted, team, onShowDetails }) {
   const toast = useToast();
   const [selected, setSelected] = useState(
     preselectClaimId ? denials.find((d) => d.claim_id === preselectClaimId) || null : null
@@ -322,7 +463,14 @@ function StartAppealModal({ denials, preselectClaimId, onClose, onStarted, team 
                 <tr key={d.claim_id} onClick={() => setSelected(d)}
                   className={`cursor-pointer ${selected?.claim_id === d.claim_id ? '!bg-emerald-50' : ''}`}>
                   <td><input type="radio" checked={selected?.claim_id === d.claim_id} onChange={() => setSelected(d)} /></td>
-                  <td className="font-mono text-xs">{d.claim_number}</td>
+                  <td className="font-mono text-xs">{d.claim_number}
+                    {onShowDetails && (
+                      <button className="ml-2 font-sans text-[11px] font-semibold text-emerald-700 hover:underline"
+                        onClick={(e) => { e.stopPropagation(); onShowDetails(d.claim_id); }}>
+                        Details
+                      </button>
+                    )}
+                  </td>
                   <td>{d.patient_name}</td>
                   <td>{d.payer}</td>
                   <td className="text-xs text-stone-500">{d.denial_reason}</td>
@@ -368,6 +516,7 @@ export default function Denials({ initialAppealId, initialStartAppealClaimId, on
   const [drawerId, setDrawerId] = useState(null);
   const [showStart, setShowStart] = useState(false);
   const [preselectClaimId, setPreselectClaimId] = useState(null);
+  const [detailsClaimId, setDetailsClaimId] = useState(null);
 
   useEffect(() => {
     if (initialAppealId) { setDrawerId(initialAppealId); onConsumed?.(); }
@@ -404,8 +553,9 @@ export default function Denials({ initialAppealId, initialStartAppealClaimId, on
 
   return (
     <div>
-      {drawerId && <AppealDrawer appealId={drawerId} onClose={() => setDrawerId(null)} onChanged={load} team={team} />}
-      {showStart && <StartAppealModal denials={unworked} preselectClaimId={preselectClaimId} onClose={() => { setShowStart(false); setPreselectClaimId(null); }} onStarted={() => { setShowStart(false); setPreselectClaimId(null); setTab('all'); load(); }} team={team} />}
+      {drawerId && <AppealDrawer appealId={drawerId} onClose={() => setDrawerId(null)} onChanged={load} team={team} onShowDetails={setDetailsClaimId} />}
+      {showStart && <StartAppealModal denials={unworked} preselectClaimId={preselectClaimId} onClose={() => { setShowStart(false); setPreselectClaimId(null); }} onStarted={() => { setShowStart(false); setPreselectClaimId(null); setTab('all'); load(); }} team={team} onShowDetails={setDetailsClaimId} />}
+      {detailsClaimId && <ClaimDetailsModal claimId={detailsClaimId} onClose={() => setDetailsClaimId(null)} />}
 
       <PageHeader
         title="Denial Appeals"
@@ -459,7 +609,11 @@ export default function Denials({ initialAppealId, initialStartAppealClaimId, on
                       <td className={`text-xs ${overdue ? 'text-rose-600 font-semibold' : 'text-stone-500'}`}>
                         {a.follow_up_date ? fmtDate(a.follow_up_date) : '—'}{overdue ? ' ⚠' : ''}
                       </td>
-                      <td><span className={`badge ${STATUS_META[a.status].badge}`}>{STATUS_META[a.status].label}</span></td>
+                      <td>
+                        <span className={`badge ${STATUS_META[a.status].badge}`}>{STATUS_META[a.status].label}</span>
+                        {!!a.has_letter && a.status === 'open' && <div className="text-[11px] text-amber-700 font-medium mt-1">📝 Drafted — not submitted</div>}
+                        {a.status === 'submitted' && a.submitted_via && <div className="text-[11px] text-stone-400 mt-1">via {SUBMIT_VIA[a.submitted_via] || a.submitted_via}</div>}
+                      </td>
                     </tr>
                   );
                 })}

@@ -174,7 +174,8 @@ function makeDom() {
     const approveBtn = await until(() => [...section.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Approve & save draft'), 9000, 'approve button');
     approveBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
     await until(() => section.textContent.includes('Approved · saved'), 9000, 'card decided state');
-    if (!section.textContent.includes('Saved as a draft appeal on the claim')) fail('executed note missing after approval');
+    if (!section.textContent.includes('Saved as an appeal draft on the claim')) fail('executed note missing after approval');
+    if (!section.textContent.includes('open it in Denial Appeals to edit, print, or mark submitted')) fail('executed note should point at the letter actions (deploy #98 copy)');
     console.log('  PASS approving in the section flips the card to Approved · saved in place');
 
     if (errs.length) fail('React errors during render: ' + errs.slice(0, 3).join(' || ').slice(0, 400));

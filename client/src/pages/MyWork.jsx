@@ -4,6 +4,7 @@ import { PageHeader, Skeleton, EmptyState } from '../components/ui';
 import { useToast } from '../components/ui';
 import RescueWizard from '../components/RescueWizard';
 import ImportWizard from '../components/ImportWizard';
+import ClaimDetailsModal from '../components/ClaimDetailsModal';
 
 const TYPE_META = {
   followup: { icon: '⏰', label: 'Follow-up', color: 'border-l-amber-400', bg: 'bg-amber-50' },
@@ -19,6 +20,7 @@ export default function MyWork({ onOpenAppeal, onOpenClaim, onStartAppeal, onRev
   const [doneKeys, setDoneKeys] = useState(new Set());
   const [rescueClaimId, setRescueClaimId] = useState(null);
   const [showImport, setShowImport] = useState(false);
+  const [detailsClaimId, setDetailsClaimId] = useState(null);
 
   const load = () => api.worklist(scope).then(setData).catch((e) => toast.error(e.message));
   useEffect(() => { load(); }, [scope]);
@@ -114,6 +116,11 @@ export default function MyWork({ onOpenAppeal, onOpenClaim, onStartAppeal, onRev
                     <button onClick={() => handleAction(item)} className="btn btn-primary !py-2 !text-[13px]">
                       {item.action.label} →
                     </button>
+                    {item.claim_id && (
+                      <button onClick={() => setDetailsClaimId(item.claim_id)} className="btn btn-outline !py-1.5 !text-xs">
+                        Claim details
+                      </button>
+                    )}
                     {item.type === 'denial' && item.claim_id && (
                       <button onClick={() => setRescueClaimId(item.claim_id)} className="btn btn-dark !py-1.5 !text-xs">
                         🛟 Rescue
@@ -137,6 +144,13 @@ export default function MyWork({ onOpenAppeal, onOpenClaim, onStartAppeal, onRev
       )}
       {rescueClaimId && (
         <RescueWizard claimId={rescueClaimId} onClose={() => setRescueClaimId(null)} onReviewDrafts={onReviewAgentDrafts} />
+      )}
+      {detailsClaimId && (
+        <ClaimDetailsModal
+          claimId={detailsClaimId}
+          onClose={() => setDetailsClaimId(null)}
+          onOpenAppeal={onOpenAppeal ? (appealId) => { setDetailsClaimId(null); onOpenAppeal(appealId); } : undefined}
+        />
       )}
       {showImport && (
         <ImportWizard onClose={() => setShowImport(false)} onImported={load} />

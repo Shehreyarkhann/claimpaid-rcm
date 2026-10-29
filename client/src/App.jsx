@@ -270,6 +270,7 @@ function Workspace() {
       {page === 'dashboard' && <Dashboard goDenials={() => go('denials')} />}
       {page === 'claims' && <Claims initialClaimId={deepLink?.claimId} onConsumed={() => setDeepLink(null)}
         onReviewAgentDrafts={() => go('agent', { agentSection: 'approvals' })}
+        onOpenAppeal={(appealId) => go('denials', { appealId })}
         onCheckEligibility={(claim) => go('elig', { prefill: { payerId: claim.payer_id, serviceDate: claim.service_date, patientName: claim.patient_name } })} />}
       {page === 'reports' && <Reports />}
       {page === 'playbook' && <Playbook />}

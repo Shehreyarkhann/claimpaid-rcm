@@ -208,8 +208,14 @@ async function api(base, method, p, body, token) {
     const appeal = raw.prepare('SELECT * FROM appeals WHERE claim_id = ?').get(claim1);
     check('(c) appeal row now exists', !!appeal);
     check("(c) appeal is a draft ('open', never 'submitted')", !!appeal && appeal.status === 'open', appeal && appeal.status);
+    // Deploy #98: the letter lives on appeals.letter, NEVER in the notes
+    // timeline (the old check asserted the defective dump-into-notes
+    // behavior). The timeline gets only the one-line system note.
+    check('(c) letter saved on appeals.letter', !!appeal && typeof appeal.letter === 'string' && appeal.letter.includes('CLM-1001'),
+      appeal ? String(appeal.letter || '').slice(0, 100) : 'no appeal');
     const note = appeal ? raw.prepare('SELECT note FROM appeal_notes WHERE appeal_id = ?').get(appeal.id) : null;
-    check('(c) letter saved on the appeal timeline', !!note && note.note.includes('CLM-1001'), note ? note.note.slice(0, 100) : 'no note');
+    check('(c) timeline holds only the short system note', !!note && note.note.includes('letter panel') && !note.note.includes('CLM-1001'),
+      note ? note.note.slice(0, 100) : 'no note');
     const auditActs = raw.prepare("SELECT action FROM audit_log WHERE resource_type = 'agent_action' AND resource_id = ? ORDER BY id").all(String(action1.id)).map((r) => r.action);
     check('(c) audit rows for approve + execute', auditActs.includes('agent_action_approve') && auditActs.includes('agent_action_execute'), auditActs.join(','));
     check('(c) action result carries the appeal id', !!(appr.data.action.result && appr.data.action.result.appeal_id === (appeal && appeal.id)));
