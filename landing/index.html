@@ -130,11 +130,7 @@ h1 .w{display:inline-block;opacity:0;animation:wordUp .7s cubic-bezier(.22,1,.36
 .hero-shot .shot-bar span{margin-left:10px;font-size:12.5px;color:var(--mut);font-weight:600;letter-spacing:.3px}
 .hero-shot img{display:block;width:100%;height:auto}
 /* agent detail crops */
-.agent-crops{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:44px;align-items:start}
-.crop-frame{background:var(--card);border:1px solid var(--line2);border-radius:16px;overflow:hidden;box-shadow:0 24px 50px rgba(33,26,19,.12)}
-.crop-frame img{display:block;width:100%;height:auto}
-@media(min-width:901px){.crop-frame.crop-up{transform:translateY(-16px)}}
-@media(max-width:900px){.agent-crops{grid-template-columns:1fr}}
+
 /* floating claim cards */
 .float-cards{position:absolute;right:4%;top:120px;z-index:2;display:flex;flex-direction:column;gap:30px;width:250px}
 @media(max-width:1080px){.float-cards{display:none}}
@@ -507,10 +503,6 @@ footer{border-top:1px solid var(--line);padding:54px 0;color:var(--mut);font-siz
   <div class="sec-tag reveal">MEET YOUR AGENT</div>
   <h2 class="reveal">The queue works itself.<br/><span class="grad">You make the calls.</span></h2>
   <p class="sec-sub reveal">ClaimPaid's agent is a working member of the billing team — not a chatbot in a corner. It reads your queue, does the legwork, and brings you finished drafts. Every write waits for your click, and every decision lands in the audit log.</p>
-  <div class="agent-crops reveal">
-    <div class="crop-frame crop-up"><img src="product-agent-card.webp" alt="ClaimPaid Agent — real product detail: an appeal draft awaiting approval" loading="lazy" width="2184" height="780"/></div>
-    <div class="crop-frame"><img src="product-agent-plan.webp" alt="ClaimPaid Agent — real product detail: the morning brief's ranked plan" loading="lazy" width="2184" height="490"/></div>
-  </div>
   <div class="bento">
     <div class="bcard wide reveal"><span class="tag ai">AGENT</span><span class="ico">🌅</span><h3>The morning brief</h3><p>Your day starts with a brief, not a pile: what changed while you were away — new denials, ERA postings, exceptions on hold, follow-ups that slipped — and the first moves that matter, already worked out.</p></div>
     <div class="bcard reveal"><span class="tag ai">AGENT</span><span class="ico">🎯</span><h3>A ranked queue</h3><p>The plan ranks every item by deadline pressure times dollars at stake, and says why it's ranked there — including what your own history says about the odds of winning it.</p></div>
