@@ -83,6 +83,12 @@ In-depth, practical guides for medical billing teams (also at https://claimpaid.
 - **How Long Do Insurers Have to Pay a Claim? Prompt-Pay Laws Explained** — https://claimpaid.io/blog/prompt-payment-laws-explained/ — state prompt-pay deadlines, Medicare's 30-day standard, the ERISA exception, late-payment remedies.
 - **ClaimPaid vs Legacy Billing Software: What to Compare** — https://claimpaid.io/compare/ — criteria-based evaluation: trial availability, transparent pricing, quote-verified AI coding, BAA e-signing, AI agent safeguards, and an agent that works the queue; honest fit/misfit notes.
 
+## Free tools & references
+
+- **Free Deadline Audit** — https://claimpaid.io/audit/ — a public tool that ranks open claims by days left against each payer's timely filing limit. It runs entirely in the visitor's browser: no claim data is uploaded; only an optional email form sends aggregate summary totals.
+- **Denial Code Library** — https://claimpaid.io/denial-codes/ — plain-language pages for 31 high-volume claim adjustment reason codes (CO-97, CO-50, CO-197, CO-29, CO-16, PR-1, OA-23 and more): the standard X12 meaning, what it means on a real remittance, common causes, and how to fix or appeal it.
+- **Timely Filing Deadlines by Payer** — https://claimpaid.io/deadlines/ — the standard published filing limits (Aetna 120 days, Cigna 180, UnitedHealthcare 90, Anthem 180, Medicare 365, NY Medicaid 90, Humana 180) and how each deadline is computed. The signed payer contract controls; verify before acting.
+
 ## Optional
 
 - Developer API: https://claimpaid.io/ai/ (API keys, POST /api/v1/query)

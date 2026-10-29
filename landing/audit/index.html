@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Free Claim Deadline Audit — See What's About to Expire | ClaimPaid</title>
+<meta name="description" content="Free, private deadline audit for medical billing teams: drop in your open claims and see which ones are about to miss their payer's timely filing deadline. Runs 100% in your browser — your file never leaves your device."/>
+<link rel="canonical" href="https://claimpaid.io/audit/"/>
+<meta name="robots" content="index, follow, max-image-preview:large"/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="ClaimPaid"/>
+<meta property="og:title" content="Free Claim Deadline Audit — ClaimPaid"/>
+<meta property="og:description" content="See which open claims are about to expire against their payer's timely filing limit. Free, instant, and private: the audit runs in your browser."/>
+<meta property="og:url" content="https://claimpaid.io/audit/"/>
+<meta property="og:image" content="https://claimpaid.io/claimpaid-icon.webp"/>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"/><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"/><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"/><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"/>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"ClaimPaid Free Deadline Audit","url":"https://claimpaid.io/audit/","applicationCategory":"BusinessApplication","operatingSystem":"Web browser","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Computes payer timely filing deadlines for open claims entirely in the visitor's browser and ranks claims by days left to file."}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://claimpaid.io/"},{"@type":"ListItem","position":2,"name":"Free Deadline Audit","item":"https://claimpaid.io/audit/"}]}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800;9..144,900&family=Playfair+Display:wght@800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{--paper:#FAF5EB;--paper2:#F3ECDC;--card:#FFFDF8;--ink:#211A13;--ink2:#453B2F;--mut:#7C7060;--line:#E4D9C3;--green:#0E9F6E;--green-dk:#0A7A54;--green-deep:#17251F;--amber:#B45309;--amber-lt:#D97706;--amber-bg:#FBF3E4;--mint-bg:#EFFAF4;--red:#B3261E;--red-bg:#FBEBE9}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--paper);color:var(--ink2);font-family:'Inter',system-ui,sans-serif;line-height:1.7;font-size:16.5px}
+h1,h2,h3{font-family:'Fraunces',Georgia,serif;line-height:1.25;color:var(--ink)}
+.wrap{max-width:940px;margin:0 auto;padding:0 24px}
+nav{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(14px);background:rgba(250,245,235,.88);border-bottom:1px solid var(--line)}
+.nav-in{max-width:1100px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:68px}
+.logo{display:flex;align-items:center;gap:10px;font-family:'Playfair Display',Georgia,serif;font-weight:800;font-size:21px;letter-spacing:-.4px;text-decoration:none;color:var(--ink)}
+.logo img{width:34px;height:34px;border-radius:9px;box-shadow:0 4px 14px rgba(14,159,110,.35)}
+.logo .wm{color:var(--ink)} .logo em{font-style:normal;color:var(--green-dk)}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{color:var(--ink2);text-decoration:none;font-size:14.5px;font-weight:500}
+.nav-links a:hover{color:var(--ink)}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:15px;border-radius:12px;padding:13px 26px;text-decoration:none;border:none;transition:transform .25s,box-shadow .25s;cursor:pointer;font-family:'Inter',sans-serif}
+.btn-green{background:#0E9F6E;color:#fff;box-shadow:0 8px 24px rgba(14,159,110,.32)}
+.btn-green:hover{transform:translateY(-3px)}
+.btn-green:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-sm{padding:10px 20px;font-size:14px;color:#fff}
+.btn-ghost{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+main{padding:128px 0 30px}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--green-dk);background:var(--mint-bg);border:1px solid #BFE8D6;padding:5px 12px;border-radius:100px;margin-bottom:18px}
+h1{font-size:clamp(33px,4.8vw,50px);font-weight:800;letter-spacing:-1px;line-height:1.12;margin-bottom:16px}
+.sub{font-size:18px;color:var(--ink2);max-width:720px}
+.privacy-strip{display:flex;gap:12px;align-items:flex-start;background:var(--mint-bg);border:1px solid #BFE8D6;border-radius:14px;padding:16px 20px;margin:26px 0;font-size:15px}
+.privacy-strip strong{color:var(--ink)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px 28px;margin:26px 0}
+.panel h2{font-size:23px;margin-bottom:8px}
+.panel .hint{color:var(--mut);font-size:14.5px;margin-bottom:16px}
+.drop{border:2px dashed var(--line);border-radius:14px;padding:28px;text-align:center;color:var(--mut);transition:border-color .2s,background .2s}
+.drop.over{border-color:var(--green);background:var(--mint-bg)}
+.drop strong{color:var(--ink)}
+input[type="file"]{margin-top:12px;font:inherit;font-size:14px}
+textarea{width:100%;font:inherit;font-size:13.5px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:12px 14px;margin-top:14px;min-height:84px;color:var(--ink)}
+table{width:100%;border-collapse:separate;border-spacing:0;margin:16px 0;font-size:14.5px;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+th{background:var(--paper2);color:var(--ink);text-align:left;padding:11px 13px;font-family:'Fraunces',Georgia,serif;font-size:14px;font-weight:700;border-bottom:1px solid var(--line)}
+td{padding:10px 13px;border-top:1px solid var(--line);vertical-align:top}
+tr:first-child td{border-top:none}
+td input,td select{font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);width:100%}
+.err{display:none;background:var(--red-bg);border:1px solid #EFC5C1;border-left:4px solid var(--red);border-radius:12px;padding:14px 18px;margin:16px 0;font-size:14.5px;color:var(--ink)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin:20px 0}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px}
+.stat .big{font-family:'Fraunces',Georgia,serif;font-size:34px;font-weight:800;color:var(--ink);line-height:1.1}
+.stat .lbl{font-weight:700;color:var(--ink);font-size:14.5px;margin-top:4px}
+.stat .sub2{color:var(--mut);font-size:13.5px}
+.stat.danger .big{color:var(--red)}
+tr.bucket-expired td{background:#FDF3F2}
+tr.bucket-d14 td{background:#FBF3E4}
+.note{font-size:14.5px;background:var(--amber-bg);border:1px solid #EBD9B4;border-left:4px solid var(--amber-lt);border-radius:14px;padding:18px 22px;margin:26px 0}
+.note strong{color:var(--ink)}
+.lead-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:6px 0 16px}
+.lead-grid label{font-size:13.5px;font-weight:600;color:var(--ink);display:block}
+.lead-grid input{width:100%;font:inherit;font-size:15px;padding:11px 13px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);margin-top:5px}
+.hp{position:absolute;left:-9999px;top:-9999px;height:1px;width:1px;overflow:hidden}
+.lead-status{font-size:14.5px;margin-top:12px;min-height:22px}
+.lead-status.ok{color:var(--green-dk);font-weight:600}
+.lead-status.err{color:var(--red);font-weight:600}
+.cta-row{display:flex;gap:14px;flex-wrap:wrap;margin:22px 0 6px}
+footer{border-top:1px solid var(--line);padding:40px 0;color:var(--mut);font-size:13.5px;background:var(--paper);margin-top:50px}
+.foot{max-width:1100px;margin:0 auto;padding:0 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px}
+.foot a{color:var(--ink2);text-decoration:none}
+.foot a:hover{color:var(--green-dk)}
+.foot-links{display:flex;gap:22px;flex-wrap:wrap}
+@media print{
+  nav,footer,.no-print{display:none!important}
+  body{background:#fff;font-size:12.5px}
+  main{padding:0}
+  .panel{border:none;padding:0}
+  .stat{border:1px solid #ccc}
+}
+</style>
+<link rel="stylesheet" href="/consent.css"/>
+</head>
+<body>
+<nav><div class="nav-in">
+  <a class="logo" href="/"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo"/><span class="wm">Claim<em>Paid</em></span></a>
+  <div class="nav-links"><a href="/">Product</a><a href="/denial-codes/">Denial Codes</a><a href="/blog/">Blog</a><a class="btn btn-green btn-sm" href="/app/">Get started</a></div>
+</div></nav>
+
+<main><div class="wrap">
+  <span class="tag">Free tool</span>
+  <h1>See what's about to expire.</h1>
+  <p class="sub">Every payer gives you a fixed number of days from the date of service to file a claim. Miss it and the claim denies as <a href="/denial-codes/co-29/" style="color:var(--green-dk);font-weight:600">CO-29</a> — usually for good. This audit ranks your open claims by days left against each payer's standard timely filing limit, so you can work the ones that are about to die first.</p>
+
+  <div class="privacy-strip"><div>🔒</div><div><strong>Your file never leaves your browser.</strong> The audit runs 100% on this device — your CSV is read locally and nothing about your claims is uploaded, stored, or sent anywhere. The optional email form at the end sends only summary totals (counts and dollars), never claim rows.</div></div>
+
+  <section class="panel no-print" id="csvPanel">
+    <h2>Option 1 — Drop in a CSV</h2>
+    <p class="hint">Export an aging or open-claims list from whatever you bill with today. The tool needs a header row with <strong>payer</strong>, <strong>date of service</strong>, and <strong>amount</strong> columns (a claim reference column is used if present). Common header names all work — "Payer", "DOS", "Billed Amount", and so on.</p>
+    <div class="drop" id="dropZone">
+      <strong>Drag &amp; drop your CSV here</strong><br/>or<br/>
+      <input type="file" id="csvFile" accept=".csv,text/csv,text/plain"/>
+    </div>
+    <textarea id="csvPaste" placeholder="…or paste CSV rows here (with the header row) and the audit runs automatically."></textarea>
+    <p class="hint" style="margin-top:12px">No file handy? <a href="data:text/csv;charset=utf-8,Claim%20Ref%2CPayer%2CDate%20of%20Service%2CBilled%20Amount%0AEX-1001%2CUnitedHealthcare%2C2026-08-04%2C1250.00%0AEX-1002%2CAetna%2C2026-01-15%2C860.00%0AEX-1003%2CMedicare%2C2026-06-30%2C2400.00%0AEX-1004%2CCigna%2C2025-11-02%2C475.50" download="claimpaid-audit-sample.csv" style="color:var(--green-dk);font-weight:600">Download a 4-row sample CSV</a> and try it.</p>
+  </section>
+
+  <section class="panel no-print" id="manualPanel">
+    <h2>Option 2 — Type in up to 10 claims</h2>
+    <p class="hint">For a quick gut-check on the claims you're worried about. Claim reference is optional.</p>
+    <table>
+      <thead><tr><th>Claim ref</th><th>Payer</th><th>Date of service</th><th>Billed amount</th></tr></thead>
+      <tbody id="manualBody"></tbody>
+    </table>
+    <button type="button" class="btn btn-green" id="runManual">Run the audit →</button>
+  </section>
+
+  <p class="err" id="auditError" role="alert"></p>
+
+  <section id="report" style="display:none">
+    <h2 style="font-size:28px;margin-top:34px">Your deadline report</h2>
+    <div class="cards">
+      <div class="stat danger"><div class="big" id="rRisk">$0</div><div class="lbl">At risk — expired or ≤60 days</div><div class="sub2" id="rRiskCount"></div></div>
+      <div class="stat"><div class="big" id="rExpired">$0</div><div class="lbl">Already expired</div><div class="sub2" id="rExpiredCount"></div></div>
+      <div class="stat"><div class="big" id="rNearest">—</div><div class="lbl">Nearest deadline</div><div class="sub2">Across every claim you entered</div></div>
+    </div>
+
+    <table>
+      <thead><tr><th>Window</th><th>Claims</th><th>Dollars</th></tr></thead>
+      <tbody id="bucketBody"></tbody>
+    </table>
+
+    <table>
+      <thead><tr><th>Claim</th><th>Payer</th><th>Date of service</th><th>Filing deadline</th><th>Time left</th><th>Amount</th></tr></thead>
+      <tbody id="claimBody"></tbody>
+    </table>
+
+    <div class="cta-row no-print">
+      <button type="button" class="btn btn-ghost" id="printBtn">Print this report</button>
+      <button type="button" class="btn btn-ghost" id="shareBtn">Copy link to this tool</button>
+      <a class="btn btn-green" href="/app/">Track every deadline automatically — free trial →</a>
+      <a class="btn btn-ghost" href="/denial-codes/">Look up a denial code</a>
+    </div>
+    <p style="color:var(--mut);font-size:14px">Inside ClaimPaid, this same audit runs continuously over your whole A/R — with the appeals drafted for the claims worth fighting.</p>
+  </section>
+
+  <section class="panel no-print" id="leadPanel">
+    <h2>Get the timely-filing checklist by email</h2>
+    <p class="hint" id="leadHint">Run the audit first — then we'll send the checklist with your summary attached. Only the summary totals are sent, never your claim rows.</p>
+    <form id="leadForm" novalidate>
+      <div class="lead-grid">
+        <label>Your name<input id="leadName" type="text" autocomplete="name" required/></label>
+        <label>Work email<input id="leadEmail" type="email" autocomplete="email" required/></label>
+        <label>Company<input id="leadCompany" type="text" autocomplete="organization" required/></label>
+      </div>
+      <span class="hp" aria-hidden="true"><label>Website<input id="leadWebsite" type="text" tabindex="-1" autocomplete="off"/></label></span>
+      <button type="submit" class="btn btn-green" disabled>Email me the checklist</button>
+      <p class="lead-status" id="leadStatus" role="status"></p>
+    </form>
+  </section>
+
+  <div class="note"><strong>How the deadlines are figured:</strong> deadline = date of service + the payer's standard published timely filing limit (Aetna 120 days, Cigna 180, UnitedHealthcare 90, Anthem 180, Medicare 365, NY Medicaid 90, Humana 180; other payers default to 365). <strong>Deadlines shown are the standard published timely-filing limits. Your contract with each payer controls the actual deadline for your claims — verify before acting on any specific claim.</strong> See the full <a href="/deadlines/" style="color:var(--green-dk);font-weight:600">deadline table by payer</a>.</div>
+</div></main>
+
+<footer><div class="foot">
+  <a class="logo" href="/" style="font-size:17px"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo" style="width:28px;height:28px"/><span class="wm">Claim<em>Paid</em></span></a>
+  <div class="foot-links"><a href="/blog/">Blog</a><a href="/denial-codes/">Denial Code Library</a><a href="/legal/terms">Terms</a><a href="/legal/privacy">Privacy</a><a href="/cookies/">Cookies</a><a href="/cookies/" data-cp-consent-open>Cookie settings</a><a href="mailto:support@claimpaid.io">support@claimpaid.io</a></div>
+  <div>© 2026 ClaimPaid · Get your claims paid.</div>
+</div></footer>
+<script src="/audit/audit.js" defer></script>
+<script src="/consent.js" defer></script>
+</body>
+</html>

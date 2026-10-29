@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Denial Code Library — CARC Meanings, Causes &amp; Fixes | ClaimPaid</title>
+<meta name="description" content="Plain-language meanings for the claim adjustment reason codes (CARCs) that drive medical claim denials — what each code means on a remittance, why it happens, and how to fix or appeal it."/>
+<link rel="canonical" href="https://claimpaid.io/denial-codes/"/>
+<meta name="robots" content="index, follow, max-image-preview:large"/>
+<meta property="og:type" content="article"/>
+<meta property="og:site_name" content="ClaimPaid"/>
+<meta property="og:title" content="Denial Code Library — CARC Meanings, Causes &amp; Fixes | ClaimPaid"/>
+<meta property="og:description" content="Plain-language meanings for the claim adjustment reason codes (CARCs) that drive medical claim denials — what each code means on a remittance, why it happens, and how to fix or appeal it."/>
+<meta property="og:url" content="https://claimpaid.io/denial-codes/"/>
+<meta property="og:image" content="https://claimpaid.io/claimpaid-icon.webp"/>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"/><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"/><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"/><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"/>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://claimpaid.io/"},{"@type":"ListItem","position":2,"name":"Denial Code Library","item":"https://claimpaid.io/denial-codes/"}]}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800;9..144,900&family=Playfair+Display:wght@800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{--paper:#FAF5EB;--paper2:#F3ECDC;--card:#FFFDF8;--ink:#211A13;--ink2:#453B2F;--mut:#7C7060;--line:#E4D9C3;--green:#0E9F6E;--green-dk:#0A7A54;--green-deep:#17251F;--amber:#B45309;--amber-lt:#D97706;--amber-bg:#FBF3E4;--mint-bg:#EFFAF4;--red:#B3261E;--red-bg:#FBEBE9}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--paper);color:var(--ink2);font-family:'Inter',system-ui,sans-serif;line-height:1.75;font-size:16.5px}
+h1,h2,h3{font-family:'Fraunces',Georgia,serif;line-height:1.25;color:var(--ink)}
+.wrap{max-width:820px;margin:0 auto;padding:0 24px}
+.wrap-wide{max-width:1100px;margin:0 auto;padding:0 24px}
+nav{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(14px);background:rgba(250,245,235,.88);border-bottom:1px solid var(--line)}
+.nav-in{max-width:1100px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:68px}
+.logo{display:flex;align-items:center;gap:10px;font-family:'Playfair Display',Georgia,serif;font-weight:800;font-size:21px;letter-spacing:-.4px;text-decoration:none;color:var(--ink)}
+.logo img{width:34px;height:34px;border-radius:9px;box-shadow:0 4px 14px rgba(14,159,110,.35)}
+.logo .wm{color:var(--ink)} .logo em{font-style:normal;color:var(--green-dk)}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{color:var(--ink2);text-decoration:none;font-size:14.5px;font-weight:500}
+.nav-links a:hover{color:var(--ink)}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:15px;border-radius:12px;padding:13px 26px;text-decoration:none;border:none;transition:transform .25s,box-shadow .25s;cursor:pointer;font-family:'Inter',sans-serif}
+.btn-green{background:#0E9F6E;color:#fff;box-shadow:0 8px 24px rgba(14,159,110,.32)}
+.btn-green:hover{transform:translateY(-3px)}
+.btn-sm{padding:10px 20px;font-size:14px;color:#fff}
+.btn-ghost{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+article{padding:132px 0 60px}
+.crumb{font-size:13px;color:var(--mut);margin-bottom:18px}
+.crumb a{color:var(--green-dk);text-decoration:none;font-weight:600}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--green-dk);background:var(--mint-bg);border:1px solid #BFE8D6;padding:5px 12px;border-radius:100px;margin-bottom:18px}
+article h1{font-size:clamp(31px,4.4vw,45px);font-weight:800;letter-spacing:-1px;margin-bottom:14px;line-height:1.15}
+.byline{color:var(--mut);font-size:14px;margin-bottom:34px}
+.prose h2{font-size:27px;font-weight:700;letter-spacing:-.5px;margin:46px 0 16px}
+.prose h3{font-size:19px;font-weight:700;margin:28px 0 10px}
+.prose p{margin:0 0 18px}
+.prose ul,.prose ol{margin:0 0 20px 22px}
+.prose li{margin-bottom:10px}
+.prose strong{color:var(--ink)}
+.prose a{color:var(--green-dk);text-decoration:underline;text-underline-offset:3px;font-weight:600}
+table{width:100%;border-collapse:separate;border-spacing:0;margin:26px 0;font-size:14.5px;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+th{background:var(--paper2);color:var(--ink);text-align:left;padding:13px 15px;font-family:'Fraunces',Georgia,serif;font-size:14.5px;font-weight:700;border-bottom:1px solid var(--line)}
+td{padding:12px 15px;border-top:1px solid var(--line);vertical-align:top}
+tr:first-child td{border-top:none}
+td strong{color:var(--ink)}
+.note{font-size:14.5px;background:var(--amber-bg);border:1px solid #EBD9B4;border-left:4px solid var(--amber-lt);border-radius:14px;padding:18px 22px;margin:26px 0}
+.note strong{color:var(--ink)}
+.route{background:var(--mint-bg);border:1px solid #BFE8D6;border-left:4px solid var(--green);border-radius:14px;padding:18px 22px;margin:26px 0;font-size:15px}
+.route strong{color:var(--ink)}
+.cta-band{background:var(--green-deep);border-radius:18px;padding:34px 36px;margin:48px 0 8px;color:#E9E2D0}
+.cta-band h2{color:#FBF7EC;font-size:26px;margin:0 0 10px}
+.cta-band p{margin:0 0 20px;color:#CFC6AC}
+.cta-band .row{display:flex;gap:14px;flex-wrap:wrap}
+.rel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin:20px 0 8px}
+.rel-card{display:block;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;text-decoration:none;transition:transform .2s,border-color .2s}
+.rel-card:hover{transform:translateY(-2px);border-color:var(--green)}
+.rel-card .rc{font-family:'Fraunces',Georgia,serif;font-weight:800;font-size:18px;color:var(--ink)}
+.rel-card .rt{font-size:13.5px;color:var(--mut);line-height:1.5;margin-top:4px}
+footer{border-top:1px solid var(--line);padding:40px 0;color:var(--mut);font-size:13.5px;background:var(--paper)}
+.foot{max-width:1100px;margin:0 auto;padding:0 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px}
+.foot a{color:var(--ink2);text-decoration:none}
+.foot a:hover{color:var(--green-dk)}
+.foot-links{display:flex;gap:22px;flex-wrap:wrap}
+.lib-tools{display:flex;gap:12px;flex-wrap:wrap;margin:26px 0 8px}
+.lib-search{flex:1;min-width:240px;font:inherit;font-size:15px;padding:13px 16px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink)}
+.chip{font:inherit;font-size:13.5px;font-weight:600;padding:9px 16px;border-radius:100px;border:1px solid var(--line);background:var(--card);color:var(--ink2);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--green-deep);color:#FBF7EC;border-color:var(--green-deep)}
+.cat-block{margin-top:42px}
+.cat-block h2{font-size:25px;margin-bottom:6px}
+.cat-block .cat-sub{color:var(--mut);font-size:14.5px;margin-bottom:18px}
+.code-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.code-card{display:block;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;text-decoration:none;transition:transform .2s,border-color .2s}
+.code-card:hover{transform:translateY(-2px);border-color:var(--green)}
+.code-card .cc{font-family:'Fraunces',Georgia,serif;font-weight:800;font-size:21px;color:var(--ink)}
+.code-card .ct{font-weight:600;color:var(--ink);font-size:15px;line-height:1.45;margin:3px 0 6px}
+.code-card .cm{font-size:13.5px;color:var(--mut);line-height:1.55}
+.no-results{display:none;color:var(--mut);margin-top:24px}
+</style>
+<link rel="stylesheet" href="/consent.css"/>
+</head>
+<body>
+<nav><div class="nav-in">
+  <a class="logo" href="/"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo"/><span class="wm">Claim<em>Paid</em></span></a>
+  <div class="nav-links"><a href="/">Product</a><a href="/denial-codes/">Denial Codes</a><a href="/blog/">Blog</a><a class="btn btn-green btn-sm" href="/app/">Get started</a></div>
+</div></nav>
+
+<article><div class="wrap-wide">
+  <div class="crumb"><a href="/">Home</a> · Denial Code Library</div>
+  <span class="tag">Reference</span>
+  <h1>The Denial Code Library</h1>
+  <p class="byline">Every claim adjustment reason code (CARC), in plain language — what it means, why it happens, and how billing teams fix it.</p>
+
+  <div class="prose">
+    <p>A denial arrives as a code, not an explanation. This library translates the highest-volume CARCs — the CO, PR, and OA codes that make up most remittance denials — into what they mean on a real 835, the causes that produce them in real practices, and the fix that actually works: corrected claim, appeal, reroute, or write-off. No code is worth fighting the same way, and fighting the wrong way burns the one resource denials don't refund — time inside the filing window.</p>
+  </div>
+
+  <div class="lib-tools">
+    <input class="lib-search" id="libSearch" type="search" placeholder="Search by code or keyword — try CO-29, duplicate, deductible…" aria-label="Search denial codes"/>
+    <button type="button" class="chip" data-filter="all" aria-pressed="true">All codes</button><button type="button" class="chip" data-filter="contractual" aria-pressed="false">Contractual adjustments</button><button type="button" class="chip" data-filter="medical-necessity" aria-pressed="false">Medical necessity</button><button type="button" class="chip" data-filter="eligibility" aria-pressed="false">Eligibility &amp; coverage</button><button type="button" class="chip" data-filter="coding" aria-pressed="false">Coding &amp; claim data</button><button type="button" class="chip" data-filter="timely-filing" aria-pressed="false">Timely filing</button><button type="button" class="chip" data-filter="authorization" aria-pressed="false">Authorization</button><button type="button" class="chip" data-filter="other" aria-pressed="false">Other adjustments</button>
+  </div>
+  <p class="no-results" id="libNoResults">No codes match that search. Try a code (CO-16), a group (PR), or a plain word (duplicate, authorization, deductible).</p>
+
+  <section class="cat-block" data-cat-block="contractual">
+    <h2>Contractual adjustments</h2>
+    <p class="cat-sub">5 codes</p>
+    <div class="code-grid"><a class="code-card" href="/denial-codes/co-24/" data-code="co-24" data-title="covered under capitation or a managed care plan" data-cat="contractual"><div class="cc">CO-24</div><div class="ct">Covered under capitation or a managed care plan</div><div class="cm">Charges are covered under a capitation agreement or managed care plan.</div></a><a class="code-card" href="/denial-codes/co-45/" data-code="co-45" data-title="charge exceeds the fee schedule / maximum allowable" data-cat="contractual"><div class="cc">CO-45</div><div class="ct">Charge exceeds the fee schedule / maximum allowable</div><div class="cm">Charge exceeds the fee schedule or maximum allowable amount.</div></a><a class="code-card" href="/denial-codes/co-242/" data-code="co-242" data-title="services not provided by network / primary care providers" data-cat="contractual"><div class="cc">CO-242</div><div class="ct">Services not provided by network / primary care providers</div><div class="cm">Services were not provided by network or primary care providers.</div></a><a class="code-card" href="/denial-codes/co-256/" data-code="co-256" data-title="services not payable per the managed care contract" data-cat="contractual"><div class="cc">CO-256</div><div class="ct">Services not payable per the managed care contract</div><div class="cm">Services are not payable under the managed care contract.</div></a><a class="code-card" href="/denial-codes/oa-94/" data-code="oa-94" data-title="processed in excess of charges" data-cat="contractual"><div class="cc">OA-94</div><div class="ct">Processed in excess of charges</div><div class="cm">Processed in excess of charges.</div></a></div>
+  </section>
+  <section class="cat-block" data-cat-block="medical-necessity">
+    <h2>Medical necessity</h2>
+    <p class="cat-sub">1 code</p>
+    <div class="code-grid"><a class="code-card" href="/denial-codes/co-50/" data-code="co-50" data-title="not deemed medically necessary by the payer" data-cat="medical-necessity"><div class="cc">CO-50</div><div class="ct">Not deemed medically necessary by the payer</div><div class="cm">This is a non-covered service because it is not deemed a medical necessity by the payer.</div></a></div>
+  </section>
+  <section class="cat-block" data-cat-block="eligibility">
+    <h2>Eligibility &amp; coverage</h2>
+    <p class="cat-sub">9 codes</p>
+    <div class="code-grid"><a class="code-card" href="/denial-codes/co-22/" data-code="co-22" data-title="another payer is primary (coordination of benefits)" data-cat="eligibility"><div class="cc">CO-22</div><div class="ct">Another payer is primary (coordination of benefits)</div><div class="cm">This care may be covered by another payer per coordination of benefits.</div></a><a class="code-card" href="/denial-codes/co-27/" data-code="co-27" data-title="expenses incurred after coverage was terminated" data-cat="eligibility"><div class="cc">CO-27</div><div class="ct">Expenses incurred after coverage was terminated</div><div class="cm">Expenses incurred after coverage was terminated.</div></a><a class="code-card" href="/denial-codes/co-31/" data-code="co-31" data-title="patient cannot be identified as our insured" data-cat="eligibility"><div class="cc">CO-31</div><div class="ct">Patient cannot be identified as our insured</div><div class="cm">The patient cannot be identified as our insured.</div></a><a class="code-card" href="/denial-codes/co-96/" data-code="co-96" data-title="non-covered charge(s)" data-cat="eligibility"><div class="cc">CO-96</div><div class="ct">Non-covered charge(s)</div><div class="cm">Non-covered charge(s).</div></a><a class="code-card" href="/denial-codes/co-109/" data-code="co-109" data-title="claim is not covered by this payer / contractor" data-cat="eligibility"><div class="cc">CO-109</div><div class="ct">Claim is not covered by this payer / contractor</div><div class="cm">The claim is not covered by this payer or contractor.</div></a><a class="code-card" href="/denial-codes/co-119/" data-code="co-119" data-title="benefit maximum for this time period has been reached" data-cat="eligibility"><div class="cc">CO-119</div><div class="ct">Benefit maximum for this time period has been reached</div><div class="cm">Benefit maximum for this time period has been reached.</div></a><a class="code-card" href="/denial-codes/co-140/" data-code="co-140" data-title="patient/insured health identification number is missing" data-cat="eligibility"><div class="cc">CO-140</div><div class="ct">Patient/insured health identification number is missing</div><div class="cm">The patient's or insured's health identification number is missing.</div></a><a class="code-card" href="/denial-codes/co-204/" data-code="co-204" data-title="service not covered under the patient's current benefit plan" data-cat="eligibility"><div class="cc">CO-204</div><div class="ct">Service not covered under the patient's current benefit plan</div><div class="cm">This service is not covered under the patient's current benefit plan.</div></a><a class="code-card" href="/denial-codes/oa-23/" data-code="oa-23" data-title="impact of the prior payer's adjudication (cob)" data-cat="eligibility"><div class="cc">OA-23</div><div class="ct">Impact of the prior payer's adjudication (COB)</div><div class="cm">The impact of the prior payer's adjudication, including payments and/or adjustments.</div></a></div>
+  </section>
+  <section class="cat-block" data-cat-block="coding">
+    <h2>Coding &amp; claim data</h2>
+    <p class="cat-sub">8 codes</p>
+    <div class="code-grid"><a class="code-card" href="/denial-codes/co-97/" data-code="co-97" data-title="benefit included in another service already paid" data-cat="coding"><div class="cc">CO-97</div><div class="ct">Benefit included in another service already paid</div><div class="cm">The benefit for this service is included in the payment or allowance for another service or procedure that has already been adjudicated.</div></a><a class="code-card" href="/denial-codes/co-11/" data-code="co-11" data-title="diagnosis inconsistent with the procedure" data-cat="coding"><div class="cc">CO-11</div><div class="ct">Diagnosis inconsistent with the procedure</div><div class="cm">The diagnosis is inconsistent with the procedure.</div></a><a class="code-card" href="/denial-codes/co-16/" data-code="co-16" data-title="claim lacks information or has billing errors" data-cat="coding"><div class="cc">CO-16</div><div class="ct">Claim lacks information or has billing errors</div><div class="cm">The claim lacks information or has submission/billing errors.</div></a><a class="code-card" href="/denial-codes/co-146/" data-code="co-146" data-title="diagnosis is invalid for the dates of service reported" data-cat="coding"><div class="cc">CO-146</div><div class="ct">Diagnosis is invalid for the dates of service reported</div><div class="cm">The diagnosis is invalid for the dates of service reported.</div></a><a class="code-card" href="/denial-codes/co-151/" data-code="co-151" data-title="information does not support this many services" data-cat="coding"><div class="cc">CO-151</div><div class="ct">Information does not support this many services</div><div class="cm">The payer deems that the information submitted does not support this many services.</div></a><a class="code-card" href="/denial-codes/co-181/" data-code="co-181" data-title="procedure code is invalid on the date of service" data-cat="coding"><div class="cc">CO-181</div><div class="ct">Procedure code is invalid on the date of service</div><div class="cm">The procedure code is invalid on the date of service.</div></a><a class="code-card" href="/denial-codes/co-182/" data-code="co-182" data-title="procedure modifier is invalid" data-cat="coding"><div class="cc">CO-182</div><div class="ct">Procedure modifier is invalid</div><div class="cm">The procedure modifier is invalid.</div></a><a class="code-card" href="/denial-codes/co-236/" data-code="co-236" data-title="procedure/modifier combination not compatible with another same-day service" data-cat="coding"><div class="cc">CO-236</div><div class="ct">Procedure/modifier combination not compatible with another same-day service</div><div class="cm">This procedure or procedure/modifier combination is not compatible with another procedure or procedure/modifier combination provided on the same day, per the payer's clinical edit logic (typically NCCI-based).</div></a></div>
+  </section>
+  <section class="cat-block" data-cat-block="timely-filing">
+    <h2>Timely filing</h2>
+    <p class="cat-sub">1 code</p>
+    <div class="code-grid"><a class="code-card" href="/denial-codes/co-29/" data-code="co-29" data-title="the time limit for filing has expired" data-cat="timely-filing"><div class="cc">CO-29</div><div class="ct">The time limit for filing has expired</div><div class="cm">The time limit for filing has expired.</div></a></div>
+  </section>
+  <section class="cat-block" data-cat-block="authorization">
+    <h2>Authorization</h2>
+    <p class="cat-sub">1 code</p>
+    <div class="code-grid"><a class="code-card" href="/denial-codes/co-197/" data-code="co-197" data-title="prior authorization or notification was absent" data-cat="authorization"><div class="cc">CO-197</div><div class="ct">Prior authorization or notification was absent</div><div class="cm">Precertification, prior authorization, or notification was absent for a service that required it.</div></a></div>
+  </section>
+  <section class="cat-block" data-cat-block="other">
+    <h2>Other adjustments</h2>
+    <p class="cat-sub">6 codes</p>
+    <div class="code-grid"><a class="code-card" href="/denial-codes/co-18/" data-code="co-18" data-title="exact duplicate claim or service" data-cat="other"><div class="cc">CO-18</div><div class="ct">Exact duplicate claim or service</div><div class="cm">Exact duplicate claim or service.</div></a><a class="code-card" href="/denial-codes/co-223/" data-code="co-223" data-title="adjustment required by federal, state, or local law" data-cat="other"><div class="cc">CO-223</div><div class="ct">Adjustment required by federal, state, or local law</div><div class="cm">Adjustment code for a mandated federal, state, or local law or regulation that is not already covered by another code, applied because the law requires it before a new, specific code can be created.</div></a><a class="code-card" href="/denial-codes/co-252/" data-code="co-252" data-title="additional documentation is required to adjudicate this claim" data-cat="other"><div class="cc">CO-252</div><div class="ct">Additional documentation is required to adjudicate this claim</div><div class="cm">An attachment or other documentation is required to adjudicate this claim or service.</div></a><a class="code-card" href="/denial-codes/pr-1/" data-code="pr-1" data-title="deductible amount (patient responsibility)" data-cat="other"><div class="cc">PR-1</div><div class="ct">Deductible amount (patient responsibility)</div><div class="cm">Deductible amount.</div></a><a class="code-card" href="/denial-codes/pr-2/" data-code="pr-2" data-title="coinsurance amount (patient responsibility)" data-cat="other"><div class="cc">PR-2</div><div class="ct">Coinsurance amount (patient responsibility)</div><div class="cm">Coinsurance amount.</div></a><a class="code-card" href="/denial-codes/pr-3/" data-code="pr-3" data-title="copayment amount (patient responsibility)" data-cat="other"><div class="cc">PR-3</div><div class="ct">Copayment amount (patient responsibility)</div><div class="cm">Copayment amount.</div></a></div>
+  </section>
+
+  <div class="wrap" style="padding:0">
+    <div class="cta-band">
+    <h2>Deadlines decide which denials are worth fighting</h2>
+    <p>Every fix on this page runs against a filing or appeal clock. Run the free deadline audit on your open claims — in your browser, nothing uploaded — and see what is about to expire.</p>
+    <div class="row"><a class="btn btn-green" href="/audit/">Run the free deadline audit →</a><a class="btn btn-ghost" href="/app/">Start the free trial</a></div>
+  </div>
+  </div>
+</div></article>
+
+<script>
+(function () {
+  var search = document.getElementById('libSearch');
+  var chips = Array.prototype.slice.call(document.querySelectorAll('[data-filter]'));
+  var cards = Array.prototype.slice.call(document.querySelectorAll('.code-card'));
+  var blocks = Array.prototype.slice.call(document.querySelectorAll('[data-cat-block]'));
+  var empty = document.getElementById('libNoResults');
+  var activeFilter = 'all';
+  function apply() {
+    var q = (search.value || '').trim().toLowerCase();
+    var visible = 0;
+    cards.forEach(function (card) {
+      var okFilter = activeFilter === 'all' || card.getAttribute('data-cat') === activeFilter;
+      var okSearch = !q || card.getAttribute('data-code').indexOf(q) !== -1 || card.getAttribute('data-title').indexOf(q) !== -1;
+      var show = okFilter && okSearch;
+      card.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    blocks.forEach(function (b) {
+      var any = Array.prototype.some.call(b.querySelectorAll('.code-card'), function (c) { return c.style.display !== 'none'; });
+      b.style.display = any ? '' : 'none';
+    });
+    empty.style.display = visible ? 'none' : 'block';
+  }
+  search.addEventListener('input', apply);
+  chips.forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      activeFilter = chip.getAttribute('data-filter');
+      chips.forEach(function (c) { c.setAttribute('aria-pressed', c === chip ? 'true' : 'false'); });
+      apply();
+    });
+  });
+})();
+</script>
+<footer><div class="foot">
+  <a class="logo" href="/" style="font-size:17px"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo" style="width:28px;height:28px"/><span class="wm">Claim<em>Paid</em></span></a>
+  <div class="foot-links"><a href="/blog/">Blog</a><a href="/denial-codes/">Denial Code Library</a><a href="/legal/terms">Terms</a><a href="/legal/privacy">Privacy</a><a href="/cookies/">Cookies</a><a href="/cookies/" data-cp-consent-open>Cookie settings</a><a href="mailto:support@claimpaid.io">support@claimpaid.io</a></div>
+  <div>© 2026 ClaimPaid · Get your claims paid.</div>
+</div></footer>
+<script src="/consent.js" defer></script>
+</body>
+</html>
