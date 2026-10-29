@@ -677,4 +677,143 @@ router.delete('/tables/:name/:id', (req, res) => {
   res.json({ deleted: true });
 });
 
+// ================= SYSTEM HEALTH (deploy #101) =================
+// The owner's own observability: is it up, is it erroring, what is the
+// agent costing, are the dependencies alive. Everything here is counts,
+// sizes and booleans — config presence is reported as set/not-set, and
+// NO secret value ever leaves through this endpoint.
+const fs = require('fs');
+const metrics = require('../metrics');
+const { estimateCostUsd, AGENT_PRICING } = require('../config/agentPricing');
+
+let _bundleCache = { hash: null, at: 0 };
+function bundleHash() {
+  const now = Date.now();
+  if (_bundleCache.hash && now - _bundleCache.at < 60 * 1000) return _bundleCache.hash;
+  let hash = null;
+  try {
+    const html = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'client', 'dist', 'index.html'), 'utf8');
+    const m = html.match(/index-([A-Za-z0-9_-]+)\.js/);
+    if (m) hash = m[1];
+  } catch { /* dist not built in this environment */ }
+  _bundleCache = { hash, at: now };
+  return hash;
+}
+
+async function probe(url, timeoutMs = 1500) {
+  if (!url) return 'down';
+  try {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), timeoutMs);
+    const r = await fetch(url, { signal: ctl.signal });
+    clearTimeout(t);
+    return r.ok ? 'up' : 'down';
+  } catch {
+    return 'down';
+  }
+}
+
+function newestFileAge(dir) {
+  try {
+    const entries = fs.readdirSync(dir).map((f) => {
+      try { return { f, mtime: fs.statSync(path.join(dir, f)).mtimeMs }; } catch { return null; }
+    }).filter(Boolean).sort((a, b) => b.mtime - a.mtime);
+    if (!entries.length) return null;
+    return { file: entries[0].f, age_hours: Math.round(((Date.now() - entries[0].mtime) / 3600000) * 10) / 10 };
+  } catch {
+    return null;
+  }
+}
+
+router.get('/health', async (req, res) => {
+  const dbFile = process.env.DB_PATH || path.join(__dirname, '..', '..', 'rcm.db');
+  let dbBytes = null;
+  try { dbBytes = fs.statSync(dbFile).size + (fs.existsSync(`${dbFile}-wal`) ? fs.statSync(`${dbFile}-wal`).size : 0); } catch { /* size unknown */ }
+  let disk = null;
+  try {
+    const st = fs.statfsSync(path.dirname(dbFile));
+    disk = { free_bytes: st.bfree * st.bsize, total_bytes: st.blocks * st.bsize };
+  } catch { /* statfs unavailable */ }
+
+  // Agent usage: agent_usage is monthly-bucketed; the 30d view sums the
+  // current + previous calendar month rows (the standard approximation
+  // for this table's grain), token totals valued at the pricing config.
+  const monthKey = (d) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+  const nowD = new Date();
+  const prevD = new Date(Date.UTC(nowD.getUTCFullYear(), nowD.getUTCMonth() - 1, 1));
+  const months = [monthKey(nowD), monthKey(prevD)];
+  let agent = { turns: 0, input_tokens: 0, output_tokens: 0, est_cost_usd: 0, top_orgs: [] };
+  try {
+    const tot = db.prepare(`
+      SELECT COALESCE(SUM(turns),0) AS turns, COALESCE(SUM(input_tokens),0) AS it, COALESCE(SUM(output_tokens),0) AS ot
+      FROM agent_usage WHERE month IN (?, ?)
+    `).get(months[0], months[1]);
+    agent = {
+      turns: tot.turns, input_tokens: tot.it, output_tokens: tot.ot,
+      est_cost_usd: estimateCostUsd(tot.it, tot.ot),
+      pricing: AGENT_PRICING,
+      top_orgs: db.prepare(`
+        SELECT u.org_id, o.name AS org_name, u.turns, u.input_tokens, u.output_tokens
+        FROM agent_usage u LEFT JOIN orgs o ON o.id = u.org_id
+        WHERE u.month IN (?, ?) ORDER BY u.turns DESC LIMIT 5
+      `).all(months[0], months[1]).map((r) => ({
+        org_id: r.org_id, org_name: r.org_name || `Workspace ${r.org_id}`,
+        turns: r.turns, est_cost_usd: estimateCostUsd(r.input_tokens, r.output_tokens),
+      })),
+    };
+  } catch { /* pre-Phase-2 DB — agent block stays zeroed */ }
+
+  const scheduler = {};
+  try {
+    for (const r of db.prepare('SELECT job, last_run_at FROM agent_scheduler_log').all()) {
+      scheduler[r.job] = r.last_run_at;
+    }
+  } catch { /* pre-#101 DB */ }
+  const lastDigest = db.prepare('SELECT MAX(created_at) AS t FROM agent_digest_log').get();
+
+  const aiBase = (process.env.AI_SERVICE_URL || 'http://127.0.0.1:4001').replace(/\/$/, '');
+  const ollamaBase = (process.env.OLLAMA_URL || 'http://127.0.0.1:11434').replace(/\/$/, '');
+  const [aiStatus, ollamaStatus] = await Promise.all([
+    probe(`${aiBase}/api/health`),
+    probe(`${ollamaBase}/api/tags`),
+  ]);
+
+  res.json({
+    server: {
+      uptime_seconds: Math.round(process.uptime()),
+      started_at: metrics.BOOT_TIME.toISOString(),
+      bundle_hash: bundleHash(),
+      node: process.version,
+    },
+    traffic: {
+      last_24h: metrics.totals(24),
+      last_7d: metrics.totals(24 * 7),
+      latency_p95_by_group: metrics.latencyByGroup(),
+    },
+    agent,
+    storage: {
+      db_bytes: dbBytes,
+      disk,
+      latest_backup: newestFileAge(process.env.BACKUP_DIR || '/var/backups/claimpaid'),
+    },
+    services: { ai: aiStatus, ollama: ollamaStatus },
+    config: {
+      anthropic_api_key: !!String(process.env.ANTHROPIC_API_KEY || process.env.AGENT_API_KEY || '').trim(),
+      stedi_api_key: !!String(process.env.STEDI_API_KEY || '').trim(),
+      resend: !!String(process.env.RESEND_API_KEY || '').trim() || /resend/i.test(process.env.SMTP_HOST || ''),
+      stripe: !!String(process.env.STRIPE_SECRET_KEY || '').trim(),
+      agent_enabled: !!String(process.env.AGENT_ENABLED || '').trim(),
+    },
+    scheduler: {
+      watchdog_last_run: scheduler.watchdog_digest || null,
+      brief_precompute_last_run: scheduler.brief_precompute || null,
+      last_digest_attempt: lastDigest ? lastDigest.t : null,
+    },
+    totals: {
+      orgs: db.prepare('SELECT COUNT(*) AS n FROM orgs').get().n,
+      users: db.prepare('SELECT COUNT(*) AS n FROM users').get().n,
+    },
+  });
+});
+
 module.exports = router;

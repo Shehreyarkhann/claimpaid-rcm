@@ -4,6 +4,7 @@ import { api, fmtMoney2, fmtDate } from '../api';
 import { Modal, EmptyState, PageHeader, Skeleton } from '../components/ui';
 import { useToast } from '../components/ui';
 import ClaimDetailsModal from '../components/ClaimDetailsModal';
+import CallCopilot from '../components/CallCopilot';
 
 const SUBMIT_VIA = {
   payer_portal: 'Payer portal', fax: 'Fax', mail: 'Mail', clearinghouse: 'Clearinghouse',
@@ -569,6 +570,8 @@ export default function Denials({ initialAppealId, initialStartAppealClaimId, on
   const [showStart, setShowStart] = useState(false);
   const [preselectClaimId, setPreselectClaimId] = useState(null);
   const [detailsClaimId, setDetailsClaimId] = useState(null);
+  const [awaiting, setAwaiting] = useState(null);
+  const [callClaimId, setCallClaimId] = useState(null);
 
   useEffect(() => {
     if (initialAppealId) { setDrawerId(initialAppealId); onConsumed?.(); }
@@ -590,6 +593,9 @@ export default function Denials({ initialAppealId, initialStartAppealClaimId, on
     });
     api.unworkedDenials().then(setUnworked);
     api.team().then(setTeam).catch(() => {});
+    if (tab === 'awaiting') {
+      api.awaitingPayer().then((r) => setAwaiting(r.awaiting || [])).catch(() => setAwaiting([]));
+    }
   };
   useEffect(() => { load(); }, [tab, statusFilter]);
   useEffect(() => { if (drawerId) { /* refresh on drawer change handled by onChanged */ } }, [drawerId]);
@@ -600,12 +606,14 @@ export default function Denials({ initialAppealId, initialStartAppealClaimId, on
     { id: 'all', label: 'Open queue' },
     { id: 'mine', label: 'Assigned to me' },
     { id: 'unassigned', label: 'Unassigned' },
+    { id: 'awaiting', label: 'Awaiting payer' },
     { id: 'closed', label: 'Closed' },
   ];
 
   return (
     <div>
       {drawerId && <AppealDrawer appealId={drawerId} onClose={() => setDrawerId(null)} onChanged={load} team={team} onShowDetails={setDetailsClaimId} />}
+      {callClaimId && <CallCopilot claimId={callClaimId} onClose={() => setCallClaimId(null)} onLogged={load} />}
       {showStart && <StartAppealModal denials={unworked} preselectClaimId={preselectClaimId} onClose={() => { setShowStart(false); setPreselectClaimId(null); }} onStarted={() => { setShowStart(false); setPreselectClaimId(null); setTab('all'); load(); }} team={team} onShowDetails={setDetailsClaimId} />}
       {detailsClaimId && <ClaimDetailsModal claimId={detailsClaimId} onClose={() => setDetailsClaimId(null)} />}
 
@@ -631,7 +639,50 @@ export default function Denials({ initialAppealId, initialStartAppealClaimId, on
         </select>
       </div>
 
-      {!appeals ? (
+      {tab === 'awaiting' ? (
+        !awaiting ? (
+          <div className="card p-6 space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14" />)}</div>
+        ) : awaiting.length === 0 ? (
+          <div className="card">
+            <EmptyState icon="📮" title="Nothing awaiting a payer"
+              hint="When you mark an appeal submitted, it waits here — measured against the payer's typical response window, not a calendar guess." />
+          </div>
+        ) : (
+          <div className="card overflow-hidden">
+            <div className="px-5 py-3 border-b border-stone-100 text-xs text-stone-500">
+              Submitted appeals, waiting on the payer. Windows are <strong>typical</strong> response times (set per payer in Filing Rules) — a payer past its window with no remittance movement is flagged <span className="badge badge-rose">Payer silent</span>.
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full tbl">
+                <thead><tr>
+                  <th>Claim</th><th>Patient</th><th>Submitted</th><th>Channel</th>
+                  <th className="!text-right">Waiting</th><th>Typical window</th><th>Follow-up</th><th></th>
+                </tr></thead>
+                <tbody>
+                  {awaiting.map((r) => (
+                    <tr key={r.appeal_id}>
+                      <td className="font-mono text-xs">{r.claim_number}<div className="text-stone-400 font-sans">{r.payer}</div></td>
+                      <td className="font-medium">{r.patient_name}</td>
+                      <td className="text-xs text-stone-500">{fmtDate(r.submitted_at)}</td>
+                      <td className="text-xs">{SUBMIT_VIA[r.channel] || r.channel || '—'}</td>
+                      <td className="!text-right font-semibold">{r.days_waiting}d</td>
+                      <td className="text-xs text-stone-500">{r.response_days}d · by {fmtDate(r.expected_by)}</td>
+                      <td className="text-xs text-stone-500">{r.follow_up_date ? fmtDate(r.follow_up_date) : '—'}</td>
+                      <td>
+                        <span className="flex gap-1.5 justify-end">
+                          {r.silent && <span className="badge badge-rose self-center">Payer silent</span>}
+                          <button type="button" className="btn btn-outline btn-sm" onClick={() => setCallClaimId(r.claim_id)}>Call brief</button>
+                          <button type="button" className="btn btn-dark btn-sm" onClick={() => setDrawerId(r.appeal_id)}>Follow up</button>
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
+      ) : !appeals ? (
         <div className="card p-6 space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14" />)}</div>
       ) : appeals.length === 0 ? (
         <div className="card">

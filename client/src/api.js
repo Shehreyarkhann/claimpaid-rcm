@@ -67,6 +67,7 @@ export const api = {
       body: JSON.stringify(data),
     }).then(handle),
   appeals: (params = {}) => get(`/api/appeals?${new URLSearchParams(params)}`),
+  awaitingPayer: () => get('/api/appeals/awaiting-payer'),
   unworkedDenials: () => get('/api/appeals/unworked-denials'),
   dueFollowups: () => get('/api/appeals/due'),
   team: () => get('/api/auth/team'),
@@ -113,10 +114,10 @@ export const api = {
     }).then(handle),
   deleteCustomRule: (id) =>
     authFetch(`/api/rules/custom/${id}`, { method: 'DELETE' }).then(handle),
-  setFilingRule: (payerId, filing_days, notes) =>
+  setFilingRule: (payerId, filing_days, notes, response_days) =>
     authFetch(`/api/filing/rules/${payerId}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filing_days, notes }),
+      body: JSON.stringify(response_days === undefined ? { filing_days, notes } : { filing_days, notes, response_days }),
     }).then(handle),
   // Reports
   reportArAging: () => get('/api/reports/ar-aging'),
@@ -130,6 +131,12 @@ export const api = {
   // ERA / Digest
   digest: () => get('/api/era/digest'),
   era: {
+    exceptionGroups: () => get('/api/era/exception-groups'),
+    applyExceptionGroup: (lineIds) =>
+      authFetch('/api/era/exception-groups/apply', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ line_ids: lineIds }),
+      }).then(handle),
     remittances: () => get('/api/era/remittances'),
     remittance: (id) => get(`/api/era/remittances/${id}`),
     reconciliation: () => get('/api/era/reconciliation'),
@@ -298,6 +305,7 @@ export const api = {
     }).then(handle),
   // ---- Super-admin ----
   super: {
+    health: () => get('/api/super/health'),
     overview: () => get('/api/super/overview'),
     orgs: () => get('/api/super/orgs'),
     orgDetail: (id) => get(`/api/super/orgs/${id}`),
@@ -424,6 +432,42 @@ export const api = {
       authFetch(`/api/agent/actions/${id}/approve`, { method: 'POST' }).then(handle),
     rejectAction: (id) =>
       authFetch(`/api/agent/actions/${id}/reject`, { method: 'POST' }).then(handle),
+    // Deploy #101: batch decide, the auto-approved review stream + void,
+    // the owner approval policy, the activation checklist, saved import
+    // mappings, and the notification center.
+    batchDecide: (ids, decision) =>
+      authFetch('/api/agent/actions/batch-decide', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, decision }),
+      }).then(handle),
+    autoApproved: () => get('/api/agent/actions/auto-approved'),
+    voidAuto: (id) =>
+      authFetch(`/api/agent/actions/${id}/void-auto`, { method: 'POST' }).then(handle),
+    policy: () => get('/api/agent/policy'),
+    updatePolicy: (data) =>
+      authFetch('/api/agent/policy', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      }).then(handle),
+    checklist: () => get('/api/agent/checklist'),
+    dismissChecklist: () =>
+      authFetch('/api/agent/checklist/dismiss', { method: 'PUT' }).then(handle),
+    importMappings: () => get('/api/agent/import/mappings'),
+    saveImportMapping: (data) =>
+      authFetch('/api/agent/import/mappings', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      }).then(handle),
+    deleteImportMapping: (id) =>
+      authFetch(`/api/agent/import/mappings/${id}`, { method: 'DELETE' }).then(handle),
+    notifications: () => get('/api/agent/notifications'),
+    markNotificationsRead: () =>
+      authFetch('/api/agent/notifications/read', { method: 'POST' }).then(handle),
+    digestPref: (optOut) =>
+      authFetch('/api/agent/notifications/digest-pref', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ opt_out: optOut }),
+      }).then(handle),
     // Phase 4: watchdog alerts strip + running the read tools directly
     // (the Denial Rescue wizard's engine).
     alerts: () => get('/api/agent/alerts'),

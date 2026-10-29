@@ -4,7 +4,10 @@ const { authRequired, roleRequired, requireProduct } = require('../auth');
 const { agentEnabled, AGENT_DISABLED_BODY } = require('../featureFlags');
 const model = require('../agent/model');
 const { TOOL_DEFS, createExecutor, resolveClaim, buildApplyCodesAction } = require('../agent/tools');
-const { getAction, serializeAction, approveAction, rejectAction } = require('../agent/actions');
+const { getAction, serializeAction, approveAction, rejectAction, voidAutoApproved } = require('../agent/actions');
+const { getPolicy } = require('../agent/policy');
+const { buildNotifications } = require('../agent/notifications');
+const { auditLog } = require('../audit');
 const { getOrCreateBrief } = require('../agent/brief');
 const predict = require('../agent/predict');
 const eraResolve = require('../agent/eraResolve');
@@ -85,6 +88,51 @@ router.get('/actions/pending', (req, res) => {
     ORDER BY created_at ASC, id ASC
   `).all(req.orgId);
   res.json({ actions: rows.map(serializeAction) });
+});
+
+// --- Auto-approved stream (deploy #101): drafts the owner's policy
+// executed without a human click, newest first — the review list where
+// each can still be voided while its appeal is an unworked draft. ---
+router.get('/actions/auto-approved', (req, res) => {
+  const rows = db.prepare(`
+    SELECT * FROM agent_actions WHERE org_id = ? AND auto_approved = 1
+    ORDER BY id DESC LIMIT 50
+  `).all(req.orgId);
+  res.json({ actions: rows.map(serializeAction) });
+});
+
+// --- Batch decide (deploy #101): many cards, one gesture. Each item
+// runs through the SAME approve/reject path as a single decide — an
+// already-decided item (409 from the decider) reports as 'skipped'
+// instead of failing the batch. ---
+router.post('/actions/batch-decide', canDecide, (req, res) => {
+  const { ids, decision } = req.body || {};
+  if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ids (non-empty array) is required' });
+  if (ids.length > 50) return res.status(400).json({ error: 'At most 50 actions per batch' });
+  if (!['approve', 'reject'].includes(decision)) return res.status(400).json({ error: "decision must be 'approve' or 'reject'" });
+  const results = [];
+  const summary = { executed: 0, rejected: 0, failed: 0, skipped: 0, missing: 0 };
+  for (const id of ids) {
+    const action = getAction(Number(id), req.orgId);
+    if (!action) { results.push({ id: Number(id), outcome: 'missing' }); summary.missing++; continue; }
+    if (action.status !== 'pending') {
+      results.push({ id: action.id, outcome: 'skipped', status: action.status });
+      summary.skipped++;
+      continue;
+    }
+    try {
+      const decided = decision === 'approve' ? approveAction(req, action) : rejectAction(req, action);
+      const outcome = decided.status === 'executed' ? 'executed' : decided.status === 'rejected' ? 'rejected' : decided.status;
+      results.push({ id: action.id, outcome, action: serializeAction(decided) });
+      if (outcome === 'executed') summary.executed++;
+      else if (outcome === 'rejected') summary.rejected++;
+      else summary.failed++;
+    } catch (e) {
+      if (e.status === 409) { results.push({ id: action.id, outcome: 'skipped', status: action.status }); summary.skipped++; }
+      else { results.push({ id: action.id, outcome: 'failed', error: e.message }); summary.failed++; }
+    }
+  }
+  res.json({ results, summary });
 });
 
 // --- Insights (Phase 3): dashboard-level predictions from predict.js ---
@@ -416,6 +464,119 @@ router.post('/actions/:id/reject', canDecide, (req, res) => {
   }
 });
 
+// --- Void an auto-approved draft from the review stream (deploy #101) ---
+router.post('/actions/:id/void-auto', canDecide, (req, res) => {
+  const action = getAction(req.params.id, req.orgId);
+  if (!action) return res.status(404).json({ error: 'Action not found' });
+  try {
+    return res.json({ action: serializeAction(voidAutoApproved(req, action)) });
+  } catch (e) {
+    return res.status(e.status || 500).json({ error: e.message });
+  }
+});
+
+// --- Approval policy (deploy #101): owner-only. Default OFF. Changes
+// are audit-logged with the full policy body. ---
+router.get('/policy', roleRequired('owner'), (req, res) => {
+  res.json({ policy: getPolicy(req.orgId) });
+});
+
+router.put('/policy', roleRequired('owner'), (req, res) => {
+  const { enabled, max_amount, min_sample, min_rate } = req.body || {};
+  const updates = [];
+  const params = [];
+  if (enabled !== undefined) { updates.push('agent_auto_approve = ?'); params.push(enabled ? 1 : 0); }
+  if (max_amount !== undefined) {
+    if (max_amount !== null && !(Number.isFinite(Number(max_amount)) && Number(max_amount) > 0)) {
+      return res.status(400).json({ error: 'max_amount must be a positive number or null' });
+    }
+    updates.push('agent_auto_max_amount = ?'); params.push(max_amount === null ? null : Number(max_amount));
+  }
+  if (min_sample !== undefined) {
+    if (!Number.isInteger(min_sample) || min_sample < 1 || min_sample > 1000) {
+      return res.status(400).json({ error: 'min_sample must be an integer between 1 and 1000' });
+    }
+    updates.push('agent_auto_min_sample = ?'); params.push(min_sample);
+  }
+  if (min_rate !== undefined) {
+    if (!(Number.isFinite(Number(min_rate)) && Number(min_rate) > 0 && Number(min_rate) <= 1)) {
+      return res.status(400).json({ error: 'min_rate must be between 0 and 1' });
+    }
+    updates.push('agent_auto_min_rate = ?'); params.push(Number(min_rate));
+  }
+  if (!updates.length) return res.status(400).json({ error: 'No policy fields to update' });
+  const next = { ...getPolicy(req.orgId), ...(enabled !== undefined ? { enabled: !!enabled } : {}),
+    ...(max_amount !== undefined ? { max_amount: max_amount === null ? null : Number(max_amount) } : {}),
+    ...(min_sample !== undefined ? { min_sample } : {}),
+    ...(min_rate !== undefined ? { min_rate: Number(min_rate) } : {}) };
+  if (next.enabled && next.max_amount == null) {
+    return res.status(400).json({ error: 'Set a max claim amount before enabling auto-approval' });
+  }
+  params.push(req.orgId);
+  db.prepare(`UPDATE orgs SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+  auditLog(req, 'agent_policy_update', 'agent_policy', req.orgId, JSON.stringify(getPolicy(req.orgId)));
+  res.json({ policy: getPolicy(req.orgId) });
+});
+
+// --- Activation checklist (deploy #101): derived state, no tracking
+// table — each step reads the same tables the surfaces themselves use.
+// The card hides when every step is done or the owner dismissed it. ---
+router.get('/checklist', (req, res) => {
+  const org = db.prepare('SELECT activation_dismissed FROM orgs WHERE id = ?').get(req.orgId);
+  const claimsExist = db.prepare('SELECT COUNT(*) AS n FROM claims WHERE org_id = ?').get(req.orgId).n > 0;
+  const auditRan = db.prepare('SELECT COUNT(*) AS n FROM agent_audits WHERE org_id = ?').get(req.orgId).n > 0;
+  const briefExists = db.prepare('SELECT COUNT(*) AS n FROM agent_briefs WHERE org_id = ?').get(req.orgId).n > 0;
+  const decided = db.prepare(
+    "SELECT COUNT(*) AS n FROM agent_actions WHERE org_id = ? AND status != 'pending'"
+  ).get(req.orgId).n > 0;
+  const manualAppeal = db.prepare(`
+    SELECT COUNT(*) AS n FROM appeals a WHERE a.org_id = ?
+      AND a.id NOT IN (
+        SELECT CAST(json_extract(result, '$.appeal_id') AS INTEGER) FROM agent_actions
+        WHERE org_id = ? AND kind = 'draft_appeal' AND status IN ('executed', 'voided') AND result IS NOT NULL
+      )
+  `).get(req.orgId, req.orgId).n > 0;
+  const steps = [
+    { key: 'claims', label: 'Bring in your claims', hint: 'Import or add the claims you are owed on', done: claimsExist, target: { page: 'claims' } },
+    { key: 'audit', label: 'Run a deadline audit', hint: 'See what is about to expire before it costs you', done: auditRan, target: { page: 'agent', section: 'audit' } },
+    { key: 'brief', label: 'Read your morning brief', hint: 'Your queue, ranked by deadline × dollars', done: briefExists, target: { page: 'agent' } },
+    { key: 'appeal', label: 'Work your first appeal', hint: 'Approve an agent draft or open one yourself', done: decided || manualAppeal, target: { page: 'agent', section: 'approvals' } },
+  ];
+  res.json({
+    steps,
+    complete: steps.every((s) => s.done),
+    dismissed: !!(org && org.activation_dismissed),
+  });
+});
+
+router.put('/checklist/dismiss', roleRequired('owner'), (req, res) => {
+  db.prepare('UPDATE orgs SET activation_dismissed = 1 WHERE id = ?').run(req.orgId);
+  res.json({ ok: true, dismissed: true });
+});
+
+// --- Notification center (deploy #101): derived items + read watermark
+// + the per-user digest opt-out the watchdog honors. ---
+router.get('/notifications', (req, res) => {
+  try {
+    res.json(buildNotifications(req.orgId, req.user));
+  } catch (e) {
+    console.error('[agent] notifications failed:', e.message);
+    res.status(500).json({ error: 'Notifications could not be loaded right now.' });
+  }
+});
+
+router.post('/notifications/read', (req, res) => {
+  db.prepare("UPDATE users SET notifications_read_at = datetime('now') WHERE id = ?").run(req.user.id);
+  const out = buildNotifications(req.orgId, req.user);
+  res.json({ ok: true, unread_count: out.unread_count, read_at: out.read_at });
+});
+
+router.put('/notifications/digest-pref', (req, res) => {
+  const { opt_out } = req.body || {};
+  db.prepare('UPDATE users SET digest_opt_out = ? WHERE id = ?').run(opt_out ? 1 : 0, req.user.id);
+  res.json({ ok: true, digest_opt_out: !!opt_out });
+});
+
 // =====================================================================
 // Phase 5 — Document intake (WS1)
 // =====================================================================
@@ -609,6 +770,53 @@ router.post('/import/preview/:id/mapping', (req, res) => {
   } catch (e) {
     return res.status(e.status || 500).json({ error: e.message });
   }
+});
+
+// --- Saved import mappings (deploy #101): a workspace's column mapping
+// under a name, reusable across imports of the same source file. ---
+router.get('/import/mappings', (req, res) => {
+  const rows = db.prepare(`
+    SELECT id, name, mapping, created_at FROM agent_import_mappings
+    WHERE org_id = ? ORDER BY name ASC
+  `).all(req.orgId);
+  res.json({
+    mappings: rows.map((r) => {
+      let mapping = {};
+      try { mapping = JSON.parse(r.mapping || '{}'); } catch { mapping = {}; }
+      return { id: r.id, name: r.name, mapping, created_at: r.created_at };
+    }),
+  });
+});
+
+router.post('/import/mappings', (req, res) => {
+  const { name, mapping } = req.body || {};
+  const cleanName = String(name || '').trim().slice(0, 80);
+  if (!cleanName) return res.status(400).json({ error: 'A mapping name is required' });
+  if (!mapping || typeof mapping !== 'object' || Array.isArray(mapping)) {
+    return res.status(400).json({ error: 'mapping must be an object of field -> column header' });
+  }
+  const clean = {};
+  for (const f of importWizard.FIELDS) {
+    const v = mapping[f.key];
+    if (typeof v === 'string' && v.trim()) clean[f.key] = v.trim();
+  }
+  if (!Object.keys(clean).length) return res.status(400).json({ error: 'The mapping has no usable columns' });
+  const info = db.prepare(`
+    INSERT INTO agent_import_mappings (org_id, user_id, name, mapping) VALUES (?, ?, ?, ?)
+    ON CONFLICT(org_id, name) DO UPDATE SET mapping = excluded.mapping
+  `).run(req.orgId, req.user.id, cleanName, JSON.stringify(clean));
+  const row = db.prepare('SELECT id, name, mapping, created_at FROM agent_import_mappings WHERE org_id = ? AND name = ?')
+    .get(req.orgId, cleanName);
+  res.status(info.lastInsertRowid && row ? 201 : 200).json({
+    mapping: { id: row.id, name: row.name, mapping: clean, created_at: row.created_at },
+  });
+});
+
+router.delete('/import/mappings/:id', (req, res) => {
+  const info = db.prepare('DELETE FROM agent_import_mappings WHERE id = ? AND org_id = ?')
+    .run(req.params.id, req.orgId);
+  if (!info.changes) return res.status(404).json({ error: 'Saved mapping not found' });
+  res.json({ ok: true });
 });
 
 // The explicit final step. checkClaimQuota applies like any claim

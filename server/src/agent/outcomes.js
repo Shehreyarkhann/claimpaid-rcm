@@ -30,7 +30,8 @@ function reconcileOutcomes(orgId, { force = false } = {}) {
     if (log && log.last_run_date === today) return { skipped: true, decided: 0, overturned: 0 };
   }
   const rows = db.prepare(`
-    SELECT ap.status AS appeal_status, c.status AS claim_status, c.paid_amount,
+    SELECT ap.status AS appeal_status, ap.outcome AS appeal_outcome,
+           c.status AS claim_status, c.paid_amount,
            c.payer_id, COALESCE(NULLIF(TRIM(c.denial_reason), ''), 'Unspecified') AS denial_reason,
            json_extract(a.payload, '$.category') AS payload_angle
     FROM agent_actions a
@@ -43,9 +44,16 @@ function reconcileOutcomes(orgId, { force = false } = {}) {
   let decided = 0;
   let overturnedTotal = 0;
   for (const r of rows) {
+    // Deploy #101: the ERA feedback loop records outcomes on the appeal
+    // (won / partial / re_denied) as payer answers arrive — they are
+    // decided cases exactly like a manual won/lost. A partial payment
+    // counts as a half-overturn: the payer moved, but not in full.
     let overturned = null;
     if (r.appeal_status === 'won') overturned = 1;
     else if (r.appeal_status === 'lost') overturned = 0;
+    else if (r.appeal_outcome === 'won') overturned = 1;
+    else if (r.appeal_outcome === 'partial') overturned = 0.5;
+    else if (r.appeal_outcome === 're_denied') overturned = 0;
     else if (r.claim_status === 'paid' && r.paid_amount > 0) overturned = 1;
     if (overturned === null) continue; // still open — not training data yet
     decided++;
@@ -58,7 +66,12 @@ function reconcileOutcomes(orgId, { force = false } = {}) {
     agg.set(key, cur);
   }
 
-  db.exec('BEGIN');
+  // Deploy #101: the ERA feedback loop calls this from INSIDE the
+  // posting transaction — join the caller's transaction when one is
+  // already open instead of failing on a nested BEGIN (the rebuild is
+  // wholesale + idempotent, so riding the outer commit is safe).
+  let ownTx = false;
+  try { db.exec('BEGIN'); ownTx = true; } catch { /* already in a transaction */ }
   try {
     db.prepare('DELETE FROM agent_outcome_stats WHERE org_id = ?').run(orgId);
     const ins = db.prepare(`
@@ -70,9 +83,9 @@ function reconcileOutcomes(orgId, { force = false } = {}) {
       INSERT INTO agent_reconcile_log (org_id, last_run_date) VALUES (?, ?)
       ON CONFLICT(org_id) DO UPDATE SET last_run_date = excluded.last_run_date
     `).run(orgId, today);
-    db.exec('COMMIT');
+    if (ownTx) db.exec('COMMIT');
   } catch (e) {
-    db.exec('ROLLBACK');
+    if (ownTx) { try { db.exec('ROLLBACK'); } catch { /* already rolled back */ } }
     throw e;
   }
   return { skipped: false, decided, overturned: overturnedTotal };

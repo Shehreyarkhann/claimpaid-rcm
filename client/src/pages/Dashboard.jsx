@@ -6,6 +6,7 @@ import {
 import { api, fmtMoney, fmtMoneyCompact, fmtDate } from '../api';
 import { Skeleton, PageHeader } from '../components/ui';
 import AgentInsights from '../components/AgentInsights';
+import ActivationChecklist from '../components/ActivationChecklist';
 
 const COLORS = ['#10b981', '#B45309', '#D97706', '#f59e0b', '#f43f5e', '#78716C', '#35805B', '#57534E'];
 
@@ -40,7 +41,7 @@ const chartTooltip = {
   contentStyle: { borderRadius: 12, border: '1px solid #E7E5E4', boxShadow: '0 8px 24px rgba(15,23,42,0.12)', fontSize: 12 },
 };
 
-export default function Dashboard({ goDenials }) {
+export default function Dashboard({ goDenials, goClaims, goAgent, goAgentApprovals }) {
   const [kpis, setKpis] = useState(null);
   const [aging, setAging] = useState([]);
   const [trend, setTrend] = useState([]);
@@ -76,6 +77,12 @@ export default function Dashboard({ goDenials }) {
   return (
     <div>
       <PageHeader title="Dashboard" subtitle="Revenue cycle at a glance" />
+
+      <ActivationChecklist onNavigate={(target) => {
+        if (target === 'claims') goClaims && goClaims();
+        else if (target === 'appeal') goAgentApprovals && goAgentApprovals();
+        else goAgent && goAgent();
+      }} />
 
       {due.length > 0 && (
         <button onClick={goDenials}

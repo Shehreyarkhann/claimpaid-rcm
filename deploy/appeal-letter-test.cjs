@@ -23,7 +23,8 @@
  *   - PUT /api/appeals/:id/letter round-trips + validates + is
  *     activity-logged on the claim
  *   - POST /api/appeals/:id/mark-submitted validates the channel, sets
- *     status/submitted_via/submitted_at and defaults follow-up to +10d
+ *     status/submitted_via/submitted_at and defaults follow-up to the
+ *     payer's typical response window (+30d default since deploy #101)
  *   - GET /api/claims/:id carries filing fields, the appeals summary
  *     (has_letter, submitted_via) and matched ERA lines
  *
@@ -256,8 +257,11 @@ async function partB() {
   check('mark-submitted sets status=submitted', ms.data.status === 'submitted', ms.data.status);
   check('mark-submitted records via + timestamp', ms.data.submitted_via === 'fax' && !!ms.data.submitted_at,
     JSON.stringify({ via: ms.data.submitted_via, at: ms.data.submitted_at }));
-  const plus10 = [0, -1, 1].map((off) => { const d = new Date(); d.setDate(d.getDate() + 10 + off); return d.toISOString().slice(0, 10); });
-  check('mark-submitted defaults follow-up to +10 days', plus10.includes(ms.data.follow_up_date), `got ${ms.data.follow_up_date}`);
+  // Deploy #101 contract change: the flat +10d default is gone — the
+  // follow-up now defaults to submitted + the payer's TYPICAL response
+  // window (30 days when the workspace set no per-payer override).
+  const plus30 = [0, -1, 1].map((off) => { const d = new Date(); d.setDate(d.getDate() + 30 + off); return d.toISOString().slice(0, 10); });
+  check('mark-submitted defaults follow-up to the payer window (+30 days default)', plus30.includes(ms.data.follow_up_date), `got ${ms.data.follow_up_date}`);
 
   // Claim detail: filing + appeals summary + era lines + activity log.
   const cd = await api(base, 'GET', `/api/claims/${claimId}`, null, tok);

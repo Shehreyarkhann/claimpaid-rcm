@@ -58,6 +58,7 @@ export default function FilingRules() {
   const toast = useToast();
   const [rules, setRules] = useState(null);
   const [editing, setEditing] = useState({});
+  const [editingResp, setEditingResp] = useState({});
   const [showAdd, setShowAdd] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [customRules, setCustomRules] = useState([]);
@@ -119,6 +120,21 @@ export default function FilingRules() {
       await api.setFilingRule(payerId, days, null);
       toast.success('Filing rule updated');
       setEditing((e) => { const n = { ...e }; delete n[payerId]; return n; });
+      load();
+    } catch (e) { toast.error(e.message); }
+  };
+
+  // Deploy #101: the typical response window rides the same rule row —
+  // saving it must not clobber the filing deadline, so it sends the
+  // payer's current filing_days alongside.
+  const saveResp = async (payerId) => {
+    const rule = (rules || []).find((r) => r.payer_id === payerId);
+    const days = parseInt(editingResp[payerId]);
+    if (!days || days < 1 || days > 365) { toast.error('Enter 1–365 days'); return; }
+    try {
+      await api.setFilingRule(payerId, rule ? rule.filing_days : 365, null, days);
+      toast.success('Typical response window updated');
+      setEditingResp((e) => { const n = { ...e }; delete n[payerId]; return n; });
       load();
     } catch (e) { toast.error(e.message); }
   };
@@ -258,8 +274,11 @@ export default function FilingRules() {
         <div className="card p-6 space-y-3">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-14" />)}</div>
       ) : (
         <div className="card overflow-hidden">
+          <div className="px-5 py-3 border-b border-stone-100 text-xs text-stone-500">
+            <strong className="text-stone-700">Typical response window</strong> — how long the payer usually takes to answer an appeal. It sets follow-ups when you mark an appeal submitted and flags payers who go silent. Typical only — an expectation, not a payer promise.
+          </div>
           <table className="w-full tbl">
-            <thead><tr><th>Payer</th><th>Type</th><th>Filing deadline</th>{canWrite && <th className="!text-right">Edit</th>}</tr></thead>
+            <thead><tr><th>Payer</th><th>Type</th><th>Filing deadline</th><th>Typical response window</th>{canWrite && <th className="!text-right">Edit</th>}</tr></thead>
             <tbody>
               {rules.map((r) => (
                 <tr key={r.payer_id}>
@@ -272,6 +291,16 @@ export default function FilingRules() {
                       <span className="text-sm">
                         <strong className="text-stone-900">{r.filing_days} days</strong>
                         {r.is_default && <span className="ml-2 text-[11px] text-stone-400">(default)</span>}
+                      </span>
+                    )}
+                  </td>
+                  <td>
+                    {editingResp[r.payer_id] !== undefined ? (
+                      <span className="text-sm font-semibold text-stone-700">{editingResp[r.payer_id] || '—'} days</span>
+                    ) : (
+                      <span className="text-sm">
+                        <strong className="text-stone-900">{r.response_days} days</strong>
+                        {r.response_is_default && <span className="ml-2 text-[11px] text-stone-400">(typical default)</span>}
                       </span>
                     )}
                   </td>
@@ -288,9 +317,24 @@ export default function FilingRules() {
                           <button onClick={() => setEditing((e) => { const n = { ...e }; delete n[r.payer_id]; return n; })}
                             className="btn btn-ghost !py-1.5 !text-xs">Cancel</button>
                         </div>
+                      ) : editingResp[r.payer_id] !== undefined ? (
+                        <div className="flex items-center justify-end gap-2">
+                          <input type="number" min="1" max="365" autoFocus
+                            className="input !w-24 !py-1.5"
+                            value={editingResp[r.payer_id]}
+                            onChange={(e) => setEditingResp({ ...editingResp, [r.payer_id]: e.target.value })}
+                            onKeyDown={(e) => e.key === 'Enter' && saveResp(r.payer_id)} />
+                          <button onClick={() => saveResp(r.payer_id)} className="btn btn-primary !py-1.5 !text-xs">Save</button>
+                          <button onClick={() => setEditingResp((e) => { const n = { ...e }; delete n[r.payer_id]; return n; })}
+                            className="btn btn-ghost !py-1.5 !text-xs">Cancel</button>
+                        </div>
                       ) : (
-                        <button onClick={() => setEditing({ ...editing, [r.payer_id]: r.filing_days })}
-                          className="text-amber-700 hover:text-amber-800 text-xs font-semibold">Edit</button>
+                        <span className="flex justify-end gap-3">
+                          <button onClick={() => setEditing({ ...editing, [r.payer_id]: r.filing_days })}
+                            className="text-amber-700 hover:text-amber-800 text-xs font-semibold">Edit deadline</button>
+                          <button onClick={() => setEditingResp({ ...editingResp, [r.payer_id]: r.response_days })}
+                            className="text-amber-700 hover:text-amber-800 text-xs font-semibold">Edit window</button>
+                        </span>
                       )}
                     </td>
                   )}

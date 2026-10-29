@@ -316,6 +316,10 @@ function draftAppeal(ctx, input) {
     // payload the executor saves.
     preview: angleStat ? `${angleStat}\n\n${letter.text}` : letter.text,
   });
+  // Deploy #101: when the owner's auto-approve policy fired inside
+  // createAction, the action is already executed — the tool output must
+  // say so, never "awaiting approval" for a draft that already saved.
+  const autoSaved = action.status === 'executed' && action.auto_approved === 1;
   return {
     output: {
       action_id: action.id,
@@ -324,12 +328,14 @@ function draftAppeal(ctx, input) {
       angle: learned
         ? { category: letter.category, label: angleLabel, source: 'learned', overturn_rate: learned.value, sample_size: learned.sampleSize, statement: angleStat }
         : { category: letter.category, label: angleLabel, source: 'default' },
-      status: 'pending',
-      note: learned
-        ? `The draft appeal letter is now shown to the user as an approval card. NOTHING has been saved to the claim. The letter argues the ${angleLabel} angle because this workspace's own decided appeals support it — state this in your reply exactly: "${angleStat}" It is saved as a draft appeal only if the user approves; it is never submitted to the payer by the system.`
-        : 'The draft appeal letter is now shown to the user as an approval card. NOTHING has been saved to the claim. It is saved as a draft appeal only if the user approves; it is never submitted to the payer by the system.',
+      status: autoSaved ? 'auto_approved' : 'pending',
+      note: autoSaved
+        ? `The workspace's auto-approval policy approved this draft immediately — it is ALREADY saved to the claim as a draft appeal (never submitted to the payer). It appears in the Auto-approved review stream, where it can still be voided. ${learned ? `The letter argues the ${angleLabel} angle: "${angleStat}"` : ''}`
+        : learned
+          ? `The draft appeal letter is now shown to the user as an approval card. NOTHING has been saved to the claim. The letter argues the ${angleLabel} angle because this workspace's own decided appeals support it — state this in your reply exactly: "${angleStat}" It is saved as a draft appeal only if the user approves; it is never submitted to the payer by the system.`
+          : 'The draft appeal letter is now shown to the user as an approval card. NOTHING has been saved to the claim. It is saved as a draft appeal only if the user approves; it is never submitted to the payer by the system.',
     },
-    event: { tool: 'draft_appeal', label: `Drafted appeal · ${claim.claim_number} — awaiting approval` },
+    event: { tool: 'draft_appeal', label: autoSaved ? `Drafted appeal · ${claim.claim_number} — auto-approved by policy` : `Drafted appeal · ${claim.claim_number} — awaiting approval` },
     action: serializeAction(action),
   };
 }

@@ -4,6 +4,7 @@ const { authRequired, roleRequired, requireProduct } = require('../auth');
 const { generateLetter, listTemplates, getTemplate, getSignature, CATEGORY_LABELS, PLACEHOLDERS, SIGNATURE_PLACEHOLDERS, DEFAULT_TEMPLATES, DEFAULT_SIGNATURE } = require('../appealLetters');
 const { logActivity } = require('../activity');
 const { auditLog } = require('../audit');
+const { responseDaysFor, addDays, daysSince } = require('../agent/responseWindows');
 
 const VALID_SUBMIT_CHANNELS = ['payer_portal', 'fax', 'mail', 'clearinghouse'];
 
@@ -100,6 +101,47 @@ router.get('/letter-templates', (req, res) => {
     signature: { body: sig.body, is_custom: sig.is_custom },
     signature_placeholders: SIGNATURE_PLACEHOLDERS,
   });
+});
+
+// --- Awaiting payer (deploy #101): submitted appeals and the wait ---
+// Every appeal in the 'submitted' state with its wait measured against
+// the payer's TYPICAL response window (workspace-overridable). `silent`
+// is status-driven: past the window AND no ERA line has posted for the
+// claim since submission — the payer owes an answer and hasn't moved.
+router.get('/awaiting-payer', (req, res) => {
+  const rows = db.prepare(`
+    SELECT a.id, a.submitted_at, a.submitted_via, a.follow_up_date, a.assigned_to,
+           c.id AS claim_id, c.claim_number, c.patient_name, c.payer_id,
+           (c.billed_amount - c.paid_amount) AS at_stake,
+           p.name AS payer, u.name AS assignee_name
+    FROM appeals a
+    JOIN claims c ON c.id = a.claim_id
+    JOIN payers p ON p.id = c.payer_id
+    LEFT JOIN users u ON u.id = a.assigned_to
+    WHERE a.org_id = ? AND a.status = 'submitted' AND a.submitted_at IS NOT NULL
+    ORDER BY a.submitted_at ASC
+  `).all(req.orgId);
+  const out = rows.map((r) => {
+    const window = responseDaysFor(req.orgId, r.payer_id);
+    const waiting = daysSince(r.submitted_at) ?? 0;
+    const moved = db.prepare(`
+      SELECT id FROM era_claim_lines WHERE org_id = ? AND match_claim_id = ?
+        AND post_status = 'posted' AND posted_at > ? LIMIT 1
+    `).get(req.orgId, r.claim_id, r.submitted_at);
+    return {
+      appeal_id: r.id, claim_id: r.claim_id, claim_number: r.claim_number,
+      patient_name: r.patient_name, payer: r.payer, at_stake: r.at_stake,
+      submitted_at: r.submitted_at, submitted_via: r.submitted_via,
+      channel: r.submitted_via, follow_up_date: r.follow_up_date,
+      assignee_name: r.assignee_name,
+      days_waiting: waiting, response_days: window,
+      expected_by: addDays(r.submitted_at, window),
+      silent: waiting > window && !moved,
+      payer_moved: !!moved,
+    };
+  });
+  out.sort((a, b) => (b.silent - a.silent) || (b.days_waiting - a.days_waiting));
+  res.json({ awaiting: out });
 });
 
 // --- Get single appeal with notes timeline ---
@@ -301,7 +343,9 @@ router.put('/:id/letter', canWrite, (req, res) => {
 // Records HOW and WHEN the letter actually left the building (nothing in
 // ClaimPaid transmits it — the submission pipe is not live). Sets the
 // follow-up that keeps the appeal in the work queue: the caller's date
-// when given, else +10 days.
+// when given, else the payer's typical response window (deploy #101 —
+// submitted date + window days; the window is the workspace's per-payer
+// rule, default 30).
 router.post('/:id/mark-submitted', canWrite, (req, res) => {
   const appeal = db.prepare('SELECT * FROM appeals WHERE id = ? AND org_id = ?').get(req.params.id, req.orgId);
   if (!appeal) return res.status(404).json({ error: 'Appeal not found' });
@@ -314,9 +358,9 @@ router.post('/:id/mark-submitted', canWrite, (req, res) => {
     return res.status(400).json({ error: 'follow_up_date must be YYYY-MM-DD' });
   }
   if (!followUp) {
-    const d = new Date();
-    d.setDate(d.getDate() + 10);
-    followUp = d.toISOString().slice(0, 10);
+    const claim = db.prepare('SELECT payer_id FROM claims WHERE id = ?').get(appeal.claim_id);
+    const window = responseDaysFor(req.orgId, claim ? claim.payer_id : null);
+    followUp = addDays(new Date().toISOString().slice(0, 10), window);
   }
   db.prepare(`
     UPDATE appeals SET status = 'submitted', submitted_via = ?, submitted_at = datetime('now'),

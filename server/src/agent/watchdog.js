@@ -24,8 +24,18 @@ const { agentEnabled } = require('../featureFlags');
 const { FILING_SELECT, FILING_JOIN } = require('../routes/filing');
 const { orgLocalDate } = require('./brief');
 const { actionTitle } = require('./actions');
+const { responseDaysFor, daysSince } = require('./responseWindows');
 const predict = require('./predict');
 const email = require('../email'); // module object: sendEmail is read at call time (test-stubbable)
+
+function stampScheduler(job, detail) {
+  try {
+    db.prepare(`
+      INSERT INTO agent_scheduler_log (job, last_run_at, detail) VALUES (?, datetime('now'), ?)
+      ON CONFLICT(job) DO UPDATE SET last_run_at = excluded.last_run_at, detail = excluded.detail
+    `).run(job, detail || null);
+  } catch { /* pre-#101 DB before first boot migration — stamping is best-effort */ }
+}
 
 const WINDOW_START_HOUR = 6; // org-local, inclusive
 const WINDOW_END_HOUR = 10;  // org-local, exclusive
@@ -120,9 +130,64 @@ function computeDigestItems(org, user, shared) {
     })),
   };
 
+  // Payer silence (deploy #101): appeals this user submitted whose payer
+  // has not answered inside the payer's typical response window — no ERA
+  // line posted for the claim since submission. Status-driven, not
+  // calendar-driven: the follow-up date no longer decides this, the
+  // payer's silence does.
+  const submittedRows = db.prepare(`
+    SELECT a.id AS appeal_id, a.submitted_at, a.submitted_via, a.follow_up_date,
+           c.id AS claim_id, c.claim_number, c.payer_id
+    FROM appeals a JOIN claims c ON c.id = a.claim_id
+    WHERE a.org_id = ? AND a.assigned_to = ? AND a.status = 'submitted' AND a.submitted_at IS NOT NULL
+    ORDER BY a.submitted_at ASC
+  `).all(orgId, user.id);
+  const silentRows = [];
+  for (const r of submittedRows) {
+    const waiting = daysSince(r.submitted_at);
+    const window = responseDaysFor(orgId, r.payer_id);
+    if (waiting == null || waiting <= window) continue;
+    const moved = db.prepare(`
+      SELECT id FROM era_claim_lines
+      WHERE org_id = ? AND match_claim_id = ? AND post_status = 'posted' AND posted_at > ?
+      LIMIT 1
+    `).get(orgId, r.claim_id, r.submitted_at);
+    if (moved) continue;
+    silentRows.push({ ...r, days_waiting: waiting, response_days: window });
+  }
+  const payerSilent = {
+    count: silentRows.length,
+    highlights: silentRows.slice(0, 3).map((r) => ({
+      claim_number: r.claim_number, claim_id: r.claim_id, appeal_id: r.appeal_id,
+      days_waiting: r.days_waiting, response_days: r.response_days, via: r.submitted_via,
+    })),
+  };
+
+  // Re-denied appeals (deploy #101): the ERA feedback loop reopened
+  // these when the payer denied again — each is a response draft waiting
+  // to be written. Clears from the list once the claim leaves 'denied'
+  // or a newer outcome lands.
+  const redeniedRows = db.prepare(`
+    SELECT c.claim_number, c.id AS claim_id, a.id AS appeal_id, a.outcome_at
+    FROM appeals a JOIN claims c ON c.id = a.claim_id
+    WHERE a.org_id = ? AND a.assigned_to = ? AND a.outcome = 're_denied' AND a.status = 'open'
+      AND c.status = 'denied'
+    ORDER BY a.outcome_at DESC
+  `).all(orgId, user.id);
+  const redenied = {
+    count: redeniedRows.length,
+    highlights: redeniedRows.slice(0, 3).map((r) => ({
+      claim_number: r.claim_number, claim_id: r.claim_id, appeal_id: r.appeal_id,
+    })),
+  };
+
   const exceptions = shared ? shared.era_exceptions : sharedOrgItems(orgId).era_exceptions;
-  const total = pending.count + followups.count + filing.count + exceptions.count;
-  return { pending_approvals: pending, followups_overdue: followups, filing_risk: filing, era_exceptions: exceptions, total };
+  const total = pending.count + followups.count + filing.count + exceptions.count
+    + payerSilent.count + redenied.count;
+  return {
+    pending_approvals: pending, followups_overdue: followups, filing_risk: filing,
+    era_exceptions: exceptions, payer_silent: payerSilent, re_denied: redenied, total,
+  };
 }
 
 function subjectFor(items) {
@@ -131,6 +196,8 @@ function subjectFor(items) {
   if (items.filing_risk.count) parts.push(`$${items.filing_risk.amount.toLocaleString('en-US')} at filing risk`);
   if (items.followups_overdue.count) parts.push(`${items.followups_overdue.count} follow-up${items.followups_overdue.count === 1 ? '' : 's'} overdue`);
   if (items.era_exceptions.count) parts.push(`${items.era_exceptions.count} ERA exception${items.era_exceptions.count === 1 ? '' : 's'} on hold`);
+  if (items.re_denied && items.re_denied.count) parts.push(`${items.re_denied.count} appeal${items.re_denied.count === 1 ? '' : 's'} re-denied`);
+  if (items.payer_silent && items.payer_silent.count) parts.push(`${items.payer_silent.count} payer${items.payer_silent.count === 1 ? '' : 's'} silent`);
   return `${parts.slice(0, 2).join(', ')} — ClaimPaid`;
 }
 
@@ -153,6 +220,14 @@ function digestBodies(org, user, items) {
   }
   if (items.era_exceptions.count) {
     lines.push(`ERA exceptions on hold: ${items.era_exceptions.count} ($${items.era_exceptions.amount.toLocaleString('en-US')} waiting on a decision)`);
+  }
+  // Deploy #101: counts only in email for the new status-driven items —
+  // the claim-level detail lives in the app, not in an inbox.
+  if (items.re_denied && items.re_denied.count) {
+    lines.push(`Appeals re-denied by the payer: ${items.re_denied.count} — ready for a response draft in the Agent tab`);
+  }
+  if (items.payer_silent && items.payer_silent.count) {
+    lines.push(`Payers silent past their typical response window: ${items.payer_silent.count} submitted appeal${items.payer_silent.count === 1 ? '' : 's'} awaiting an answer — call briefs are ready in the app`);
   }
   const text =
     `Hi ${first},\n\n` +
@@ -177,6 +252,7 @@ function digestBodies(org, user, items) {
 async function runDigestOnce(now = new Date()) {
   const summary = { sent: 0, failed: 0, skippedUsers: 0, orgs: 0 };
   if (!agentEnabled()) return { ...summary, skipped: 'agent_disabled' };
+  stampScheduler('watchdog_digest');
   // Lazy require, mirroring auth.js: routes/billing pulls the Stripe
   // stack and requiring it at module load risks a cycle.
   const { productsForOrg } = require('../routes/billing');
@@ -191,11 +267,14 @@ async function runDigestOnce(now = new Date()) {
       summary.orgs++;
       const shared = sharedOrgItems(org.id);
       const members = db.prepare(`
-        SELECT u.id, u.email, u.name, uo.role FROM user_orgs uo
+        SELECT u.id, u.email, u.name, uo.role, COALESCE(u.digest_opt_out, 0) AS digest_opt_out FROM user_orgs uo
         JOIN users u ON u.id = uo.user_id WHERE uo.org_id = ?
       `).all(org.id);
       for (const user of members) {
         if (!user.email) { summary.skippedUsers++; continue; }
+        // Deploy #101: the per-user email-digest opt-out (notification
+        // center) — an opted-out user gets no digest, ever.
+        if (user.digest_opt_out) { summary.skippedUsers++; continue; }
         const already = db.prepare(
           'SELECT id FROM agent_digest_log WHERE org_id = ? AND user_id = ? AND digest_date = ?'
         ).get(org.id, user.id, date);

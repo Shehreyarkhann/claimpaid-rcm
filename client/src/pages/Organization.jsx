@@ -288,10 +288,24 @@ function NotificationsTab({ isOwner }) {
   const toast = useToast();
   const [prefs, setPrefs] = useState(null);
   const [saving, setSaving] = useState(false);
+  // Deploy #101: the morning agent digest is a PER-USER preference (it
+  // follows you across workspaces), separate from the workspace prefs.
+  const [digestOn, setDigestOn] = useState(null);
+  const [digestSaving, setDigestSaving] = useState(false);
 
   useEffect(() => {
     api.settings.notifications().then(setPrefs).catch((e) => toast.error(e.message));
+    api.agent.notifications().then((d) => setDigestOn(!d.digest_opt_out)).catch(() => setDigestOn(null));
   }, []);
+
+  const flipDigest = async (value) => {
+    setDigestSaving(true);
+    try {
+      const r = await api.agent.digestPref(!value);
+      setDigestOn(!r.digest_opt_out);
+    } catch (e) { toast.error(e.message); }
+    finally { setDigestSaving(false); }
+  };
 
   const flip = async (key, value) => {
     if (!isOwner || saving) return;
@@ -309,6 +323,17 @@ function NotificationsTab({ isOwner }) {
       <h3 className="font-bold text-stone-900 mb-1">Email notifications</h3>
       <p className="text-sm text-stone-500 mb-2">Per-workspace email preferences. Emails queue until a mail provider is configured — preferences save and apply regardless.</p>
       {!isOwner && <p className="text-xs text-stone-400 mb-2">Only owners can change these.</p>}
+      {digestOn !== null && (
+        <div className="mb-3 pb-3 border-b border-stone-100">
+          <Toggle
+            label="Morning agent digest (you, personally)"
+            hint="One counts-only email each morning when the agent finds work waiting — approvals, silent payers, re-denied appeals. Never patient details. This setting is yours alone and follows you across workspaces."
+            checked={digestOn}
+            disabled={digestSaving}
+            onChange={flipDigest}
+          />
+        </div>
+      )}
       <div className="divide-y divide-stone-100">
         {NOTIF_DEFS.map((d) => (
           <div key={d.key} className="flex items-center justify-between gap-4">

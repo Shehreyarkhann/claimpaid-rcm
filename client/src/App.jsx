@@ -268,7 +268,7 @@ function Workspace() {
         />
       )}
       {page === 'digest' && <Digest />}
-      {page === 'dashboard' && <Dashboard goDenials={() => go('denials')} />}
+      {page === 'dashboard' && <Dashboard goDenials={() => go('denials')} goClaims={() => go('claims')} goAgent={() => go('agent')} goAgentApprovals={() => go('agent', { agentSection: 'approvals' })} />}
       {page === 'claims' && <Claims initialClaimId={deepLink?.claimId} onConsumed={() => setDeepLink(null)}
         onReviewAgentDrafts={() => go('agent', { agentSection: 'approvals' })}
         onOpenAppeal={(appealId) => go('denials', { appealId })}

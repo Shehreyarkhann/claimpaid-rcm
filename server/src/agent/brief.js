@@ -80,6 +80,20 @@ function buildWhileAway(orgId, sinceIso) {
       AND follow_up_date >= date(?) AND follow_up_date < date('now')
   `).get(orgId, sinceIso);
 
+  // Appeals the payer RE-DENIED inside the window (deploy #101): the ERA
+  // feedback loop recorded the outcome and reopened the appeal — these
+  // are response drafts waiting to be written.
+  const redenied = db.prepare(`
+    SELECT a.id AS appeal_id, c.id AS claim_id, c.claim_number, c.billed_amount, c.denial_reason
+    FROM appeals a JOIN claims c ON c.id = a.claim_id
+    WHERE a.org_id = ? AND a.outcome = 're_denied' AND a.outcome_at >= ?
+    ORDER BY a.outcome_at DESC LIMIT 5
+  `).all(orgId, sinceIso);
+  const redeniedCount = db.prepare(`
+    SELECT COUNT(*) AS n FROM appeals
+    WHERE org_id = ? AND outcome = 're_denied' AND outcome_at >= ?
+  `).get(orgId, sinceIso).n;
+
   return {
     since: sinceIso,
     new_denials: {
@@ -92,6 +106,13 @@ function buildWhileAway(orgId, sinceIso) {
     era_postings: { count: eraPosted.n, total_paid: money(eraPosted.total_paid) },
     era_exceptions: { new_count: eraExceptionsNew, on_hold_count: eraExceptionsOnHold },
     followups_passed: { count: followups.n },
+    re_denied: {
+      count: redeniedCount,
+      highlights: redenied.map((r) => ({
+        appeal_id: r.appeal_id, claim_id: r.claim_id, claim_number: r.claim_number,
+        amount: money(r.billed_amount), denial_reason: r.denial_reason || null,
+      })),
+    },
   };
 }
 
@@ -166,7 +187,7 @@ function draftCandidates(orgId, planItems) {
 function hasAnythingToSummarize(content) {
   const w = content.while_away;
   return w.new_denials.count + w.era_postings.count + w.era_exceptions.new_count
-    + w.followups_passed.count + content.plan.length > 0;
+    + w.followups_passed.count + (w.re_denied ? w.re_denied.count : 0) + content.plan.length > 0;
 }
 
 const NARRATIVE_SYSTEM = [

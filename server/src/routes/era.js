@@ -225,6 +225,96 @@ router.get('/remittances/:id', (req, res) => {
   });
 });
 
+// --- Exception patterns (deploy #101) ---
+// Open exceptions grouped by (payer, primary CARC, deterministic
+// recommended action). Billers decide PATTERNS, not lines: a group
+// header shows the line count + dollars, and "Apply to all" runs the
+// existing per-line resolve path (agent/eraResolve.applyResolution —
+// the same engine behind the agent's resolve_exception executor and
+// the inbox Post/Ignore buttons) for every line in the group.
+const eraResolve = require('../agent/eraResolve');
+
+function primaryCarc(line) {
+  let adj = [];
+  try { adj = JSON.parse(line.adjustments || '[]'); } catch { adj = []; }
+  if (!adj.length) return 'none';
+  const a = adj[0];
+  return `${a.group}-${a.code}`;
+}
+
+function exceptionGroups(orgId) {
+  const rows = db.prepare(`
+    SELECT l.*, r.payer_name
+    FROM era_claim_lines l JOIN era_remittances r ON r.id = l.era_id
+    WHERE l.org_id = ? AND l.post_status = 'pending' AND l.flags IS NOT NULL AND l.flags != '[]'
+    ORDER BY l.created_at DESC, l.id DESC
+  `).all(orgId);
+  const groups = new Map();
+  for (const line of rows) {
+    const rec = eraResolve.recommendDisposition(line);
+    const carc = primaryCarc(line);
+    const payer = line.payer_name || 'Unknown payer';
+    const key = `${payer}|${carc}|${rec.disposition}`;
+    if (!groups.has(key)) {
+      groups.set(key, {
+        key, payer, primary_carc: carc,
+        disposition: rec.disposition, disposition_label: rec.label,
+        can_resolve: rec.can_resolve,
+        count: 0, total_billed: 0, total_paid: 0, line_ids: [],
+      });
+    }
+    const g = groups.get(key);
+    g.count += 1;
+    g.total_billed = round2(g.total_billed + (Number(line.billed) || 0));
+    g.total_paid = round2(g.total_paid + (Number(line.paid) || 0));
+    g.line_ids.push(line.id);
+    g.can_resolve = g.can_resolve && rec.can_resolve;
+  }
+  return [...groups.values()].sort((a, b) => b.total_billed - a.total_billed);
+}
+
+router.get('/exception-groups', (req, res) => {
+  res.json({ groups: exceptionGroups(req.orgId) });
+});
+
+router.post('/exception-groups/apply', roleRequired('owner', 'biller'), (req, res) => {
+  const { line_ids } = req.body || {};
+  if (!Array.isArray(line_ids) || !line_ids.length) {
+    return res.status(400).json({ error: 'line_ids (non-empty array) is required' });
+  }
+  if (line_ids.length > 200) return res.status(400).json({ error: 'At most 200 lines per batch' });
+  const results = [];
+  const summary = { resolved: 0, posted: 0, ignored: 0, skipped: 0, failed: 0 };
+  for (const id of line_ids) {
+    const line = db.prepare('SELECT * FROM era_claim_lines WHERE id = ? AND org_id = ?').get(Number(id), req.orgId);
+    if (!line) { results.push({ line_id: Number(id), outcome: 'missing' }); summary.skipped++; continue; }
+    if (line.post_status !== 'pending') {
+      results.push({ line_id: line.id, outcome: 'skipped', reason: 'already resolved' });
+      summary.skipped++;
+      continue;
+    }
+    const rec = eraResolve.recommendDisposition(line);
+    if (!rec.can_resolve) {
+      results.push({ line_id: line.id, outcome: 'skipped', reason: rec.reason, disposition: rec.disposition });
+      summary.skipped++;
+      continue;
+    }
+    try {
+      const r = eraResolve.applyResolution({ orgId: req.orgId, user: req.user }, line, rec.disposition);
+      results.push({ line_id: line.id, outcome: 'resolved', disposition: rec.disposition, posted: !!r.posted, ignored: !!r.ignored, claim_id: r.claim_id || null, new_status: r.new_status || null });
+      summary.resolved++;
+      if (r.posted) summary.posted++;
+      if (r.ignored) summary.ignored++;
+    } catch (e) {
+      results.push({ line_id: line.id, outcome: 'failed', error: e.message });
+      summary.failed++;
+    }
+  }
+  auditLog(req, 'resolve_batch', 'era_exception_group', null,
+    `Pattern apply: ${summary.resolved} resolved (${summary.posted} posted, ${summary.ignored} written off), ${summary.skipped} skipped, ${summary.failed} failed`);
+  res.json({ results, summary });
+});
+
 function getLine(req, res) {
   const line = db.prepare('SELECT * FROM era_claim_lines WHERE id = ? AND org_id = ?')
     .get(req.params.id, req.orgId);

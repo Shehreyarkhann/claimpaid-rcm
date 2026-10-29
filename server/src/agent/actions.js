@@ -56,6 +56,8 @@ function serializeAction(row) {
       job_id: payload.job_id ?? null,
     },
     result: parseJson(row.result, null),
+    auto_approved: row.auto_approved === 1,
+    auto_snapshot: parseJson(row.auto_snapshot, null),
     created_at: row.created_at,
     decided_at: row.decided_at,
     executed_at: row.executed_at,
@@ -67,7 +69,48 @@ function createAction({ orgId, userId, convoId, kind, payload, preview }) {
     INSERT INTO agent_actions (org_id, user_id, convo_id, kind, payload, preview, status)
     VALUES (?, ?, ?, ?, ?, ?, 'pending')
   `).run(orgId, userId, convoId || null, kind, JSON.stringify(payload || {}), preview || '');
-  return db.prepare('SELECT * FROM agent_actions WHERE id = ?').get(Number(info.lastInsertRowid));
+  const row = db.prepare('SELECT * FROM agent_actions WHERE id = ?').get(Number(info.lastInsertRowid));
+  // Deploy #101: approval policy tiers — a draft_appeal created through
+  // ANY path (brief, chat, wizard, intake) is evaluated against the
+  // owner's auto-approve policy the moment it exists. Qualifying drafts
+  // execute immediately through the same approve path a human uses;
+  // everything else stays pending exactly as before. Policy is OFF by
+  // default, and a policy failure must never break creation.
+  if (kind === 'draft_appeal') {
+    try {
+      const after = maybeAutoApprove(row);
+      if (after) return after;
+    } catch (e) {
+      console.error('[agent] auto-approve evaluation failed:', e.message);
+    }
+  }
+  return row;
+}
+
+// The auto-approve gate. Returns the updated action row when the policy
+// fired (executed or failed), else null (stays human-queued).
+function maybeAutoApprove(action) {
+  const { evaluateDraftAction } = require('./policy');
+  const verdict = evaluateDraftAction(action.org_id, action);
+  if (!verdict.qualifies) return null;
+  const snapshot = {
+    policy: verdict.policy,
+    prediction: verdict.prediction,
+    claim_amount: verdict.claim_amount,
+    evaluated_at: new Date().toISOString(),
+  };
+  db.prepare('UPDATE agent_actions SET auto_approved = 1, auto_snapshot = ? WHERE id = ?')
+    .run(JSON.stringify(snapshot), action.id);
+  // The executor runs as the proposing user (their id authors the appeal
+  // note, labeled auto-approved there); the audit trail records the
+  // decision as the policy's, with the snapshot attached to the row.
+  const req = {
+    orgId: action.org_id,
+    user: { id: action.user_id, email: null, name: null },
+    ip: null, headers: {}, autoApprove: snapshot,
+  };
+  const fresh = getAction(action.id, action.org_id);
+  return approveAction(req, fresh, { auto: snapshot });
 }
 
 function getAction(id, orgId) {
@@ -97,6 +140,12 @@ function executeDraftAppeal(req, action) {
   let appeal = db.prepare('SELECT id, letter FROM appeals WHERE claim_id = ? AND org_id = ?')
     .get(claim.id, action.org_id);
   let letterLocation = 'appeal';
+  const appealPreExisted = !!appeal;
+  // Deploy #101: an auto-approved draft says so on the appeal timeline —
+  // nobody clicked Approve, and the record must not pretend otherwise.
+  const savedNote = req.autoApprove
+    ? 'Appeal draft saved by the auto-approval policy (no human decision) — the letter is in the letter panel.'
+    : 'Appeal draft saved via agent approval — the letter is in the letter panel.';
   if (!appeal) {
     const info = db.prepare(`
       INSERT INTO appeals (org_id, claim_id, assigned_to, status, priority, letter)
@@ -104,11 +153,11 @@ function executeDraftAppeal(req, action) {
     `).run(action.org_id, claim.id, action.user_id, payload.letter);
     appeal = { id: Number(info.lastInsertRowid), letter: payload.letter };
     db.prepare('INSERT INTO appeal_notes (appeal_id, user_id, note) VALUES (?, ?, ?)')
-      .run(appeal.id, req.user.id, 'Appeal draft saved via agent approval — the letter is in the letter panel.');
+      .run(appeal.id, req.user.id, savedNote);
   } else if (!appeal.letter || !appeal.letter.trim()) {
     db.prepare('UPDATE appeals SET letter = ? WHERE id = ?').run(payload.letter, appeal.id);
     db.prepare('INSERT INTO appeal_notes (appeal_id, user_id, note) VALUES (?, ?, ?)')
-      .run(appeal.id, req.user.id, 'Appeal draft saved via agent approval — the letter is in the letter panel.');
+      .run(appeal.id, req.user.id, savedNote);
   } else if (appeal.letter.trim() !== payload.letter.trim()) {
     // The appeal already carries a letter (a person's own, or an earlier
     // approved draft). Keep it as THE letter; preserve this new draft as a
@@ -120,7 +169,7 @@ function executeDraftAppeal(req, action) {
   logActivity(action.org_id, claim.id, req.user.id, 'appeal_drafted',
     `Appeal drafted by the agent and approved — saved on claim ${claim.claim_number} as a draft (not submitted)`);
   return {
-    appeal_id: appeal.id, appeal_status: 'open',
+    appeal_id: appeal.id, appeal_status: 'open', appeal_created: !appealPreExisted,
     letter_saved_as_note: letterLocation === 'additional_note', letter_location: letterLocation,
   };
 }
@@ -197,17 +246,19 @@ function decidedError() {
   return e;
 }
 
-function approveAction(req, action) {
+function approveAction(req, action, opts = {}) {
   if (action.status !== 'pending') throw decidedError();
   const label = actionTitle(action);
-  auditLog(req, 'agent_action_approve', 'agent_action', action.id, label);
+  const auto = opts.auto || null;
+  auditLog(req, auto ? 'agent_action_auto_approve' : 'agent_action_approve', 'agent_action', action.id, label);
   try {
     const result = executeAction(req, action);
+    const stored = auto ? { ...result, auto_approved: true, auto_snapshot: auto } : result;
     db.prepare(`
       UPDATE agent_actions SET status = 'executed', result = ?,
         decided_at = datetime('now'), executed_at = datetime('now') WHERE id = ?
-    `).run(JSON.stringify(result), action.id);
-    auditLog(req, 'agent_action_execute', 'agent_action', action.id, label);
+    `).run(JSON.stringify(stored), action.id);
+    auditLog(req, auto ? 'agent_action_auto_execute' : 'agent_action_execute', 'agent_action', action.id, label);
   } catch (e) {
     db.prepare(`
       UPDATE agent_actions SET status = 'failed', result = ?,
@@ -215,6 +266,57 @@ function approveAction(req, action) {
     `).run(JSON.stringify({ error: e.message }), action.id);
     auditLog(req, 'agent_action_execute_failed', 'agent_action', action.id, label);
   }
+  return getAction(action.id, action.org_id);
+}
+
+// --- Void an auto-approved draft (deploy #101) ---
+// The review stream's undo: removes the draft appeal the policy created
+// (the appeal row + its notes, the same delete the Denials DELETE route
+// performs) and marks the action 'voided'. Refused once the appeal has
+// left the draft state — submitted or decided appeals are real work
+// product and are never deleted from a review list.
+function voidAutoApproved(req, action) {
+  if (!action.auto_approved || action.kind !== 'draft_appeal' || action.status !== 'executed') {
+    const e = new Error('Only an executed auto-approved draft can be voided.');
+    e.status = 400;
+    throw e;
+  }
+  const result = parseJson(action.result, {});
+  const appealId = result.appeal_id;
+  const appeal = appealId
+    ? db.prepare('SELECT * FROM appeals WHERE id = ? AND org_id = ?').get(appealId, action.org_id)
+    : null;
+  if (appeal) {
+    if (appeal.status !== 'open' || appeal.submitted_at) {
+      const e = new Error('This draft has already been worked or submitted — void it from Denial Appeals instead.');
+      e.status = 409;
+      throw e;
+    }
+    if (result.letter_location === 'additional_note') {
+      // The appeal pre-existed with its own letter; the policy only added
+      // a draft note — remove exactly that note, nothing else.
+      const note = db.prepare(`
+        SELECT id FROM appeal_notes WHERE appeal_id = ? AND note LIKE 'Additional draft letter (agent)%'
+        ORDER BY id DESC LIMIT 1
+      `).get(appeal.id);
+      if (note) db.prepare('DELETE FROM appeal_notes WHERE id = ?').run(note.id);
+      logActivity(action.org_id, appeal.claim_id, req.user.id, 'appeal_voided',
+        `Auto-approved draft note voided from the review stream — appeal #${appeal.id} kept, draft note removed`);
+    } else if (result.appeal_created) {
+      db.prepare('DELETE FROM appeal_notes WHERE appeal_id = ?').run(appeal.id);
+      db.prepare('DELETE FROM appeals WHERE id = ?').run(appeal.id);
+      logActivity(action.org_id, appeal.claim_id, req.user.id, 'appeal_voided',
+        `Auto-approved appeal draft voided from the review stream — draft appeal #${appeal.id} removed`);
+    } else {
+      // The appeal pre-existed empty; the policy filled its letter —
+      // voiding clears the letter back out.
+      db.prepare('UPDATE appeals SET letter = NULL WHERE id = ?').run(appeal.id);
+      logActivity(action.org_id, appeal.claim_id, req.user.id, 'appeal_voided',
+        `Auto-approved draft letter voided from the review stream — letter cleared from appeal #${appeal.id}`);
+    }
+  }
+  db.prepare("UPDATE agent_actions SET status = 'voided' WHERE id = ?").run(action.id);
+  auditLog(req, 'agent_action_void_auto', 'agent_action', action.id, actionTitle(action));
   return getAction(action.id, action.org_id);
 }
 
@@ -242,4 +344,4 @@ function rejectAction(req, action) {
   return getAction(action.id, action.org_id);
 }
 
-module.exports = { createAction, getAction, serializeAction, approveAction, rejectAction, actionTitle };
+module.exports = { createAction, getAction, serializeAction, approveAction, rejectAction, actionTitle, voidAutoApproved };

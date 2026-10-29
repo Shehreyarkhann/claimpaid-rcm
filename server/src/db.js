@@ -1010,6 +1010,93 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_agent_audits_org ON agent_audits(org_id, created_at);
   `);
   if (!columnExists('claims', 'patient_paid_amount')) db.exec('ALTER TABLE claims ADD COLUMN patient_paid_amount REAL NOT NULL DEFAULT 0');
+  // ---- Deploy #101: status-driven core loop, scale, health, rhythm ----
+  // payer response windows: the TYPICAL days a payer takes to answer an
+  // appeal, per payer per workspace (payer_filing_rules is already the
+  // per-org payer-rules row). NULL = the product default (30) — every
+  // surface labels the figure "typical", never a payer commitment.
+  if (!columnExists('payer_filing_rules', 'response_days')) db.exec('ALTER TABLE payer_filing_rules ADD COLUMN response_days INTEGER');
+  // Appeal outcome recorded by the ERA feedback loop (deploy #101):
+  // 'won' | 'partial' | 're_denied' (+ outcome_at / outcome_source 'era' |
+  // 'manual'). Distinct from appeals.status (the work state): a partial
+  // payment leaves the appeal submitted-and-working while its outcome is
+  // already training data for agent/outcomes.js reconciliation.
+  if (!columnExists('appeals', 'outcome')) db.exec('ALTER TABLE appeals ADD COLUMN outcome TEXT');
+  if (!columnExists('appeals', 'outcome_at')) db.exec('ALTER TABLE appeals ADD COLUMN outcome_at TEXT');
+  if (!columnExists('appeals', 'outcome_source')) db.exec('ALTER TABLE appeals ADD COLUMN outcome_source TEXT');
+  // Approval policy tiers (deploy #101): agent_actions gain the
+  // auto-approval stamp + the policy/prediction snapshot used at decision
+  // time; the policy itself lives on the org row (owner-set, default OFF).
+  if (!columnExists('agent_actions', 'auto_approved')) db.exec('ALTER TABLE agent_actions ADD COLUMN auto_approved INTEGER NOT NULL DEFAULT 0');
+  if (!columnExists('agent_actions', 'auto_snapshot')) db.exec('ALTER TABLE agent_actions ADD COLUMN auto_snapshot TEXT');
+  if (!columnExists('orgs', 'agent_auto_approve')) db.exec('ALTER TABLE orgs ADD COLUMN agent_auto_approve INTEGER NOT NULL DEFAULT 0');
+  if (!columnExists('orgs', 'agent_auto_max_amount')) db.exec('ALTER TABLE orgs ADD COLUMN agent_auto_max_amount REAL');
+  if (!columnExists('orgs', 'agent_auto_min_sample')) db.exec('ALTER TABLE orgs ADD COLUMN agent_auto_min_sample INTEGER NOT NULL DEFAULT 5');
+  if (!columnExists('orgs', 'agent_auto_min_rate')) db.exec('ALTER TABLE orgs ADD COLUMN agent_auto_min_rate REAL NOT NULL DEFAULT 0.7');
+  // Activation checklist dismissal (org setting, owner action).
+  if (!columnExists('orgs', 'activation_dismissed')) db.exec('ALTER TABLE orgs ADD COLUMN activation_dismissed INTEGER NOT NULL DEFAULT 0');
+  // Notification center: per-user read watermark + morning-digest opt-out.
+  if (!columnExists('users', 'notifications_read_at')) db.exec('ALTER TABLE users ADD COLUMN notifications_read_at TEXT');
+  if (!columnExists('users', 'digest_opt_out')) db.exec('ALTER TABLE users ADD COLUMN digest_opt_out INTEGER NOT NULL DEFAULT 0');
+  // Partial outcomes make overturned fractional (0.5) — the outcome-stats
+  // table is a derived cache rebuilt wholesale by reconciliation, so a
+  // pre-#101 INTEGER shape is dropped and recreated (Phase-4 precedent).
+  {
+    const t = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='agent_outcome_stats'").get();
+    if (t && /overturned\s+INTEGER/i.test(t.sql)) db.exec('DROP TABLE agent_outcome_stats');
+  }
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS agent_outcome_stats (
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      payer_id INTEGER,
+      denial_reason TEXT NOT NULL DEFAULT '',
+      angle TEXT NOT NULL DEFAULT '',
+      appeals INTEGER NOT NULL DEFAULT 0,
+      overturned REAL NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (org_id, payer_id, denial_reason, angle)
+    );
+    -- Server metrics rollup (deploy #101): one row per hour per route
+    -- group per status class. Counts + latency sums only — no paths with
+    -- ids, no bodies, no PHI. The live p95 ring lives in metrics.js.
+    CREATE TABLE IF NOT EXISTS metrics_hourly (
+      hour TEXT NOT NULL,
+      route_group TEXT NOT NULL,
+      status_class TEXT NOT NULL,
+      count INTEGER NOT NULL DEFAULT 0,
+      errors INTEGER NOT NULL DEFAULT 0,
+      total_ms REAL NOT NULL DEFAULT 0,
+      PRIMARY KEY (hour, route_group, status_class)
+    );
+    -- Saved CSV import mappings (deploy #101), per workspace.
+    CREATE TABLE IF NOT EXISTS agent_import_mappings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      user_id INTEGER REFERENCES users(id),
+      name TEXT NOT NULL,
+      mapping TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(org_id, name)
+    );
+    CREATE INDEX IF NOT EXISTS idx_import_mappings_org ON agent_import_mappings(org_id, created_at);
+    -- Brief precompute dedupe (deploy #101): one ATTEMPT row per user per
+    -- org-local day, mirroring agent_digest_log semantics.
+    CREATE TABLE IF NOT EXISTS agent_brief_precompute_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      brief_date TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'generated',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(org_id, user_id, brief_date)
+    );
+    -- Scheduler stamps (deploy #101): last-run truth for /super health.
+    CREATE TABLE IF NOT EXISTS agent_scheduler_log (
+      job TEXT PRIMARY KEY,
+      last_run_at TEXT NOT NULL DEFAULT (datetime('now')),
+      detail TEXT
+    );
+  `);
   // ---- Appeal letter as a first-class object (deploy #98) ----
   // Until now the appeals table had nowhere to PUT a letter, so the agent
   // executor preserved approved drafts by dumping the full letter into

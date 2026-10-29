@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../auth';
 import UserMenu from './UserMenu';
+import NotificationBell from './NotificationBell';
 import { useOrgSettings } from '../orgSettings';
 import { api } from '../api';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
@@ -279,6 +280,7 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
         </nav>
 
         <div className="p-3 space-y-2">
+          <NotificationBell onNavigate={(p) => go(p)} collapsed={rail} />
           <button onClick={toggle} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             className="w-full hidden lg:flex items-center justify-center gap-2 rounded-xl bg-white/5 hover:bg-white/10 transition p-2.5 text-stone-400 hover:text-white">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
@@ -305,6 +307,7 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
             <div className="text-sm font-semibold leading-tight truncate">{currentLabel}</div>
             <div className="text-[11px] text-stone-400 leading-tight truncate">{user?.org_name || 'ClaimPaid'}</div>
           </div>
+          <NotificationBell variant="mobile" collapsed onNavigate={(p) => go(p)} />
           <UserMenu placement="down" compact />
         </div>
         {usageWarn && (

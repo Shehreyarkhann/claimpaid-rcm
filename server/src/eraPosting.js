@@ -97,7 +97,16 @@ function postLine(req, era, line) {
 
   db.prepare(`UPDATE era_claim_lines SET post_status = 'posted', posted_at = datetime('now'), posted_by = ? WHERE id = ?`)
     .run(req.user.id, line.id);
-  return { claimId: claim.id, newStatus, balance, authLinked };
+
+  // Deploy #101: the ERA feedback loop — a posted line that settles a
+  // claim with an open, submitted appeal records the payer's answer
+  // (won / partial / re-denied) deterministically. Lazy require:
+  // eraFeedback requires this module's tolerance constant. It never
+  // throws (it guards itself), so posting cannot be sunk by it.
+  const feedback = require('./agent/eraFeedback').applyEraFeedback({
+    orgId: req.orgId, line, result: { claimId: claim.id, newStatus },
+  });
+  return { claimId: claim.id, newStatus, balance, authLinked, feedback };
 }
 
 module.exports = { recomputeRemittance, postLine, round2, VARIANCE_TOLERANCE };

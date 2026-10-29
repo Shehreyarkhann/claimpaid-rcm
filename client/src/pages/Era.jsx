@@ -237,12 +237,32 @@ export default function Era() {
   const [result, setResult] = useState(null);
   const [matchLine, setMatchLine] = useState(null);
   const [detailsClaimId, setDetailsClaimId] = useState(null);
+  const [groups, setGroups] = useState([]);
+  const [applyingKey, setApplyingKey] = useState(null);
+  const [groupSummary, setGroupSummary] = useState(null);
 
   const load = () => {
     api.era.remittances().then((d) => setRemittances(d.remittances)).catch((e) => toast.error(e.message));
     api.era.reconciliation().then(setRecon).catch(() => {});
+    api.era.exceptionGroups().then((d) => setGroups(d.groups || [])).catch(() => {});
   };
   useEffect(() => { load(); }, []);
+
+  const applyGroup = async (g) => {
+    setApplyingKey(g.key);
+    setGroupSummary(null);
+    try {
+      const r = await api.era.applyExceptionGroup(g.line_ids);
+      const s = r.summary || {};
+      setGroupSummary(`${g.payer} · ${g.primary_carc}: ${s.resolved || 0} resolved (${s.posted || 0} posted, ${s.ignored || 0} written off)${s.skipped ? ` · ${s.skipped} skipped` : ''}${s.failed ? ` · ${s.failed} failed` : ''}`);
+      toast.success('Pattern applied');
+      load();
+    } catch (e) {
+      toast.error(e.message || 'Could not apply that pattern');
+    } finally {
+      setApplyingKey(null);
+    }
+  };
 
   const handleUpload = async (e) => {
     const file = e.target.files[0];
@@ -362,6 +382,34 @@ export default function Era() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {groups.length > 0 && (
+        <div className="card p-5 mb-6">
+          <div className="flex items-baseline gap-3 flex-wrap mb-1">
+            <h3 className="font-semibold text-stone-900">Exception patterns</h3>
+            <span className="text-xs text-stone-400">Open exceptions grouped by payer × denial code × recommended action — decide the pattern once, apply it to every line.</span>
+          </div>
+          {groupSummary && <div className="text-xs text-emerald-700 font-medium mb-2">{groupSummary}</div>}
+          <div className="space-y-2 mt-3">
+            {groups.map((g) => (
+              <div key={g.key} className="flex flex-wrap items-center gap-2 rounded-xl border border-stone-200 bg-[#FFFDF8] px-3.5 py-2.5">
+                <span className="text-sm font-semibold text-stone-800">{g.payer}</span>
+                <span className="badge badge-slate">{g.primary_carc}</span>
+                <span className="badge badge-blue">{g.disposition_label}</span>
+                <span className="text-xs text-stone-500">{g.count} line{g.count === 1 ? '' : 's'} · {fmtMoney(g.total_billed)} billed</span>
+                {canWrite && (g.can_resolve ? (
+                  <button type="button" className="btn btn-primary btn-sm ml-auto" disabled={applyingKey === g.key}
+                    onClick={() => applyGroup(g)}>
+                    {applyingKey === g.key ? 'Applying…' : `Apply to all ${g.count}`}
+                  </button>
+                ) : (
+                  <span className="text-xs text-stone-400 ml-auto">Match lines to claims first — resolve individually below</span>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

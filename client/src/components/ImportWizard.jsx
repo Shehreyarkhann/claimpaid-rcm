@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api, fmtMoney2 } from '../api';
 import { authFetch } from '../auth';
 import { Modal, useToast } from './ui';
@@ -25,6 +25,39 @@ export default function ImportWizard({ onClose, onImported }) {
   const [error, setError] = useState('');
   const csvRef = useRef(null);
   const ediRef = useRef(null);
+  // Deploy #101: saved column mappings for this workspace.
+  const [savedMappings, setSavedMappings] = useState([]);
+  const [mappingName, setMappingName] = useState('');
+
+  useEffect(() => {
+    api.agent.importMappings().then((r) => setSavedMappings(r.mappings || [])).catch(() => {});
+  }, []);
+
+  const applySavedMapping = (id) => {
+    const m = savedMappings.find((x) => x.id === Number(id));
+    if (m) setMapping({ ...m.mapping });
+  };
+  const saveCurrentMapping = async () => {
+    const name = mappingName.trim();
+    if (!name) { toast.error('Name the mapping first'); return; }
+    try {
+      await api.agent.saveImportMapping({ name, mapping });
+      const r = await api.agent.importMappings();
+      setSavedMappings(r.mappings || []);
+      setMappingName('');
+      toast.success(`Mapping "${name}" saved for this workspace`);
+    } catch (e) {
+      toast.error(e.message || 'Could not save the mapping');
+    }
+  };
+  const deleteSavedMapping = async (id) => {
+    try {
+      await api.agent.deleteImportMapping(id);
+      setSavedMappings((list) => list.filter((x) => x.id !== id));
+    } catch (e) {
+      toast.error(e.message || 'Could not delete the mapping');
+    }
+  };
 
   const downloadTemplate = async () => {
     try {
@@ -174,6 +207,28 @@ export default function ImportWizard({ onClose, onImported }) {
             <div>
               <div className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-2">Column mapping — adjust anything the wizard guessed wrong</div>
               <p className="text-sm text-stone-500 mb-3">File: <b className="text-stone-700">{preview.filename}</b> · {preview.row_count} data rows. Required fields are marked *.</p>
+              <div className="flex flex-wrap items-center gap-2 mb-4 rounded-xl bg-stone-50 border border-stone-200 px-3 py-2.5">
+                <span className="text-xs font-semibold text-stone-500">Saved mappings</span>
+                <select className="input !py-1.5 !text-[13px] !w-56" defaultValue=""
+                  onChange={(e) => { if (e.target.value) applySavedMapping(e.target.value); e.target.value = ''; }}>
+                  <option value="">Apply a saved mapping…</option>
+                  {savedMappings.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
+                <input className="input !py-1.5 !text-[13px] !w-48" placeholder="Name this mapping"
+                  value={mappingName} onChange={(e) => setMappingName(e.target.value)} />
+                <button type="button" className="btn btn-outline btn-sm" onClick={saveCurrentMapping}>Save mapping</button>
+                {savedMappings.length > 0 && (
+                  <span className="flex flex-wrap gap-1.5">
+                    {savedMappings.map((m) => (
+                      <span key={m.id} className="inline-flex items-center gap-1 text-[11px] bg-white border border-stone-200 rounded-full px-2 py-0.5">
+                        {m.name}
+                        <button type="button" aria-label={`Delete mapping ${m.name}`} className="text-stone-400 hover:text-rose-600"
+                          onClick={() => deleteSavedMapping(m.id)}>✕</button>
+                      </span>
+                    ))}
+                  </span>
+                )}
+              </div>
               <div className="grid sm:grid-cols-2 gap-x-5 gap-y-2.5">
                 {preview.fields.map((f) => (
                   <div key={f.key} className="flex items-center gap-3">

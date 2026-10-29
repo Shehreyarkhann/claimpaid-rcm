@@ -4,6 +4,7 @@ import { api, fmtMoney2 } from '../api';
 import { Modal, EmptyState, PageHeader, Skeleton, useToast, confirmDialog } from '../components/ui';
 import { CANNED_REPLIES } from '../cannedReplies';
 import SystemStatusTab from './SystemStatusTab';
+import SuperHealthTab from './SuperHealthTab';
 
 const PLAN_LABEL = { starter: 'Starter', pro: 'Pro + AI', ai: 'AI Only', enterprise: 'Enterprise', trial: 'Trial' };
 const PLAN_BADGE = { starter: 'badge-blue', pro: 'badge-violet', ai: 'badge-amber', enterprise: 'badge-green', trial: 'badge-blue' };
@@ -1129,7 +1130,7 @@ function DbTab() {
 const TABS = [
   ['overview', 'Overview'], ['clients', 'Clients'], ['ai', 'AI Clients'], ['users', 'Users'],
   ['subscriptions', 'Subscriptions'], ['demos', 'Demo Requests'], ['support', 'Support'], ['db', 'Database'],
-  ['status', 'System status'],
+  ['status', 'System status'], ['health', 'Health'],
 ];
 
 export default function SuperAdmin() {
@@ -1216,6 +1217,7 @@ export default function SuperAdmin() {
           {tab === 'support' && <SupportTab />}
           {tab === 'db' && <DbTab />}
           {tab === 'status' && <SystemStatusTab />}
+          {tab === 'health' && <SuperHealthTab />}
         </div>
       </main>
     </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { api, fmtMoney2 } from '../api';
+import { useAuth } from '../auth';
 import { PageHeader, EmptyState, Skeleton, useToast } from '../components/ui';
 import DocumentIntake from '../components/DocumentIntake';
 import AuditRunner from '../components/AuditReport';
@@ -69,7 +70,7 @@ const KIND_META = {
   },
 };
 
-export function ActionCard({ action, busy, onDecide, onShowClaimDetails }) {
+export function ActionCard({ action, busy, onDecide, onShowClaimDetails, selectable, selected, onToggleSelect }) {
   const meta = STATUS_META[action.status] || STATUS_META.pending;
   const kind = KIND_META[action.kind] || KIND_META.draft_appeal;
   const decided = action.status !== 'pending';
@@ -93,8 +94,13 @@ export function ActionCard({ action, busy, onDecide, onShowClaimDetails }) {
           className="motion-stamp absolute right-4 top-3 w-16 h-16 pointer-events-none drop-shadow-lg z-10" />
       )}
       <div className="flex flex-wrap items-center gap-2 mb-2">
+        {selectable && !decided && (
+          <input type="checkbox" checked={!!selected} onChange={() => onToggleSelect && onToggleSelect(action.id)}
+            aria-label={`Select ${action.title}`} className="w-4 h-4 accent-emerald-600 shrink-0" />
+        )}
         <span className="text-sm font-bold text-stone-900">{action.title}</span>
         <span className={`badge ${meta.pill}`}>{meta.label}</span>
+        {action.auto_approved && <span className="badge badge-blue">Auto-approved by policy</span>}
         {action.payload?.category && <span className="badge badge-slate">{action.payload.category.replace(/_/g, ' ')}</span>}
         {action.payload?.disposition_label && <span className="badge badge-slate">{action.payload.disposition_label}</span>}
       </div>
@@ -169,9 +175,10 @@ function ClaimRowActions({ claimId, denied, pendingActions, proposingId, onOpenC
 // wizard-proposed and intake cards ALL render here and only here, so a
 // pending draft can never be counted by the alerts strip yet visible
 // nowhere (the previous-day brief / conversation-less orphan bug).
-function ApprovalsSection({ actions, decidingId, onDecide, onShowClaimDetails }) {
+function ApprovalsSection({ actions, decidingId, onDecide, onShowClaimDetails, selectedIds, onToggleSelect, onSelectAll, onBatchDecide, batchBusy, batchSummary }) {
   if (!actions.length) return null;
   const pendingCount = actions.filter((a) => a.status === 'pending').length;
+  const selectedCount = (selectedIds || []).length;
   return (
     <div id="agent-approvals" className="card p-5 mb-5">
       <div className="flex items-baseline gap-3 flex-wrap">
@@ -181,11 +188,102 @@ function ApprovalsSection({ actions, decidingId, onDecide, onShowClaimDetails })
         )}
         <div className="text-xs text-stone-400">Every draft the agent prepares — brief, chat, wizard, intake — waits here. Nothing saves until you decide.</div>
       </div>
+      {pendingCount > 1 && (
+        <div className="flex flex-wrap items-center gap-2 mt-3 rounded-xl bg-stone-50 border border-stone-200 px-3 py-2">
+          <button type="button" className="btn btn-outline btn-sm" onClick={onSelectAll}>
+            {selectedCount === pendingCount ? 'Clear selection' : `Select all ${pendingCount}`}
+          </button>
+          <button type="button" className="btn btn-primary btn-sm" disabled={!selectedCount || batchBusy}
+            onClick={() => onBatchDecide('approve')}>
+            {batchBusy ? 'Working…' : `Approve selected${selectedCount ? ` (${selectedCount})` : ''}`}
+          </button>
+          <button type="button" className="btn btn-outline btn-sm" disabled={!selectedCount || batchBusy}
+            onClick={() => onBatchDecide('reject')}>
+            Reject selected
+          </button>
+          {batchSummary && <span className="text-xs text-stone-500">{batchSummary}</span>}
+        </div>
+      )}
       <div className="space-y-3 mt-4">
         {actions.map((a) => (
-          <ActionCard key={a.id} action={a} busy={decidingId === a.id} onDecide={onDecide} onShowClaimDetails={onShowClaimDetails} />
+          <ActionCard key={a.id} action={a} busy={decidingId === a.id} onDecide={onDecide} onShowClaimDetails={onShowClaimDetails}
+            selectable selected={(selectedIds || []).includes(a.id)} onToggleSelect={onToggleSelect} />
         ))}
       </div>
+    </div>
+  );
+}
+
+// Deploy #101: the auto-approved review stream + the owner's policy
+// controls. Drafts the policy executed appear here with the exact
+// policy + win-history snapshot that qualified them; each can be voided
+// while its appeal is still an unworked draft.
+function AutoApprovedSection({ actions, onVoid, voidingId, isOwner, policy, onSavePolicy, policyBusy }) {
+  const [form, setForm] = useState(null);
+  useEffect(() => { if (policy) setForm({ ...policy }); }, [policy]);
+  if (!isOwner && !actions.length) return null;
+  return (
+    <div id="agent-auto-approved" className="card p-5 mb-5">
+      <div className="flex items-baseline gap-3 flex-wrap">
+        <div className="font-display font-semibold text-stone-900 text-lg">Auto-approved</div>
+        <div className="text-xs text-stone-400">Drafts your approval policy executed on its own — review them here; voiding removes the draft while it is still unworked.</div>
+      </div>
+      {isOwner && form && (
+        <div className="mt-3 rounded-xl border border-stone-200 bg-stone-50 p-3.5">
+          <label className="flex items-center gap-2 text-sm font-medium text-stone-800">
+            <input type="checkbox" checked={!!form.enabled} className="w-4 h-4 accent-emerald-600"
+              onChange={(e) => setForm((f) => ({ ...f, enabled: e.target.checked }))} />
+            Auto-approve appeal drafts that clear my bar
+          </label>
+          <div className="flex flex-wrap gap-3 mt-3">
+            <label className="text-xs text-stone-500">Max claim amount ($)
+              <input type="number" min="1" className="input !py-1.5 mt-1 !w-36" value={form.max_amount ?? ''}
+                onChange={(e) => setForm((f) => ({ ...f, max_amount: e.target.value === '' ? null : Number(e.target.value) }))} />
+            </label>
+            <label className="text-xs text-stone-500">Min decided appeals (history)
+              <input type="number" min="1" max="1000" className="input !py-1.5 mt-1 !w-36" value={form.min_sample ?? 5}
+                onChange={(e) => setForm((f) => ({ ...f, min_sample: Number(e.target.value) }))} />
+            </label>
+            <label className="text-xs text-stone-500">Min win rate (0–1)
+              <input type="number" min="0" max="1" step="0.05" className="input !py-1.5 mt-1 !w-28" value={form.min_rate ?? 0.7}
+                onChange={(e) => setForm((f) => ({ ...f, min_rate: Number(e.target.value) }))} />
+            </label>
+            <button type="button" className="btn btn-dark btn-sm self-end" disabled={policyBusy} onClick={() => onSavePolicy(form)}>
+              {policyBusy ? 'Saving…' : 'Save policy'}
+            </button>
+          </div>
+          <p className="text-[11px] text-stone-400 mt-2">A draft auto-approves only when the claim is at or under the max amount AND this workspace's own decided appeals for that payer + denial reason clear both history bars. No history, no auto-approval. Policy changes are audit-logged.</p>
+        </div>
+      )}
+      {actions.length === 0 ? (
+        <p className="text-sm text-stone-400 mt-3">Nothing has been auto-approved yet.</p>
+      ) : (
+        <div className="space-y-2.5 mt-4">
+          {actions.map((a) => {
+            const snap = a.auto_snapshot || {};
+            const pred = snap.prediction || {};
+            return (
+              <div key={a.id} className="rounded-xl border border-stone-200 bg-[#FFFDF8] px-3.5 py-3 flex flex-wrap items-center gap-2">
+                <span className="text-sm font-semibold text-stone-800">{a.title}</span>
+                {a.status === 'executed' && <span className="badge badge-green">Saved as draft</span>}
+                {a.status === 'voided' && <span className="badge badge-slate">Voided</span>}
+                {a.status === 'failed' && <span className="badge badge-rose">Save failed</span>}
+                <span className="text-xs text-stone-500">
+                  {pred.value != null ? `Win history ${Math.round(pred.value * 100)}% (n=${pred.sampleSize})` : '—'}
+                  {snap.claim_amount != null ? ` · claim $${Number(snap.claim_amount).toLocaleString()}` : ''}
+                  {a.executed_at ? ` · ${new Date(String(a.executed_at).replace(' ', 'T') + 'Z').toLocaleString()}` : ''}
+                </span>
+                {a.status === 'executed' && (
+                  <button type="button" className="btn btn-outline btn-sm ml-auto" disabled={voidingId === a.id}
+                    onClick={() => onVoid(a)}>
+                    {voidingId === a.id ? 'Voiding…' : 'Void draft'}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -239,6 +337,34 @@ function BriefSection({ brief, pendingActions, onOpenClaim, onProposeDraft, prop
           </div>
         ))}
       </div>
+      {w.re_denied && w.re_denied.count > 0 && (
+        <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50/70 px-3.5 py-3">
+          <div className="text-[10px] font-semibold uppercase tracking-widest text-rose-700 mb-1.5">
+            Appeals re-denied — {w.re_denied.count} payer answer{w.re_denied.count === 1 ? '' : 's'} to respond to
+          </div>
+          <div className="space-y-1.5">
+            {(w.re_denied.highlights || []).map((h) => (
+              <div key={h.appeal_id || h.claim_id} className="flex items-center gap-2 text-[13px]">
+                <span className="min-w-0 flex-1">
+                  <span className="font-medium text-stone-800">{h.claim_number}</span>
+                  {h.denial_reason && <span className="text-stone-500"> — {h.denial_reason}</span>}
+                  {h.amount != null && <span className="text-stone-500"> · ${Number(h.amount).toLocaleString()}</span>}
+                </span>
+                <ClaimRowActions
+                  claimId={h.claim_id != null ? h.claim_id : null}
+                  denied
+                  pendingActions={pendingActions}
+                  proposingId={proposingId}
+                  onOpenClaim={onOpenClaim}
+                  onProposeDraft={onProposeDraft}
+                  onScrollApprovals={onScrollApprovals}
+                  onShowDetails={onShowDetails}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {brief.plan && brief.plan.length > 0 && (
         <div className="mt-4">
           <div className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-2">Today's plan</div>
@@ -363,10 +489,19 @@ function TeamSection({ onShowDetails }) {
 
 export default function Agent({ onUpgrade, onOpenClaim, onOpenEra, initialSection, onConsumed }) {
   const toast = useToast();
+  const { user } = useAuth();
+  const isOwner = user?.role === 'owner';
   const [disabled, setDisabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [brief, setBrief] = useState(null);
   const [pendingActions, setPendingActions] = useState([]);
+  const [autoActions, setAutoActions] = useState([]);
+  const [policy, setPolicy] = useState(null);
+  const [policyBusy, setPolicyBusy] = useState(false);
+  const [voidingId, setVoidingId] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [batchBusy, setBatchBusy] = useState(false);
+  const [batchSummary, setBatchSummary] = useState(null);
   const [alerts, setAlerts] = useState(null);
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [proposingId, setProposingId] = useState(null);
@@ -448,7 +583,17 @@ export default function Agent({ onUpgrade, onOpenClaim, onOpenEra, initialSectio
     } catch (e) {
       if (e.code === 'AGENT_DISABLED') setDisabled(true);
     }
-  }, []);
+    try {
+      const r = await api.agent.autoApproved();
+      setAutoActions(r.actions || []);
+    } catch { /* stream stays as-is */ }
+    if (isOwner) {
+      try {
+        const r = await api.agent.policy();
+        setPolicy(r.policy || null);
+      } catch { /* policy card stays hidden */ }
+    }
+  }, [isOwner]);
 
   useEffect(() => { refreshSurfaces(); }, [refreshSurfaces]);
 
@@ -484,14 +629,74 @@ export default function Agent({ onUpgrade, onOpenClaim, onOpenEra, initialSectio
     if (claimId == null || proposingId != null) return;
     setProposingId(claimId);
     try {
-      await api.agent.propose({ kind: 'draft_appeal', claim_id: claimId });
-      toast.success('Draft created — it is waiting in Awaiting your approval');
+      const r = await api.agent.propose({ kind: 'draft_appeal', claim_id: claimId });
+      if (r.action && r.action.status === 'executed' && r.action.auto_approved) {
+        toast.success('Draft created — your auto-approval policy already saved it (see Auto-approved below)');
+      } else {
+        toast.success('Draft created — it is waiting in Awaiting your approval');
+      }
       await refreshSurfaces({ keepDecided: true });
       scrollToApprovals();
     } catch (e) {
       toast.error(e.message || 'Could not draft that appeal');
     } finally {
       setProposingId(null);
+    }
+  };
+
+  // Deploy #101: batch selection + decide, and the auto-stream handlers.
+  const toggleSelect = (id) => {
+    setSelectedIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
+  };
+  const selectAllPending = () => {
+    const pendingIds = pendingActions.filter((a) => a.status === 'pending').map((a) => a.id);
+    setSelectedIds((ids) => (ids.length === pendingIds.length ? [] : pendingIds));
+  };
+  const batchDecide = async (decision) => {
+    if (!selectedIds.length || batchBusy) return;
+    setBatchBusy(true);
+    setBatchSummary(null);
+    try {
+      const r = await api.agent.batchDecide(selectedIds, decision);
+      const s = r.summary || {};
+      const parts = [];
+      if (s.executed) parts.push(`${s.executed} approved & saved`);
+      if (s.rejected) parts.push(`${s.rejected} rejected`);
+      if (s.failed) parts.push(`${s.failed} failed`);
+      if (s.skipped) parts.push(`${s.skipped} already decided (skipped)`);
+      if (s.missing) parts.push(`${s.missing} no longer found`);
+      setBatchSummary(`Batch ${decision}: ${parts.join(' · ') || 'nothing changed'}`);
+      toast.success(`Batch ${decision} complete`);
+      setSelectedIds([]);
+      refreshSurfaces({ keepDecided: true });
+    } catch (e) {
+      toast.error(e.message || 'Batch decision failed');
+    } finally {
+      setBatchBusy(false);
+    }
+  };
+  const voidAuto = async (action) => {
+    setVoidingId(action.id);
+    try {
+      await api.agent.voidAuto(action.id);
+      toast.success('Draft voided — nothing remains saved from it');
+      refreshSurfaces({ keepDecided: true });
+    } catch (e) {
+      toast.error(e.message || 'Could not void that draft');
+    } finally {
+      setVoidingId(null);
+    }
+  };
+  const savePolicy = async (form) => {
+    setPolicyBusy(true);
+    try {
+      const r = await api.agent.updatePolicy(form);
+      setPolicy(r.policy || null);
+      toast.success('Approval policy saved');
+    } catch (e) {
+      toast.error(e.message || 'Could not save the policy');
+    } finally {
+      setPolicyBusy(false);
     }
   };
 
@@ -647,6 +852,8 @@ export default function Agent({ onUpgrade, onOpenClaim, onOpenEra, initialSectio
             {alerts.filing_risk.count > 0 && <span>${Number(alerts.filing_risk.amount).toLocaleString()} at filing risk ({alerts.filing_risk.count} claim{alerts.filing_risk.count === 1 ? '' : 's'})</span>}
             {alerts.followups_overdue.count > 0 && <span>{alerts.followups_overdue.count} follow-up{alerts.followups_overdue.count === 1 ? '' : 's'} overdue</span>}
             {alerts.era_exceptions.count > 0 && <span>{alerts.era_exceptions.count} ERA exception{alerts.era_exceptions.count === 1 ? '' : 's'} on hold</span>}
+            {alerts.re_denied && alerts.re_denied.count > 0 && <span>{alerts.re_denied.count} appeal{alerts.re_denied.count === 1 ? '' : 's'} re-denied — ready to draft a response</span>}
+            {alerts.payer_silent && alerts.payer_silent.count > 0 && <span>{alerts.payer_silent.count} payer{alerts.payer_silent.count === 1 ? '' : 's'} silent past the typical window</span>}
             <span className="ml-auto text-xs font-semibold underline underline-offset-2">{alertsOpen ? 'Hide details' : 'Show details'}</span>
           </button>
           {alertsOpen && (
@@ -721,6 +928,56 @@ export default function Agent({ onUpgrade, onOpenClaim, onOpenEra, initialSectio
                   )}
                 </div>
               )}
+              {alerts.re_denied && alerts.re_denied.count > 0 && (
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-widest text-amber-700 mb-1.5">Appeals re-denied — ready to draft a response</div>
+                  <div className="space-y-1.5">
+                    {(alerts.re_denied.highlights || []).map((h) => (
+                      <div key={h.appeal_id || h.claim_number} className="flex items-center gap-2 text-[13px]">
+                        <span className="min-w-0 flex-1">
+                          <span className="font-medium">{h.claim_number}</span>
+                          <span className="text-amber-800"> — the payer denied again; the appeal is reopened</span>
+                        </span>
+                        <ClaimRowActions
+                          claimId={h.claim_id != null ? h.claim_id : null}
+                          denied
+                          pendingActions={pendingActions}
+                          proposingId={proposingId}
+                          onOpenClaim={onOpenClaim}
+                          onProposeDraft={proposeDraft}
+                          onScrollApprovals={scrollToApprovals}
+                          onShowDetails={showClaimDetails}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {alerts.payer_silent && alerts.payer_silent.count > 0 && (
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-widest text-amber-700 mb-1.5">Payer silent — past the typical response window</div>
+                  <div className="space-y-1.5">
+                    {(alerts.payer_silent.highlights || []).map((h) => (
+                      <div key={h.appeal_id || h.claim_number} className="flex items-center gap-2 text-[13px]">
+                        <span className="min-w-0 flex-1">
+                          <span className="font-medium">{h.claim_number}</span>
+                          <span className="text-amber-800"> — {h.days_waiting} days waiting (typical window {h.response_days}) — open the claim for the call brief</span>
+                        </span>
+                        <ClaimRowActions
+                          claimId={h.claim_id != null ? h.claim_id : null}
+                          denied={false}
+                          pendingActions={pendingActions}
+                          proposingId={proposingId}
+                          onOpenClaim={onOpenClaim}
+                          onProposeDraft={proposeDraft}
+                          onScrollApprovals={scrollToApprovals}
+                          onShowDetails={showClaimDetails}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {alerts.era_exceptions.count > 0 && (
                 <div>
                   <div className="text-[10px] font-semibold uppercase tracking-widest text-amber-700 mb-1.5">ERA exceptions on hold</div>
@@ -741,7 +998,11 @@ export default function Agent({ onUpgrade, onOpenClaim, onOpenEra, initialSectio
           )}
         </div>
       )}
-      <ApprovalsSection actions={pendingActions} decidingId={decidingId} onDecide={decidePending} onShowClaimDetails={showClaimDetails} />
+      <ApprovalsSection actions={pendingActions} decidingId={decidingId} onDecide={decidePending} onShowClaimDetails={showClaimDetails}
+        selectedIds={selectedIds} onToggleSelect={toggleSelect} onSelectAll={selectAllPending}
+        onBatchDecide={batchDecide} batchBusy={batchBusy} batchSummary={batchSummary} />
+      <AutoApprovedSection actions={autoActions} onVoid={voidAuto} voidingId={voidingId}
+        isOwner={isOwner} policy={policy} onSavePolicy={savePolicy} policyBusy={policyBusy} />
       {brief && (
         <BriefSection
           brief={brief}

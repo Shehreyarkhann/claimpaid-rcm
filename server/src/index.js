@@ -36,6 +36,10 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 app.use(cors());
+// Deploy #101: request metrics for the /super Health tab (route-group
+// counts + latency only — no paths, bodies, or PHI). Mounted first so
+// every response, including webhooks and statics, is timed.
+app.use(require('./metrics').metricsMiddleware);
 // Stripe webhook needs the RAW body for signature verification — mount before express.json()
 app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), handleWebhook);
 // Connect webhook (events on connected accounts — statement payments) has
@@ -186,6 +190,7 @@ if (process.env.EHR_AUTOPULL !== 'off' && typeof ehrRoutes.runSyncForOrg === 'fu
 // AGENT_WATCHDOG=off.
 if (process.env.AGENT_WATCHDOG !== 'off') {
   const watchdog = require('./agent/watchdog');
+  const { runBriefPrecompute } = require('./agent/precompute');
   let watchdogRunning = false;
   const runWatchdog = async () => {
     if (watchdogRunning) return;
@@ -193,6 +198,11 @@ if (process.env.AGENT_WATCHDOG !== 'off') {
     try {
       const s = await watchdog.runDigestOnce(new Date());
       if (s.sent || s.failed) console.log(`[agent-watchdog] digests: ${s.sent} sent, ${s.failed} failed`);
+      // Deploy #101: brief precompute rides the same hourly sweep — it
+      // generates the 06:00 org-local briefs ahead of first open, and
+      // no-ops outside that hour.
+      const p = await runBriefPrecompute(new Date());
+      if (p.generated) console.log(`[brief-precompute] generated ${p.generated} brief(s)`);
     } catch (e) {
       console.log(`[agent-watchdog] sweep failed: ${e.message}`);
     } finally {

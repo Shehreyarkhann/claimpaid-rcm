@@ -1,6 +1,7 @@
 const express = require('express');
 const { db } = require('../db');
 const { authRequired, roleRequired, requireProduct } = require('../auth');
+const { DEFAULT_RESPONSE_DAYS } = require('../agent/responseWindows');
 
 const router = express.Router();
 router.use(authRequired, requireProduct('rcm'));
@@ -18,31 +19,52 @@ const FILING_JOIN = `LEFT JOIN payer_filing_rules fr ON fr.payer_id = c.payer_id
 router.get('/rules', (req, res) => {
   const rows = db.prepare(`
     SELECT p.id AS payer_id, p.name AS payer, p.type,
-           fr.filing_days, fr.notes
+           fr.filing_days, fr.notes, fr.response_days
     FROM payers p
     LEFT JOIN payer_filing_rules fr ON fr.payer_id = p.id AND fr.org_id = ?
     WHERE p.org_id = ?
     ORDER BY p.name
   `).all(req.orgId, req.orgId);
-  // Default 365 for payers without a rule
-  res.json(rows.map((r) => ({ ...r, filing_days: r.filing_days ?? 365, is_default: r.filing_days == null })));
+  // Default 365 for payers without a rule. Deploy #101: each rule also
+  // carries the payer's TYPICAL response window (days to answer an
+  // appeal) — default 30, overridable per payer per workspace, always
+  // labeled "typical" in the UI (it is an expectation, not a promise).
+  res.json(rows.map((r) => ({
+    ...r,
+    filing_days: r.filing_days ?? 365,
+    is_default: r.filing_days == null,
+    response_days: r.response_days ?? DEFAULT_RESPONSE_DAYS,
+    response_is_default: r.response_days == null,
+  })));
 });
 
 // --- Set/update a payer's filing rule ---
 router.put('/rules/:payerId', canWrite, (req, res) => {
-  const { filing_days, notes } = req.body || {};
+  const { filing_days, notes, response_days } = req.body || {};
   if (!Number.isInteger(filing_days) || filing_days < 1 || filing_days > 730) {
     return res.status(400).json({ error: 'filing_days must be an integer between 1 and 730' });
+  }
+  if (response_days !== undefined && response_days !== null
+    && (!Number.isInteger(response_days) || response_days < 1 || response_days > 365)) {
+    return res.status(400).json({ error: 'response_days must be an integer between 1 and 365, or null to reset to the default' });
   }
   const payer = db.prepare('SELECT id FROM payers WHERE id = ? AND org_id = ?').get(req.params.payerId, req.orgId);
   if (!payer) return res.status(404).json({ error: 'Payer not found' });
 
+  // An omitted response_days leaves the stored override untouched;
+  // an explicit null resets it to the product default.
+  const existing = db.prepare(
+    'SELECT response_days FROM payer_filing_rules WHERE org_id = ? AND payer_id = ?'
+  ).get(req.orgId, payer.id);
+  const effectiveResponseDays = response_days === undefined
+    ? (existing ? existing.response_days : null)
+    : response_days;
   db.prepare(`
-    INSERT INTO payer_filing_rules (org_id, payer_id, filing_days, notes)
-    VALUES (?, ?, ?, ?)
-    ON CONFLICT(org_id, payer_id) DO UPDATE SET filing_days = excluded.filing_days, notes = excluded.notes
-  `).run(req.orgId, payer.id, filing_days, notes || null);
-  res.json({ ok: true, filing_days });
+    INSERT INTO payer_filing_rules (org_id, payer_id, filing_days, notes, response_days)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(org_id, payer_id) DO UPDATE SET filing_days = excluded.filing_days, notes = excluded.notes, response_days = excluded.response_days
+  `).run(req.orgId, payer.id, filing_days, notes || null, effectiveResponseDays);
+  res.json({ ok: true, filing_days, response_days: effectiveResponseDays });
 });
 
 // --- Filing deadline risk summary ---
