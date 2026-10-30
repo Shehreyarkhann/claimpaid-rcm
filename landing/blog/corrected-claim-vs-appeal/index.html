@@ -129,11 +129,79 @@ footer{border-top:1px solid var(--line);padding:40px 0;color:var(--mut);font-siz
 .nav-links a.btn{color:#fff}
 </style>
 <link rel="stylesheet" href="/consent.css"/>
+<style>
+/* ===== CP shell 104: products menu ===== */
+.np-wrap{position:relative;display:flex;align-items:center}
+.np-btn{background:none;border:none;cursor:pointer;font-family:inherit;font-size:14.5px;font-weight:500;color:#453B2F;display:inline-flex;align-items:center;gap:7px;padding:10px 4px;min-height:44px;border-radius:8px}
+.np-btn:hover{color:#211A13}
+.np-caret{transition:transform .25s;flex-shrink:0}
+.np-wrap.open .np-caret{transform:rotate(180deg)}
+.np-menu{position:absolute;top:calc(100% + 10px);left:50%;transform:translate(-50%,8px);width:344px;max-width:calc(100vw - 32px);background:#FFFDF8;border:1px solid #D8CBAE;border-radius:18px;box-shadow:0 30px 70px rgba(33,26,19,.18);padding:10px;opacity:0;visibility:hidden;transition:opacity .18s ease,transform .18s ease,visibility .18s;z-index:90;text-align:left}
+.np-wrap.open .np-menu{opacity:1;visibility:visible;transform:translate(-50%,0)}
+.np-item{display:flex;flex-direction:column;gap:2px;padding:11px 14px;border-radius:12px;text-decoration:none}
+.np-item:hover,.np-item:focus-visible{background:rgba(14,159,110,.08)}
+.nav-links .np-item::after{display:none}
+.np-t{font-weight:600;color:#211A13;font-size:15px;display:flex;align-items:center;gap:9px;line-height:1.3}
+.np-d{font-size:13px;color:#7C7060;line-height:1.45;font-weight:400}
+.np-free{font-size:10px;font-weight:800;letter-spacing:.9px;color:#0A7A54;background:#DFF5EA;border:1px solid rgba(14,159,110,.5);padding:2.5px 8px;border-radius:100px;line-height:1.25;white-space:nowrap}
+.np-sep{font-size:11px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:#7C7060;padding:13px 14px 5px;border-top:1px solid #E4D9C3;margin-top:7px}
+@media(max-width:760px){
+  .np-wrap{display:block;width:100%}
+  .np-btn{width:100%;justify-content:space-between;padding:14px 0;font-size:16px;min-height:50px;border-bottom:1px solid #E4D9C3;border-radius:0;color:#453B2F}
+  .np-menu{position:static;transform:none;width:100%;max-width:none;background:transparent;border:none;box-shadow:none;padding:2px 0 10px;display:none;opacity:1;visibility:visible;transition:none}
+  .np-wrap.open .np-menu{display:block;transform:none}
+  .np-item{padding:12px 8px}
+  .np-sep{padding-left:8px;padding-right:8px}
+}
+/* ===== CP shell 104: burger + mobile panel + responsive hardening ===== */
+.burger{display:none;background:none;border:none;cursor:pointer;padding:10px;margin:-10px -10px -10px 0;z-index:60;min-width:44px;min-height:44px}
+.burger span{display:block;width:24px;height:2.5px;background:#211A13;border-radius:2px;margin:5.5px auto;transition:transform .3s,opacity .3s}
+body{overflow-x:hidden}
+img,svg,video{max-width:100%}
+@media(max-width:760px){
+  .nav-links{position:fixed;top:68px;left:0;right:0;flex-direction:column;align-items:stretch;gap:0;background:rgba(250,245,235,.98);border-bottom:1px solid #E4D9C3;padding:8px 24px 22px;display:none;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);z-index:55;max-height:calc(100dvh - 68px);overflow-y:auto;box-shadow:0 24px 40px rgba(33,26,19,.12)}
+  .nav-links.open{display:flex}
+  .nav-links>a{display:block;padding:15px 0;font-size:16px;border-bottom:1px solid #E4D9C3;min-height:50px}
+  .nav-links a.btn{margin-top:14px;text-align:center;justify-content:center;border-bottom:none}
+  .burger{display:block}
+  .burger.open span:nth-child(1){transform:translateY(8px) rotate(45deg)}
+  .burger.open span:nth-child(2){opacity:0}
+  .burger.open span:nth-child(3){transform:translateY(-8px) rotate(-45deg)}
+  .foot{flex-direction:column;align-items:flex-start;gap:14px}
+  .foot-links{gap:8px 18px}
+  .foot-links a{display:inline-block;padding:7px 0}
+  .cta-band{padding:26px 22px}
+  .cta-band .btn{width:100%;justify-content:center}
+  input:not([type="checkbox"]):not([type="radio"]),select,textarea{font-size:16px}
+  .chip{min-height:44px;display:inline-flex;align-items:center}
+  .lib-search{font-size:16px;min-height:50px}
+  th,td{padding:10px 11px}
+  table{font-size:13.5px}
+}
+.foot-links{flex-wrap:wrap;row-gap:10px}
+.nav-links a.np-item{display:flex}
+</style>
 </head>
 <body>
 <nav><div class="nav-in">
   <a class="logo" href="/"><img src="/claimpaid-icon.webp" alt="ClaimPaid logo"/><span class="wm">Claim<em>Paid</em></span></a>
-  <div class="nav-links"><a href="/">Product</a><a href="/blog/">Blog</a><a class="btn btn-green btn-sm" href="/app/">Get started</a></div>
+  <div class="nav-links" id="navLinks">
+    <div class="np-wrap">
+      <button type="button" class="np-btn" aria-haspopup="true" aria-expanded="false">Products <svg class="np-caret" width="10" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="np-menu" role="menu" aria-label="Products">
+        <a class="np-item" href="/#platform" role="menuitem"><span class="np-t">ClaimPaid RCM</span><span class="np-d">The denial-management platform</span></a>
+        <a class="np-item" href="/#agent" role="menuitem"><span class="np-t">The Agent</span><span class="np-d">Works your denial queue and drafts the appeals</span></a>
+        <a class="np-item" href="/ai/" role="menuitem"><span class="np-t">ClaimPaid AI</span><span class="np-d">Policy answers and coding, with citations</span></a>
+        <div class="np-sep">Free tools</div>
+        <a class="np-item" href="/audit/" role="menuitem"><span class="np-t">Deadline Audit <span class="np-free">FREE</span></span><span class="np-d">See which open claims are about to expire</span></a>
+        <a class="np-item" href="/denial-codes/" role="menuitem"><span class="np-t">Denial Code Library <span class="np-free">FREE</span></span><span class="np-d">Every denial code — meaning, causes, fixes</span></a>
+        <a class="np-item" href="/deadlines/" role="menuitem"><span class="np-t">Filing Deadlines <span class="np-free">FREE</span></span><span class="np-d">Timely-filing limits for every major payer</span></a>
+      </div>
+    </div>
+    <a href="/#pricing">Pricing</a><a href="/blog/">Blog</a><a href="/compare/">Compare</a>
+    <a class="btn btn-green btn-sm" href="/app/">Get started</a>
+  </div>
+  <button class="burger" id="burger" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </div></nav>
 
 <article><div class="wrap">
@@ -202,5 +270,74 @@ footer{border-top:1px solid var(--line);padding:40px 0;color:var(--mut);font-siz
   <div>© 2026 ClaimPaid · Get your claims paid.</div>
 </div></footer>
 <script src="/consent.js" defer></script>
+<script>
+/* CP nav 104: products menu — click, hover (desktop), Esc, outside click, keyboard */
+(function () {
+  var wraps = Array.prototype.slice.call(document.querySelectorAll('.np-wrap'));
+  if (!wraps.length) return;
+  var mq = window.matchMedia ? window.matchMedia('(hover:hover) and (min-width:761px)') : { matches: false };
+  function setOpen(w, open) {
+    w.classList.toggle('open', open);
+    var b = w.querySelector('.np-btn');
+    if (b) b.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  function closeAll(except) {
+    wraps.forEach(function (w) { if (w !== except) setOpen(w, false); });
+  }
+  wraps.forEach(function (w) {
+    var btn = w.querySelector('.np-btn');
+    if (!btn) return;
+    var hoverOpened = false;
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (hoverOpened && w.classList.contains('open')) return;
+      var willOpen = !w.classList.contains('open');
+      closeAll(w);
+      setOpen(w, willOpen);
+    });
+    btn.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setOpen(w, true);
+        var f = w.querySelector('.np-menu a');
+        if (f) f.focus();
+      }
+    });
+    w.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { setOpen(w, false); btn.focus(); }
+    });
+    w.addEventListener('focusout', function (e) {
+      if (!w.contains(e.relatedTarget)) setOpen(w, false);
+    });
+    if (mq.matches) {
+      w.addEventListener('mouseenter', function () { closeAll(w); setOpen(w, true); hoverOpened = true; });
+      w.addEventListener('mouseleave', function () { hoverOpened = false; setOpen(w, false); });
+    }
+  });
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest || !e.target.closest('.np-wrap')) closeAll(null);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeAll(null);
+  });
+})();
+/* CP nav 104: mobile hamburger (blog-shell pages; home has its own binding) */
+(function () {
+  var b = document.getElementById('burger'), l = document.getElementById('navLinks');
+  if (!b || !l) return;
+  b.addEventListener('click', function () {
+    var open = l.classList.toggle('open');
+    b.classList.toggle('open', open);
+    b.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  l.querySelectorAll('a').forEach(function (a) {
+    a.addEventListener('click', function () {
+      l.classList.remove('open');
+      b.classList.remove('open');
+      b.setAttribute('aria-expanded', 'false');
+    });
+  });
+})();
+</script>
 </body>
 </html>
