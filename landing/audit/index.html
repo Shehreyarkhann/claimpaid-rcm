@@ -428,8 +428,10 @@ input[type="file"]{margin-top:12px;font:inherit;font-size:14px;max-width:100%}
 .audit-main thead + tbody tr:first-child td{border-top:none}
 .audit-main td input,.audit-main td select{font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);width:100%;min-width:104px}
 #manualTable{min-width:620px}
-#bucketTable{min-width:400px}
+#bucketTable{min-width:0}
 #claimTable{min-width:660px}
+.tbl-fade{position:relative}
+@media(max-width:720px){.tbl-fade::after{content:'';position:absolute;top:0;right:0;bottom:0;width:38px;pointer-events:none;background:linear-gradient(to right,rgba(250,245,235,0),rgba(250,245,235,.94))}}
 .audit-main .err{display:none;background:#FBEBE9;border:1px solid #EFC5C1;border-left:4px solid #B3261E;border-radius:12px;padding:14px 18px;margin:16px 0;font-size:14.5px;color:var(--ink)}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin:20px 0}
 .cards .stat{padding:20px 22px}
@@ -452,6 +454,9 @@ tr.bucket-d14 td{background:#FBF3E4}
 .btn-green:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
 @media(max-width:760px){
   .audit-main{padding:104px 0 20px;font-size:16px}
+  #bucketTable{font-size:13.5px}
+  #bucketTable th,#bucketTable td{padding:9px 10px}
+  #bucketTable th{white-space:normal}
   .panel{padding:22px 18px}
   .drop{padding:22px 16px}
   .cta-row .btn{width:100%;justify-content:center}
@@ -535,7 +540,7 @@ tr.bucket-d14 td{background:#FBF3E4}
       <tbody id="bucketBody"></tbody>
     </table></div>
 
-    <div class="tbl-scroll"><table id="claimTable">
+    <div class="tbl-scroll tbl-fade"><table id="claimTable">
       <thead><tr><th>Claim</th><th>Payer</th><th>Date of service</th><th>Filing deadline</th><th>Time left</th><th>Amount</th></tr></thead>
       <tbody id="claimBody"></tbody>
     </table></div>
