@@ -474,6 +474,14 @@ export const api = {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids, decision }),
       }).then(handle),
+    // Bulk appeals + grading (deploy #106, Phase E): cohort preview with
+    // per-claim grades, then draft the selected claims as pending cards.
+    cohort: (params = {}) => get(`/api/agent/appeals/cohort?${new URLSearchParams(params)}`),
+    bulkDraft: (claimIds) =>
+      authFetch('/api/agent/appeals/bulk-draft', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ claim_ids: claimIds }),
+      }).then(handle),
     autoApproved: () => get('/api/agent/actions/auto-approved'),
     voidAuto: (id) =>
       authFetch(`/api/agent/actions/${id}/void-auto`, { method: 'POST' }).then(handle),

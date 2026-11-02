@@ -3,7 +3,8 @@ const { db } = require('../db');
 const { authRequired, roleRequired, requireProduct } = require('../auth');
 const { agentEnabled, AGENT_DISABLED_BODY } = require('../featureFlags');
 const model = require('../agent/model');
-const { TOOL_DEFS, createExecutor, resolveClaim, buildApplyCodesAction } = require('../agent/tools');
+const { TOOL_DEFS, createExecutor, resolveClaim, buildApplyCodesAction, draftAppealTool } = require('../agent/tools');
+const { gradeAppeal } = require('../agent/grade');
 const { getAction, serializeAction, approveAction, rejectAction, voidAutoApproved } = require('../agent/actions');
 const { getPolicy } = require('../agent/policy');
 const { buildNotifications } = require('../agent/notifications');
@@ -135,6 +136,79 @@ router.post('/actions/batch-decide', canDecide, (req, res) => {
     }
   }
   res.json({ results, summary });
+});
+
+// --- Bulk appeals + grading (deploy #106, Phase E): select a denial
+// cohort (payer + denial reason + service-date range), preview each
+// claim's grade, then draft the whole cohort through the SAME
+// draft_appeal tool the chat uses — every draft lands as a PENDING
+// approval action carrying its grade, and the existing batch-decide
+// route above is how the cohort gets approved or rejected. Nothing
+// here submits anything to a payer, exactly like single drafts. ---
+function cohortQuery(req) {
+  const { payer, payer_id, denial_reason, from, to } = req.query || {};
+  const where = ["c.org_id = ?", "c.status = 'denied'"];
+  const params = [req.orgId];
+  if (payer_id) { where.push('c.payer_id = ?'); params.push(Number(payer_id)); }
+  else if (payer) { where.push('p.name = ? COLLATE NOCASE'); params.push(String(payer)); }
+  if (denial_reason) { where.push('c.denial_reason LIKE ?'); params.push(`%${String(denial_reason)}%`); }
+  if (from) { where.push('c.service_date >= ?'); params.push(String(from)); }
+  if (to) { where.push('c.service_date <= ?'); params.push(String(to)); }
+  return db.prepare(`
+    SELECT c.*, p.name AS payer FROM claims c LEFT JOIN payers p ON p.id = c.payer_id
+    WHERE ${where.join(' AND ')} ORDER BY c.billed_amount DESC, c.id ASC LIMIT 200
+  `).all(...params);
+}
+
+router.get('/appeals/cohort', (req, res) => {
+  const claims = cohortQuery(req);
+  const pending = new Set(
+    db.prepare(`
+      SELECT CAST(json_extract(payload, '$.claim_id') AS INTEGER) AS claim_id
+      FROM agent_actions WHERE org_id = ? AND kind = 'draft_appeal' AND status = 'pending'
+    `).all(req.orgId).map((r) => r.claim_id)
+  );
+  res.json({
+    cohort: claims.map((c) => ({
+      claim_id: c.id,
+      claim_number: c.claim_number,
+      payer: c.payer,
+      denial_reason: c.denial_reason,
+      service_date: c.service_date,
+      billed_amount: c.billed_amount,
+      // Preview grade: no letter exists yet, so citation strength is
+      // unscored and the grade is flagged partial; the draft itself
+      // carries the full grade once created.
+      grade: gradeAppeal(req.orgId, { claim: c }),
+      has_pending_draft: pending.has(c.id),
+    })),
+  });
+});
+
+router.post('/appeals/bulk-draft', canDecide, (req, res) => {
+  const ids = Array.isArray(req.body && req.body.claim_ids) ? req.body.claim_ids.map(Number).filter(Number.isInteger) : [];
+  if (!ids.length) return res.status(400).json({ error: 'claim_ids (non-empty array) is required' });
+  if (ids.length > 25) return res.status(400).json({ error: 'At most 25 drafts per bulk run' });
+  const ctx = { orgId: req.orgId, user: req.user, convoId: null };
+  const created = [];
+  const skipped = [];
+  for (const claimId of ids) {
+    const claim = resolveClaim(req.orgId, { claim_id: claimId });
+    if (!claim) { skipped.push({ claim_id: claimId, reason: 'not_found' }); continue; }
+    if (claim.status !== 'denied') { skipped.push({ claim_id: claimId, claim_number: claim.claim_number, reason: 'not_denied' }); continue; }
+    const existing = db.prepare(`
+      SELECT id FROM agent_actions WHERE org_id = ? AND kind = 'draft_appeal' AND status = 'pending'
+        AND CAST(json_extract(payload, '$.claim_id') AS INTEGER) = ? LIMIT 1
+    `).get(req.orgId, claimId);
+    if (existing) { skipped.push({ claim_id: claimId, claim_number: claim.claim_number, reason: 'already_pending', action_id: existing.id }); continue; }
+    const out = draftAppealTool(ctx, { claim_id: claimId });
+    if (out.isError || !out.action) {
+      skipped.push({ claim_id: claimId, claim_number: claim.claim_number, reason: 'draft_failed' });
+      continue;
+    }
+    created.push(out.action);
+  }
+  res.json({ created, skipped, summary: { created: created.length, skipped: skipped.length } });
 });
 
 // --- AI data analyst (deploy #106, Phase D): deterministic analyses

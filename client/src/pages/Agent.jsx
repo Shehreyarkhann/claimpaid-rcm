@@ -103,7 +103,22 @@ export function ActionCard({ action, busy, onDecide, onShowClaimDetails, selecta
         {action.auto_approved && <span className="badge badge-blue">Auto-approved by policy</span>}
         {action.payload?.category && <span className="badge badge-slate">{action.payload.category.replace(/_/g, ' ')}</span>}
         {action.payload?.disposition_label && <span className="badge badge-slate">{action.payload.disposition_label}</span>}
+        {action.payload?.grade && (
+          <span className={`badge ${action.payload.grade.letter <= 'B' ? 'badge-green' : action.payload.grade.letter === 'C' ? 'badge-amber' : 'badge-rose'}`}
+            title={action.payload.grade.note || ''}>
+            Grade {action.payload.grade.letter} · {action.payload.grade.score}/100
+          </span>
+        )}
       </div>
+      {action.payload?.grade && (
+        <p className="text-xs text-stone-500 mb-2">
+          Appeal grade — win history: {action.payload.grade.win_rate == null
+            ? `no data yet (n=${action.payload.grade.sample_size})`
+            : `${Math.round(action.payload.grade.win_rate * 100)}% overturn (n=${action.payload.grade.sample_size}, ${action.payload.grade.label})`}
+          {' · '}citation {action.payload.grade.components.citation_strength}/25
+          {' · '}documentation {action.payload.grade.components.documentation}/15
+        </p>
+      )}
       {action.status === 'pending' && (
         <p className="text-xs text-amber-800 mb-2">{kind.pendingNote}</p>
       )}
@@ -210,6 +225,117 @@ function ApprovalsSection({ actions, decidingId, onDecide, onShowClaimDetails, s
             selectable selected={(selectedIds || []).includes(a.id)} onToggleSelect={onToggleSelect} />
         ))}
       </div>
+    </div>
+  );
+}
+
+// Deploy #106 (Phase E): bulk appeals — pick a denial cohort by payer,
+// denial reason and service-date range; every claim shows its grade
+// (partial until the letter exists); drafting creates the usual pending
+// approval cards, which the batch approve/reject bar above then decides.
+function BulkAppealsSection({ onDrafted }) {
+  const toast = useToast();
+  const [payer, setPayer] = useState('');
+  const [reason, setReason] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [cohort, setCohort] = useState(null);
+  const [selected, setSelected] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [summary, setSummary] = useState('');
+
+  const preview = () => {
+    setBusy(true);
+    setSummary('');
+    const params = {};
+    if (payer.trim()) params.payer = payer.trim();
+    if (reason.trim()) params.denial_reason = reason.trim();
+    if (from) params.from = from;
+    if (to) params.to = to;
+    api.agent.cohort(params)
+      .then((d) => {
+        setCohort(d.cohort || []);
+        setSelected((d.cohort || []).filter((c) => !c.has_pending_draft).map((c) => c.claim_id));
+      })
+      .catch((e) => toast.error(e.message))
+      .finally(() => setBusy(false));
+  };
+
+  const draftSelected = () => {
+    if (!selected.length) return;
+    setBusy(true);
+    api.agent.bulkDraft(selected)
+      .then((r) => {
+        setSummary(`Drafted ${r.summary.created} appeal(s) into Awaiting your approval${r.summary.skipped ? ` · ${r.summary.skipped} skipped` : ''}.`);
+        setCohort(null);
+        setSelected([]);
+        if (onDrafted) onDrafted();
+      })
+      .catch((e) => toast.error(e.message))
+      .finally(() => setBusy(false));
+  };
+
+  const toggle = (id) => setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+
+  return (
+    <div className="card p-5 mb-5">
+      <div className="flex items-baseline gap-3 flex-wrap">
+        <div className="font-display font-semibold text-stone-900 text-lg">Bulk appeals</div>
+        <div className="text-xs text-stone-400">Draft a whole denial cohort at once — each draft is graded from this workspace's own win history and waits for approval like any other.</div>
+      </div>
+      <div className="flex flex-wrap gap-2 mt-3">
+        <input className="input !w-48" placeholder="Payer name" value={payer} onChange={(e) => setPayer(e.target.value)} />
+        <input className="input !w-56" placeholder="Denial reason contains…" value={reason} onChange={(e) => setReason(e.target.value)} />
+        <input className="input !w-40" type="date" value={from} onChange={(e) => setFrom(e.target.value)} aria-label="Service date from" />
+        <input className="input !w-40" type="date" value={to} onChange={(e) => setTo(e.target.value)} aria-label="Service date to" />
+        <button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={preview}>{busy ? 'Working…' : 'Preview cohort'}</button>
+      </div>
+      {summary && <p className="text-sm text-emerald-700 mt-3">{summary}</p>}
+      {cohort && (
+        <div className="mt-3">
+          {cohort.length === 0 ? (
+            <p className="text-sm text-stone-500">No denied claims match that cohort.</p>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full tbl">
+                  <thead><tr><th></th><th>Claim</th><th>Payer</th><th>Denial reason</th><th>Service</th><th className="!text-right">Billed</th><th>Grade</th><th></th></tr></thead>
+                  <tbody>
+                    {cohort.map((c) => (
+                      <tr key={c.claim_id}>
+                        <td>
+                          <input type="checkbox" className="w-4 h-4 accent-emerald-600" disabled={c.has_pending_draft}
+                            checked={selected.includes(c.claim_id)} onChange={() => toggle(c.claim_id)} aria-label={`Select ${c.claim_number}`} />
+                        </td>
+                        <td className="font-medium">{c.claim_number}</td>
+                        <td>{c.payer || '—'}</td>
+                        <td>{c.denial_reason || '—'}</td>
+                        <td>{c.service_date}</td>
+                        <td className="!text-right">{fmtMoney2(c.billed_amount)}</td>
+                        <td>
+                          {c.grade && (
+                            <span className={`badge ${c.grade.letter <= 'B' ? 'badge-green' : c.grade.letter === 'C' ? 'badge-amber' : 'badge-rose'}`}
+                              title={`${c.grade.note} Preview grade — citation strength is scored on the draft itself.`}>
+                              {c.grade.letter} · {c.grade.score}
+                            </span>
+                          )}
+                        </td>
+                        <td>{c.has_pending_draft && <span className="text-xs text-amber-700">draft already waiting</span>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex items-center gap-2 mt-3">
+                <button type="button" className="btn btn-primary btn-sm" disabled={busy || !selected.length} onClick={draftSelected}>
+                  {busy ? 'Drafting…' : `Draft ${selected.length} appeal(s)`}
+                </button>
+                <span className="text-xs text-stone-500">Drafts land in Awaiting your approval — approve them one by one or with the batch bar. Nothing is submitted to a payer.</span>
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -998,6 +1124,7 @@ export default function Agent({ onUpgrade, onOpenClaim, onOpenEra, initialSectio
           )}
         </div>
       )}
+      <BulkAppealsSection onDrafted={() => refreshSurfaces()} />
       <ApprovalsSection actions={pendingActions} decidingId={decidingId} onDecide={decidePending} onShowClaimDetails={showClaimDetails}
         selectedIds={selectedIds} onToggleSelect={toggleSelect} onSelectAll={selectAllPending}
         onBatchDecide={batchDecide} batchBusy={batchBusy} batchSummary={batchSummary} />

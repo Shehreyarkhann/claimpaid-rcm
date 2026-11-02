@@ -18,6 +18,7 @@ const { scrubClaim: runScrub } = require('../scrub');
 const eligibilityRoute = require('../routes/eligibility');
 const { listExceptions, buildResolveAction } = require('./eraResolve');
 const { createAction, serializeAction } = require('./actions');
+const { gradeAppeal } = require('./grade');
 
 const TOOL_DEFS = [
   {
@@ -312,6 +313,11 @@ function draftAppeal(ctx, input) {
     ? `Angle: ${angleLabel} — overturns ${Math.round(learned.value * 100)}% here (n=${learned.sampleSize}).`
     : null;
 
+  // Appeal grade (deploy #106, Phase E): computed from the org's own
+  // win history for payer + reason, the letter's citation signals, and
+  // the claim's documentation — rides the payload so every approval
+  // card (chat, brief, bulk cohort) shows the same grade.
+  const grade = gradeAppeal(ctx.orgId, { claim, letterText: letter.text });
   const action = createAction({
     orgId: ctx.orgId,
     userId: ctx.user.id,
@@ -326,6 +332,7 @@ function draftAppeal(ctx, input) {
       letter: letter.text,
       angle_source: learned ? 'learned' : 'default',
       angle_stat: learned ? { value: learned.value, sampleSize: learned.sampleSize } : null,
+      grade,
     },
     // The learned-angle stat rides at the top of the card preview so the
     // approver sees WHY this angle was chosen; the letter itself is the
@@ -340,6 +347,10 @@ function draftAppeal(ctx, input) {
     output: {
       action_id: action.id,
       claim_number: claim.claim_number,
+      grade: grade ? {
+        letter: grade.letter, score: grade.score,
+        statement: `Grade ${grade.letter} (${grade.score}/100) — win history ${grade.win_rate == null ? 'no data yet' : `${Math.round(grade.win_rate * 100)}% (n=${grade.sample_size}, ${grade.label})`}, citation ${grade.components.citation_strength}/25, documentation ${grade.components.documentation}/15.`,
+      } : null,
       category: letter.category_label || letter.category,
       angle: learned
         ? { category: letter.category, label: angleLabel, source: 'learned', overturn_rate: learned.value, sample_size: learned.sampleSize, statement: angleStat }
