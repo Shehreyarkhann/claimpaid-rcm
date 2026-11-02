@@ -11,12 +11,16 @@
 //   manual — no network; route requires explicit user confirmation.
 //   sftp   — drops the 837P into the clearinghouse's SFTP inbox (ssh2).
 //   rest   — POSTs the file to a configured HTTPS endpoint (JSON wrapper).
+//   stedi  — direct API submission through Stedi (platform key in server
+//            env; test keys reach Stedi's test flow only). The response
+//            carries Stedi's own edit-level 277CA, which the route feeds
+//            through the same ack pipeline as an uploaded ack file.
 //
 // transmit(adapterName, orgConfig, { ediText, batchNumber }) resolves to
 // { adapter, detail } on success and THROWS on any failure. The batch keeps
 // status 'generated' unless transmit succeeds.
 
-const XMIT_VENDORS = ['manual', 'sftp', 'rest'];
+const XMIT_VENDORS = ['manual', 'sftp', 'rest', 'stedi'];
 
 function orgXmitConfig(orgId) {
   const { db } = require('../db');
@@ -141,6 +145,21 @@ async function restTransmit(restCfg, ediText, batchNumber, controlNumber) {
   return { endpoint, httpStatus: res.status, response: text.slice(0, 500) };
 }
 
+// ---- stedi adapter ----------------------------------------------------------
+
+async function stediTransmit(ediText, batchNumber) {
+  const { submitRawX12, stediMode } = require('./stedi');
+  const out = await submitRawX12(ediText, `claimpaid-batch-${batchNumber}`);
+  return {
+    mode: stediMode(),
+    controlNumber: out.controlNumber,
+    status: out.status,
+    payerName: out.payerName,
+    tradingPartnerServiceId: out.tradingPartnerServiceId,
+    ackX12: out.ackX12,
+  };
+}
+
 // ---- entry point ------------------------------------------------------------
 
 async function transmit(vendorName, orgConfig, payload) {
@@ -158,6 +177,10 @@ async function transmit(vendorName, orgConfig, payload) {
   if (vendorName === 'rest') {
     const detail = await restTransmit(orgConfig.rest, ediText, batchNumber, controlNumber);
     return { adapter: 'rest', detail };
+  }
+  if (vendorName === 'stedi') {
+    const detail = await stediTransmit(ediText, batchNumber);
+    return { adapter: 'stedi', detail };
   }
   throw new Error(`Unknown transmission vendor: ${vendorName}`);
 }

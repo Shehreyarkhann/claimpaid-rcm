@@ -65,7 +65,10 @@ export default function FilingRules() {
   const [payers, setPayers] = useState([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [showRuleForm, setShowRuleForm] = useState(false);
-  const [ruleForm, setRuleForm] = useState({ name: '', severity: 'warning', payer_id: '', cpt_code: '', icd_code: '', message: '' });
+  const [ruleForm, setRuleForm] = useState({ name: '', severity: 'warning', payer_id: '', cpt_code: '', icd_code: '', message: '', action_type: 'flag', action_value: '' });
+  const [applications, setApplications] = useState([]);
+  const [fixFor, setFixFor] = useState(null);
+  const [fixMod, setFixMod] = useState('');
   const canWrite = ['owner', 'biller'].includes(user?.role);
   const isOwner = user?.role === 'owner';
 
@@ -73,6 +76,7 @@ export default function FilingRules() {
   const loadRules = () => {
     api.ruleSuggestions().then(setSuggestions).catch(() => {});
     api.customRules().then(setCustomRules).catch(() => {});
+    api.ruleApplications().then(setApplications).catch(() => {});
     api.payers().then(setPayers).catch(() => {});
   };
   useEffect(() => { load(); loadRules(); }, []);
@@ -93,6 +97,19 @@ export default function FilingRules() {
     try { await api.acceptSuggestion(id); toast.success('Rule activated'); loadRules(); }
     catch (e) { toast.error(e.message); }
   };
+  const acceptWithFix = async (id) => {
+    if (!/^[A-Za-z0-9]{2}$/.test(fixMod.trim())) { toast.error('Enter a 2-character modifier (e.g. 25)'); return; }
+    try {
+      await api.acceptSuggestion(id, { action_type: 'append_modifier', action_value: fixMod.trim().toUpperCase() });
+      toast.success('Rule activated — future claims auto-corrected at scrub');
+      setFixFor(null); setFixMod('');
+      loadRules();
+    } catch (e) { toast.error(e.message); }
+  };
+  const toggleRule = async (id) => {
+    try { await api.toggleCustomRule(id); loadRules(); }
+    catch (e) { toast.error(e.message); }
+  };
   const dismiss = async (id) => {
     try { await api.dismissSuggestion(id); loadRules(); }
     catch (e) { toast.error(e.message); }
@@ -106,7 +123,7 @@ export default function FilingRules() {
     try {
       await api.createCustomRule({ ...ruleForm, payer_id: ruleForm.payer_id ? Number(ruleForm.payer_id) : null });
       toast.success('Custom rule added');
-      setRuleForm({ name: '', severity: 'warning', payer_id: '', cpt_code: '', icd_code: '', message: '' });
+      setRuleForm({ name: '', severity: 'warning', payer_id: '', cpt_code: '', icd_code: '', message: '', action_type: 'flag', action_value: '' });
       setShowRuleForm(false);
       loadRules();
     } catch (e) { toast.error(e.message); }
@@ -190,9 +207,23 @@ export default function FilingRules() {
                   </div>
                 </div>
                 {canWrite && (
-                  <div className="flex gap-2 shrink-0">
-                    <button onClick={() => accept(s.id)} className="btn btn-primary !py-1.5 !text-xs">Accept</button>
-                    <button onClick={() => dismiss(s.id)} className="btn btn-ghost !py-1.5 !text-xs">Dismiss</button>
+                  <div className="flex gap-2 shrink-0 items-center">
+                    {fixFor === s.id ? (
+                      <>
+                        <input className="input !w-20 !py-1.5 font-mono" placeholder="Mod" maxLength={2}
+                          value={fixMod} onChange={(e) => setFixMod(e.target.value)} autoFocus />
+                        <button onClick={() => acceptWithFix(s.id)} className="btn btn-primary !py-1.5 !text-xs">Accept + auto-append</button>
+                        <button onClick={() => setFixFor(null)} className="btn btn-ghost !py-1.5 !text-xs">Cancel</button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => accept(s.id)} className="btn btn-primary !py-1.5 !text-xs">Accept</button>
+                        {s.cpt_code && (
+                          <button onClick={() => { setFixFor(s.id); setFixMod(''); }} className="btn btn-outline !py-1.5 !text-xs">Auto-fix…</button>
+                        )}
+                        <button onClick={() => dismiss(s.id)} className="btn btn-ghost !py-1.5 !text-xs">Dismiss</button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -234,6 +265,17 @@ export default function FilingRules() {
                   <input className="input font-mono" value={ruleForm.icd_code} onChange={setRF('icd_code')} placeholder="M54.5" /></div>
               </div>
             </div>
+            <div className="grid sm:grid-cols-2 gap-3 mb-3">
+              <div><label className="label">When a claim matches</label>
+                <select className="input" value={ruleForm.action_type} onChange={setRF('action_type')}>
+                  <option value="flag">Flag it — show the message at scrub time</option>
+                  <option value="append_modifier">Auto-correct — append a modifier at scrub time</option>
+                </select></div>
+              {ruleForm.action_type === 'append_modifier' && (
+                <div><label className="label">Modifier to append (to the CPT above)</label>
+                  <input className="input font-mono" maxLength={2} value={ruleForm.action_value} onChange={setRF('action_value')} placeholder="25" /></div>
+              )}
+            </div>
             <div className="mb-4"><label className="label">Message shown to billers</label>
               <input className="input" value={ruleForm.message} onChange={setRF('message')} placeholder="What should the biller check before submitting?" /></div>
             <div className="flex justify-end gap-2">
@@ -247,18 +289,24 @@ export default function FilingRules() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full tbl">
-              <thead><tr><th>Rule</th><th>Severity</th><th>Payer</th><th>CPT</th><th>ICD</th><th>Source</th>{canWrite && <th className="!text-right">Actions</th>}</tr></thead>
+              <thead><tr><th>Rule</th><th>Severity</th><th>Payer</th><th>CPT</th><th>Action</th><th>Hits</th><th>Source</th>{canWrite && <th className="!text-right">Actions</th>}</tr></thead>
               <tbody>
                 {customRules.map((r) => (
-                  <tr key={r.id}>
+                  <tr key={r.id} className={r.is_active ? '' : 'opacity-50'}>
                     <td className="font-medium text-sm">{r.name}</td>
                     <td><span className={`badge ${r.severity === 'error' ? 'badge-rose' : 'badge-amber'}`}>{r.severity}</span></td>
                     <td className="text-sm text-stone-500">{r.payer_name || 'Any'}</td>
                     <td className="text-sm font-mono text-stone-500">{r.cpt_code || '—'}</td>
-                    <td className="text-sm font-mono text-stone-500">{r.icd_code || '—'}</td>
+                    <td className="text-sm">
+                      {r.action_type === 'append_modifier'
+                        ? <span className="badge badge-green">Auto-append :{r.action_value}</span>
+                        : <span className="badge badge-slate">Flag</span>}
+                    </td>
+                    <td className="text-sm text-stone-500">{r.hit_count || 0}</td>
                     <td><span className="badge badge-slate">{r.source === 'suggestion' ? 'Suggested' : 'Manual'}</span></td>
                     {canWrite && (
-                      <td className="!text-right">
+                      <td className="!text-right whitespace-nowrap">
+                        <button onClick={() => toggleRule(r.id)} className="text-amber-700 hover:text-amber-900 text-xs font-semibold mr-3">{r.is_active ? 'Turn off' : 'Turn on'}</button>
                         <button onClick={() => removeRule(r.id, r.name)} className="text-rose-600 hover:text-rose-800 text-xs font-semibold">Delete</button>
                       </td>
                     )}
@@ -269,6 +317,23 @@ export default function FilingRules() {
           </div>
         )}
       </div>
+
+      {/* Recent auto-corrections */}
+      {applications.length > 0 && (
+        <div className="card p-5 mb-5">
+          <div className="font-semibold text-stone-900 tracking-tight mb-1">Recent auto-corrections</div>
+          <p className="text-xs text-stone-500 mb-3">Every time a rule changed a claim at scrub time — the audit trail for auto-correct.</p>
+          <div className="divide-y divide-stone-100">
+            {applications.slice(0, 10).map((a) => (
+              <div key={a.id} className="py-2 flex items-center gap-3 text-sm flex-wrap">
+                <span className="font-mono text-xs">{a.claim_number}</span>
+                <span className="text-stone-600 flex-1 min-w-0">{a.detail}</span>
+                <span className="text-xs text-stone-400">{a.created_at?.slice(0, 16).replace('T', ' ')}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {!rules ? (
         <div className="card p-6 space-y-3">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-14" />)}</div>

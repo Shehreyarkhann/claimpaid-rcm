@@ -632,6 +632,59 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_batches_org ON claim_batches(org_id);
   `);
 
+  // Stedi direct submission (Phase A): control number returned by Stedi for
+  // a transmitted batch + claim-status check log + webhook event inbox.
+  if (!columnExists('claim_batches', 'stedi_control_number')) db.exec('ALTER TABLE claim_batches ADD COLUMN stedi_control_number TEXT');
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS claim_status_checks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      claim_id INTEGER NOT NULL REFERENCES claims(id),
+      checked_by INTEGER REFERENCES users(id),
+      vendor TEXT NOT NULL DEFAULT 'stedi',
+      mode TEXT,
+      category_code TEXT,
+      status_code TEXT,
+      status_text TEXT,
+      payer_icn TEXT,
+      check_ref TEXT,
+      raw_json TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_status_checks_claim ON claim_status_checks(claim_id, created_at);
+    CREATE TABLE IF NOT EXISTS stedi_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_type TEXT,
+      transaction_id TEXT,
+      org_id INTEGER REFERENCES orgs(id),
+      batch_id INTEGER REFERENCES claim_batches(id),
+      payload_json TEXT,
+      processed INTEGER NOT NULL DEFAULT 0,
+      note TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_stedi_events_txn ON stedi_events(transaction_id);
+  `);
+
+  // Denial Copilot rules (Phase B): custom scrub rules gain an optional
+  // auto-correct action + hit tracking, and every application is logged.
+  if (!columnExists('custom_scrub_rules', 'action_type')) db.exec("ALTER TABLE custom_scrub_rules ADD COLUMN action_type TEXT NOT NULL DEFAULT 'flag'");
+  if (!columnExists('custom_scrub_rules', 'action_value')) db.exec('ALTER TABLE custom_scrub_rules ADD COLUMN action_value TEXT');
+  if (!columnExists('custom_scrub_rules', 'hit_count')) db.exec('ALTER TABLE custom_scrub_rules ADD COLUMN hit_count INTEGER NOT NULL DEFAULT 0');
+  if (!columnExists('custom_scrub_rules', 'last_hit_at')) db.exec('ALTER TABLE custom_scrub_rules ADD COLUMN last_hit_at TEXT');
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS rule_applications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      rule_id INTEGER NOT NULL REFERENCES custom_scrub_rules(id),
+      claim_id INTEGER NOT NULL REFERENCES claims(id),
+      action_type TEXT NOT NULL,
+      detail TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_rule_apps_org ON rule_applications(org_id, created_at);
+  `);
+
   // Interchange control-number sequence (one row per day; see edi/generate837p.js)
   db.exec(`
     CREATE TABLE IF NOT EXISTS edi_control_numbers (

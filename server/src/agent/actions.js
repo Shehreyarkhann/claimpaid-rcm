@@ -24,6 +24,7 @@ function actionTitle(row, payload) {
   if (row.kind === 'draft_appeal') return `Draft appeal — claim ${p.claim_number || `#${p.claim_id || ''}`}`;
   if (row.kind === 'apply_codes') return `Apply codes — claim ${p.claim_number || `#${p.claim_id || ''}`}`;
   if (row.kind === 'resolve_exception') return `Resolve ERA exception — ${p.claim_number ? `claim ${p.claim_number}` : `line ${p.clp_ref || `#${p.era_line_id || ''}`}`}`;
+  if (row.kind === 'propose_rule') return `Create rule — ${p.name || 'Denial Copilot rule'}`;
   return row.kind;
 }
 
@@ -52,6 +53,10 @@ function serializeAction(row) {
       codes: Array.isArray(payload.codes) ? payload.codes.map((c) => ({ code: c.code, type: c.type })) : null,
       disposition: payload.disposition ?? null,
       disposition_label: payload.disposition_label ?? null,
+      rule_name: payload.name ?? null,
+      action_type: payload.action_type ?? null,
+      action_value: payload.action_value ?? null,
+      cpt_code: payload.cpt_code ?? null,
       era_line_id: payload.era_line_id ?? null,
       job_id: payload.job_id ?? null,
     },
@@ -232,7 +237,22 @@ function executeApplyIntake(req, action) {
   return require('./intake').applyIntake(req, action);
 }
 
-const EXECUTORS = { draft_appeal: executeDraftAppeal, apply_codes: executeApplyCodes, resolve_exception: executeResolveException, apply_intake: executeApplyIntake };
+// --- propose_rule (Phase B, Denial Copilot): approval creates an ACTIVE
+// custom scrub rule. Flag rules warn at scrub time; append_modifier rules
+// auto-correct future claims at scrub time (logged in rule_applications).
+function executeProposeRule(req, action) {
+  const p = parseJson(action.payload, {});
+  const info = db.prepare(`
+    INSERT INTO custom_scrub_rules (org_id, name, severity, payer_id, cpt_code, icd_code, message, source, is_active, created_by, action_type, action_value)
+    VALUES (?, ?, 'warning', ?, ?, NULL, ?, 'manual', 1, ?, ?, ?)
+  `).run(
+    action.org_id, p.name, p.payer_id || null, p.cpt_code || null,
+    p.message, action.user_id, p.action_type || 'flag', p.action_value || null
+  );
+  return { rule_id: info.lastInsertRowid, name: p.name };
+}
+
+const EXECUTORS = { draft_appeal: executeDraftAppeal, apply_codes: executeApplyCodes, resolve_exception: executeResolveException, apply_intake: executeApplyIntake, propose_rule: executeProposeRule };
 
 function executeAction(req, action) {
   const fn = EXECUTORS[action.kind];

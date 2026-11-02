@@ -46,6 +46,9 @@ app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), hand
 // Connect webhook (events on connected accounts — statement payments) has
 // its own endpoint + signing secret; same raw-body requirement.
 app.post('/api/billing/webhook/connect', express.raw({ type: 'application/json' }), handleConnectWebhook);
+// Stedi webhook (payer 277CA/835 event notifications) — same raw-body
+// requirement; the handler records every delivery in stedi_events.
+app.post('/api/webhooks/stedi', express.raw({ type: 'application/json' }), require('./routes/webhooks').handleStediWebhook);
 // 512kb: the avatar upload (deploy #57) sends a downscaled data URL in JSON.
 app.use(express.json({ limit: '512kb' }));
 

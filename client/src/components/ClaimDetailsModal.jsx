@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, fmtMoney2, fmtDate } from '../api';
-import { Modal, Skeleton } from './ui';
+import { Modal, Skeleton, useToast } from './ui';
 
 // Claim details (deploy #98) — ONE shared read surface for a claim, used by
 // Denials, the Agent tab, My Work, ERA and Claims. Before this, a denied
@@ -61,8 +61,24 @@ function SectionTitle({ children }) {
 }
 
 export default function ClaimDetailsModal({ claimId, onClose, onEditClaim, onOpenAppeal }) {
+  const toast = useToast();
   const [claim, setClaim] = useState(null);
   const [error, setError] = useState('');
+  const [ruleBusy, setRuleBusy] = useState(false);
+  const [ruleMade, setRuleMade] = useState(false);
+
+  // Denial Copilot (Phase B): one click turns this denial into a live
+  // scrub rule scoped to its payer + first CPT, so the pattern is flagged
+  // on every future claim. Auto-correct variants are set on the Rules page.
+  const createRule = async () => {
+    setRuleBusy(true);
+    try {
+      const r = await api.ruleFromDenial(claim.id, { action_type: 'flag' });
+      setRuleMade(true);
+      toast.success(r.deduped ? 'A rule for this pattern is already active' : 'Rule created — this pattern is now flagged on future claims');
+    } catch (e) { toast.error(e.message); }
+    finally { setRuleBusy(false); }
+  };
 
   useEffect(() => {
     let live = true;
@@ -183,6 +199,14 @@ export default function ClaimDetailsModal({ claimId, onClose, onEditClaim, onOpe
               </div>
             )}
             <div className="text-[11px] text-stone-400 mt-2">Adjustment codes are from the matched ERA lines (CAS group–reason).</div>
+            {claim.status === 'denied' && (
+              <div className="mt-3">
+                <button className="btn btn-outline btn-sm" disabled={ruleBusy || ruleMade} onClick={createRule}>
+                  {ruleMade ? '✓ Rule active for this pattern' : ruleBusy ? 'Creating…' : '⚑ Create rule from this denial'}
+                </button>
+                <span className="text-[11px] text-stone-400 ml-2">Flags this payer + code pattern on future claims at scrub time.</span>
+              </div>
+            )}
           </div>
         )}
 

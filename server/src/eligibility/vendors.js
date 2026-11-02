@@ -377,8 +377,11 @@ async function availityCheck(orgConfig, input) {
 // with coverage_active 0 — same semantics as an Availity "no coverage found";
 // transport/HTTP failures throw precise errors, exactly like the other vendors.
 
-const STEDI_ELIGIBILITY_URL = 'https://healthcare.us.stedi.com/2024-04-01/change/medicalnetwork/eligibility/v3';
-const STEDI_PAYERS_URL = 'https://healthcare.us.stedi.com/2024-04-01/payers/search';
+// STEDI_HEALTHCARE_BASE override exists so tests can point every Stedi
+// surface (eligibility, payers, claims) at a stub; default is production.
+const STEDI_BASE = (process.env.STEDI_HEALTHCARE_BASE || 'https://healthcare.us.stedi.com/2024-04-01').replace(/\/$/, '');
+const STEDI_ELIGIBILITY_URL = `${STEDI_BASE}/change/medicalnetwork/eligibility/v3`;
+const STEDI_PAYERS_URL = `${STEDI_BASE}/payers/search`;
 const STEDI_TIMEOUT_MS = 30000;
 const STEDI_PAYER_CACHE_TTL_MS = 6 * 3600 * 1000;
 // AAA codes Stedi does not bill for (payer-down class). 75 = subscriber not

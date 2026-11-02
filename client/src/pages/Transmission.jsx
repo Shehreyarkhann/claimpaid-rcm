@@ -230,6 +230,9 @@ function BatchDetail({ id, onBack }) {
         subtitle={`${batch.claims?.length || 0} claims · created ${fmtDate(batch.created_at?.slice(0, 10))}${batch.transmitted_at ? ` · transmitted ${fmtDate(batch.transmitted_at.slice(0, 10))}` : ''}`}
         actions={<span className={`badge ${STATUS_BADGE[st]}`}>{st}</span>}
       />
+      {batch.stedi_control_number && (
+        <p className="text-xs text-stone-500 -mt-2 mb-4">Stedi control number: <span className="font-mono">{batch.stedi_control_number}</span></p>
+      )}
       {error && <div className="mb-4 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}
       {dataIssues && (
         <div className="mb-4 text-sm bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
@@ -267,7 +270,9 @@ function BatchDetail({ id, onBack }) {
               ? 'Download the file, upload it in your clearinghouse portal, then confirm below — nothing is marked transmitted without your confirmation.'
               : vendor === 'sftp'
                 ? 'The file will be dropped into your clearinghouse SFTP inbox using your Transmission settings.'
-                : 'The file will be POSTed to your configured vendor endpoint.'}
+                : vendor === 'stedi'
+                  ? 'The file goes straight to Stedi, which routes it to the payer. Stedi\'s claim-edit results come back on this batch immediately.'
+                  : 'The file will be POSTed to your configured vendor endpoint.'}
           </p>
           <div className="flex flex-wrap gap-2 items-center">
             <button className="btn" disabled={busy} onClick={download}>⬇ Download 837P</button>
@@ -346,11 +351,22 @@ const OUTBOX_BADGE = { queued: 'badge-slate', sent: 'badge-blue', acknowledged: 
 function OutboxPanel() {
   const toast = useToast();
   const [rows, setRows] = useState(null);
+  const [statusByClaim, setStatusByClaim] = useState({});
+  const [checking, setChecking] = useState(null);
   const load = () => { api.transmission.outbox().then((d) => setRows(d.outbox)).catch(() => setRows([])); };
   useEffect(load, []);
   const requeue = async (id) => {
     try { await api.transmission.requeueOutbox(id); toast.success('Claim released — it can be added to a new batch'); load(); }
     catch (e) { toast.error(e.message); }
+  };
+  const checkStatus = async (o) => {
+    setChecking(o.claim_id);
+    try {
+      const r = await api.transmission.claimStatusCheck(o.claim_id);
+      setStatusByClaim((m) => ({ ...m, [o.claim_id]: r.matched ? (r.result.status_text || r.result.status || 'Status returned') : 'No match at payer yet' }));
+      toast.success(r.matched ? `Payer status: ${r.result.status_text || r.result.status || 'returned'}` : 'Payer has no status for this claim yet');
+    } catch (e) { toast.error(e.message); }
+    finally { setChecking(null); }
   };
   if (!rows || !rows.length) return null;
   return (
@@ -376,6 +392,14 @@ function OutboxPanel() {
                 <td className="p-2 text-stone-500">{o.ack_at ? fmtDate(o.ack_at.slice(0, 10)) : '—'}</td>
                 <td className="p-2 text-right">
                   {o.status === 'failed' && <button className="btn btn-sm btn-outline" onClick={() => requeue(o.id)}>Release for re-batch</button>}
+                  {(o.status === 'sent' || o.status === 'acknowledged') && (
+                    <span className="inline-flex items-center gap-2">
+                      {statusByClaim[o.claim_id] && <span className="badge badge-blue">{statusByClaim[o.claim_id]}</span>}
+                      <button className="btn btn-sm btn-outline" disabled={checking === o.claim_id} onClick={() => checkStatus(o)}>
+                        {checking === o.claim_id ? 'Checking…' : 'Check status'}
+                      </button>
+                    </span>
+                  )}
                 </td>
               </tr>
             ))}

@@ -149,7 +149,19 @@ function getCustomRules(orgId) {
   }
 }
 
-function applyCustomRules(claim, issues) {
+// Denial Copilot rules (Phase B): a custom rule either FLAGS the claim
+// (an issue, as before) or AUTO-CORRECTS it — today the one mechanical fix
+// that is always safe to compute is appending a modifier to a CPT entry
+// (modifiers ride inside cpt_codes as "99214:25", the format the 837P
+// generator already emits). Fixes are COMPUTED here and APPLIED by the
+// scrub route (never by preview), with every application logged to
+// rule_applications and counted on the rule.
+function splitCptEntry(entry) {
+  const [base, ...mods] = String(entry || '').split(':');
+  return { base: (base || '').trim(), mods: mods.map((m) => m.trim()).filter(Boolean) };
+}
+
+function applyCustomRules(claim, issues, fixes, matchedRuleIds) {
   const rules = getCustomRules(claim.org_id);
   if (!rules.length) return;
   const cpts = splitCodes(claim.cpt_codes);
@@ -157,8 +169,29 @@ function applyCustomRules(claim, issues) {
   for (const r of rules) {
     try {
       if (r.payer_id && Number(r.payer_id) !== Number(claim.payer_id)) continue;
-      if (r.cpt_code && !cpts.includes(r.cpt_code)) continue;
+      if (r.cpt_code && !cpts.some((e) => splitCptEntry(e).base === r.cpt_code)) continue;
       if (r.icd_code && !icds.includes(r.icd_code)) continue;
+      matchedRuleIds.push(r.id);
+      if (r.action_type === 'append_modifier' && r.action_value && r.cpt_code) {
+        const idx = cpts.findIndex((e) => splitCptEntry(e).base === r.cpt_code);
+        const entry = splitCptEntry(cpts[idx]);
+        if (!entry.mods.includes(r.action_value)) {
+          const before = cpts.join(',');
+          const next = [...cpts];
+          next[idx] = [entry.base, ...entry.mods, r.action_value].join(':');
+          fixes.push({
+            rule_id: r.id,
+            rule_name: r.name,
+            action_type: 'append_modifier',
+            cpt_code: r.cpt_code,
+            modifier: r.action_value,
+            before,
+            after: next.join(','),
+            message: `Rule "${r.name}" appends modifier ${r.action_value} to CPT ${r.cpt_code} (${before} → ${next.join(',')}).`,
+          });
+          continue; // the fix replaces the flag for this rule
+        }
+      }
       issues.push({ rule: 'CUSTOM', severity: r.severity, name: r.name, message: r.message });
     } catch (e) {
       console.error('Custom scrub rule failed:', e.message);
@@ -168,6 +201,8 @@ function applyCustomRules(claim, issues) {
 
 function scrubClaim(claim) {
   const issues = [];
+  const fixes = [];
+  const matchedRuleIds = [];
   for (const rule of RULES) {
     try {
       const message = rule.check(claim);
@@ -177,7 +212,7 @@ function scrubClaim(claim) {
     }
   }
   try {
-    applyCustomRules(claim, issues);
+    applyCustomRules(claim, issues, fixes, matchedRuleIds);
   } catch (e) {
     console.error('Custom rules failed:', e.message);
   }
@@ -191,6 +226,10 @@ function scrubClaim(claim) {
     claim_number: claim.claim_number,
     status: errors > 0 ? 'failed' : warnings > 0 ? 'warnings' : 'clean',
     errors, warnings, issues,
+    // Phase B: computed auto-corrections (not yet applied — the scrub
+    // route applies them and logs rule_applications) + every custom rule
+    // that matched, for hit counting.
+    fixes, matched_rule_ids: matchedRuleIds,
     score, band, band_label,
   };
 }

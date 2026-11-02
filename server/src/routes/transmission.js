@@ -19,6 +19,8 @@ const { auditLog } = require('../audit');
 const { generate837P, validate837, validateClaimData } = require('../edi/generate837p');
 const { parseAck } = require('../edi/parseAck');
 const { transmit, orgXmitConfig, XMIT_VENDORS } = require('../edi/transmit');
+const { stediMode, claimStatusCheck, mapStatusResult } = require('../edi/stedi');
+const { resolveStediPayerId } = require('../eligibility/vendors');
 
 const router = express.Router();
 router.use(authRequired, requireProduct('rcm'));
@@ -58,6 +60,43 @@ function outboxSetClaim(orgId, batchId, claimId, status) {
 
 function getBatch(id, orgId) {
   return db.prepare('SELECT * FROM claim_batches WHERE id = ? AND org_id = ?').get(id, orgId);
+}
+
+// Apply a parsed 999/277CA to a batch + its claims (single transaction).
+// Shared by the manual ack-upload route and the Stedi transmit path, whose
+// submission response carries Stedi's own edit-level 277CA inline.
+function applyAck(orgId, batch, parsed, rawText, type) {
+  const batchIds = new Set(JSON.parse(batch.claim_ids || '[]').map(String));
+  db.exec('BEGIN');
+  try {
+    if (type === '999') {
+      db.prepare(`UPDATE claim_batches SET ack_raw_999 = ?, status = ?, updated_at = datetime('now') WHERE id = ?`)
+        .run(rawText.slice(0, 200000), parsed.batchStatus, batch.id);
+      if (parsed.batchStatus === 'rejected') {
+        const ids = [...batchIds];
+        if (ids.length) {
+          const ph = ids.map(() => '?').join(',');
+          db.prepare(`UPDATE claims SET x12_status = 'rejected' WHERE id IN (${ph})`).run(...ids);
+        }
+        outboxSetBatch(orgId, batch.id, 'failed', { ack: true });
+      } else if (parsed.batchStatus === 'accepted') {
+        outboxSetBatch(orgId, batch.id, 'acknowledged', { ack: true });
+      }
+    } else {
+      db.prepare(`UPDATE claim_batches SET ack_raw_277ca = ?, status = ?, updated_at = datetime('now') WHERE id = ?`)
+        .run(rawText.slice(0, 200000), parsed.batchStatus, batch.id);
+      for (const c of parsed.claims) {
+        if (!batchIds.has(String(c.claimId))) continue; // ignore claims not in this batch
+        const newStatus = c.status === 'accepted' ? 'accepted' : 'rejected';
+        db.prepare('UPDATE claims SET x12_status = ? WHERE id = ?').run(newStatus, Number(c.claimId));
+        outboxSetClaim(orgId, batch.id, Number(c.claimId), c.status === 'accepted' ? 'acknowledged' : 'failed');
+      }
+    }
+    db.exec('COMMIT');
+  } catch (e) {
+    db.exec('ROLLBACK');
+    throw e;
+  }
 }
 
 function batchClaims(batch) {
@@ -104,7 +143,15 @@ router.get('/transmittable', (req, res) => {
 
 // --- Vendor config (owner only) ---
 router.get('/config', ownerOnly, (req, res) => {
-  res.json({ ...orgXmitConfig(req.orgId), vendors: XMIT_VENDORS });
+  const mode = stediMode();
+  res.json({
+    ...orgXmitConfig(req.orgId),
+    vendors: XMIT_VENDORS,
+    // Stedi is a platform account: key lives in server env only. Expose
+    // presence + mode, never the key. Mode flips test -> production when
+    // the production key is installed; no org action needed.
+    stedi: { configured: mode !== 'unconfigured', mode },
+  });
 });
 
 router.put('/config', ownerOnly, (req, res) => {
@@ -323,9 +370,10 @@ router.post('/batches/:id/transmit', canWrite, async (req, res) => {
   try {
     db.prepare(`
       UPDATE claim_batches
-      SET status = 'transmitted', vendor = ?, transmitted_at = datetime('now'), updated_at = datetime('now')
+      SET status = 'transmitted', vendor = ?, transmitted_at = datetime('now'), updated_at = datetime('now'),
+          stedi_control_number = COALESCE(?, stedi_control_number)
       WHERE id = ?
-    `).run(vendor, batch.id);
+    `).run(vendor, vendor === 'stedi' ? (result.detail?.controlNumber || null) : null, batch.id);
     if (ids.length) {
       const ph = ids.map(() => '?').join(',');
       db.prepare(`UPDATE claims SET x12_status = 'transmitted' WHERE id IN (${ph})`).run(...ids);
@@ -337,7 +385,25 @@ router.post('/batches/:id/transmit', canWrite, async (req, res) => {
     throw e;
   }
   auditLog(req, 'transmit', 'claim_batch', batch.id, `${batch.batch_number} transmitted via ${vendor}`);
-  res.json({ ...getBatch(batch.id, req.orgId), transmit: result });
+
+  // Stedi's submission response carries its own edit-level 277CA inline.
+  // Feed it through the same ack pipeline as an uploaded ack file so claim
+  // x12_status reflects Stedi's edits immediately; the payer's own 277CA
+  // still arrives later (webhook / file upload) and refines it further.
+  let stediAck = null;
+  if (vendor === 'stedi' && result.detail?.ackX12) {
+    try {
+      const parsed = parseAck(result.detail.ackX12);
+      if (parsed.type === '277ca') {
+        applyAck(req.orgId, getBatch(batch.id, req.orgId), parsed, result.detail.ackX12, '277ca');
+        stediAck = { applied: true, batchStatus: parsed.batchStatus, accepted: parsed.accepted, rejected: parsed.rejected };
+        auditLog(req, 'ack', 'claim_batch', batch.id, `${batch.batch_number} Stedi edit-level 277CA processed → ${parsed.batchStatus}`);
+      }
+    } catch (e) {
+      stediAck = { applied: false, error: e.message };
+    }
+  }
+  res.json({ ...getBatch(batch.id, req.orgId), transmit: result, ...(stediAck ? { stedi_ack: stediAck } : {}) });
 });
 
 // --- Upload a 999 / 277CA acknowledgement ---
@@ -364,39 +430,97 @@ router.post('/batches/:id/ack', canWrite, upload.single('file'), (req, res) => {
     return res.status(400).json({ error: `File parsed as ${parsed.type.toUpperCase()}, but you labeled it ${type.toUpperCase()}` });
   }
 
-  const batchIds = new Set(JSON.parse(batch.claim_ids || '[]').map(String));
-  db.exec('BEGIN');
-  try {
-    if (type === '999') {
-      db.prepare(`UPDATE claim_batches SET ack_raw_999 = ?, status = ?, updated_at = datetime('now') WHERE id = ?`)
-        .run(text.slice(0, 200000), parsed.batchStatus, batch.id);
-      if (parsed.batchStatus === 'rejected') {
-        const ids = [...batchIds];
-        if (ids.length) {
-          const ph = ids.map(() => '?').join(',');
-          db.prepare(`UPDATE claims SET x12_status = 'rejected' WHERE id IN (${ph})`).run(...ids);
-        }
-        outboxSetBatch(req.orgId, batch.id, 'failed', { ack: true });
-      } else if (parsed.batchStatus === 'accepted') {
-        outboxSetBatch(req.orgId, batch.id, 'acknowledged', { ack: true });
-      }
-    } else {
-      db.prepare(`UPDATE claim_batches SET ack_raw_277ca = ?, status = ?, updated_at = datetime('now') WHERE id = ?`)
-        .run(text.slice(0, 200000), parsed.batchStatus, batch.id);
-      for (const c of parsed.claims) {
-        if (!batchIds.has(String(c.claimId))) continue; // ignore claims not in this batch
-        const newStatus = c.status === 'accepted' ? 'accepted' : 'rejected';
-        db.prepare('UPDATE claims SET x12_status = ? WHERE id = ?').run(newStatus, Number(c.claimId));
-        outboxSetClaim(req.orgId, batch.id, Number(c.claimId), c.status === 'accepted' ? 'acknowledged' : 'failed');
-      }
-    }
-    db.exec('COMMIT');
-  } catch (e) {
-    db.exec('ROLLBACK');
-    throw e;
-  }
+  applyAck(req.orgId, batch, parsed, text, type);
   auditLog(req, 'ack', 'claim_batch', batch.id, `${batch.batch_number} ${type.toUpperCase()} processed → ${parsed.batchStatus}`);
   res.json({ ...getBatch(batch.id, req.orgId), ack: parsed });
+});
+
+// --- Real-time claim status (276/277 via Stedi) ------------------------------
+// Production keys only: Stedi does not support claim-status checks with
+// test keys, and the check only returns results for claims the payer has
+// accepted into its system. Every check is logged to claim_status_checks.
+const ymd = (d) => d.toISOString().slice(0, 10).replace(/-/g, '');
+
+router.post('/claims/:claimId/status-check', canWrite, async (req, res) => {
+  const claim = db.prepare(`
+    SELECT c.*, p.name AS payer_name FROM claims c LEFT JOIN payers p ON p.id = c.payer_id
+    WHERE c.id = ? AND c.org_id = ?
+  `).get(req.params.claimId, req.orgId);
+  if (!claim) return res.status(404).json({ error: 'Claim not found' });
+  if (!['transmitted', 'accepted'].includes(claim.x12_status)) {
+    return res.status(400).json({ error: `Claim status can only be checked after transmission (this claim is ${claim.x12_status || 'not_sent'})` });
+  }
+  if (stediMode() === 'unconfigured') {
+    return res.status(400).json({ error: 'Stedi is not configured on this server (STEDI_API_KEY missing).' });
+  }
+  const org = db.prepare('SELECT name, billing_npi, billing_tax_id, eligibility_availity_payer_map FROM orgs WHERE id = ?').get(req.orgId) || {};
+  const billingNpi = org.billing_npi || claim.rendering_npi;
+  if (!billingNpi && !org.billing_tax_id) {
+    return res.status(400).json({ error: 'Set the billing NPI (or tax ID) in organization settings before checking claim status.' });
+  }
+  if (!claim.member_id) return res.status(400).json({ error: 'Claim has no member ID — the payer cannot match a status request without it.' });
+
+  let tradingPartnerServiceId;
+  try {
+    const resolution = await resolveStediPayerId(org, claim.payer_name, (process.env.STEDI_API_KEY || '').trim());
+    tradingPartnerServiceId = resolution?.tradingPartnerServiceId;
+  } catch (e) {
+    return res.status(502).json({ error: `Could not resolve the payer with Stedi: ${e.message}` });
+  }
+  if (!tradingPartnerServiceId) return res.status(502).json({ error: `Stedi has no payer match for "${claim.payer_name}".` });
+
+  const [firstName, ...rest] = String(claim.patient_name || '').trim().split(/\s+/);
+  const svc = new Date(`${claim.service_date}T00:00:00Z`);
+  const begin = new Date(svc.getTime() - 7 * 86400000);
+  const end = new Date(Math.min(svc.getTime() + 7 * 86400000, Date.now()));
+  const payload = {
+    tradingPartnerServiceId,
+    providers: [{
+      providerType: 'BillingProvider',
+      ...(billingNpi ? { npi: billingNpi } : { etin: org.billing_tax_id }),
+    }],
+    subscriber: {
+      memberId: claim.member_id,
+      firstName: firstName || '',
+      lastName: rest.join(' ') || '',
+      ...(claim.patient_dob ? { dateOfBirth: claim.patient_dob.replace(/-/g, '') } : {}),
+    },
+    encounter: { beginningDateOfService: ymd(begin), endDateOfService: ymd(end) },
+  };
+
+  let json;
+  try {
+    json = await claimStatusCheck(payload);
+  } catch (e) {
+    if (e.code === 'STEDI_TEST_KEY') return res.status(400).json({ error: e.message });
+    return res.status(502).json({ error: e.message });
+  }
+  const results = mapStatusResult(json);
+  const mine = results.find((r) => r.patient_account_number && String(r.patient_account_number) === String(claim.claim_number)) || results[0] || {};
+  const info = db.prepare(`
+    INSERT INTO claim_status_checks (org_id, claim_id, checked_by, vendor, mode, category_code, status_code, status_text, payer_icn, check_ref, raw_json)
+    VALUES (?, ?, ?, 'stedi', ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    req.orgId, claim.id, req.user.id, stediMode(),
+    mine.category_code || null, mine.status_code || null, mine.status_text || null,
+    mine.payer_icn || null, json?.id || null, JSON.stringify(json).slice(0, 20000)
+  );
+  auditLog(req, 'claim_status_check', 'claim', claim.id, `${claim.claim_number} status checked via Stedi → ${mine.status_text || 'no match returned'}`);
+  res.json({
+    check_id: info.lastInsertRowid,
+    mode: stediMode(),
+    matched: results.length > 0,
+    result: mine,
+    results,
+  });
+});
+
+router.get('/claims/:claimId/status-checks', (req, res) => {
+  const rows = db.prepare(`
+    SELECT id, vendor, mode, category_code, status_code, status_text, payer_icn, check_ref, created_at
+    FROM claim_status_checks WHERE claim_id = ? AND org_id = ? ORDER BY created_at DESC, id DESC LIMIT 20
+  `).all(req.params.claimId, req.orgId);
+  res.json({ checks: rows });
 });
 
 // --- Delete a draft batch (releases claims back to not_sent) ---
@@ -458,3 +582,6 @@ router.post('/outbox/:id/requeue', canWrite, (req, res) => {
 });
 
 module.exports = router;
+// Shared with the Stedi webhook handler (routes/webhooks.js), which feeds
+// payer 277CAs through the exact same pipeline as an uploaded ack file.
+module.exports.applyAckToBatch = applyAck;

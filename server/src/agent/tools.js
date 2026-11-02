@@ -110,6 +110,22 @@ const TOOL_DEFS = [
     },
   },
   {
+    name: 'propose_rule',
+    description: 'PROPOSE a Denial Copilot rule so a recurring denial pattern is caught on future claims. This creates a pending approval card — the rule is created ONLY if the user approves it. action_type "flag" warns billers at scrub time; "append_modifier" (with action_value, a 2-character modifier, and a cpt_code) auto-appends that modifier to matching claims at scrub time, logged and reversible by deleting the rule. Use when the user points at a repeating denial and wants it to stop happening.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Short rule name, e.g. "Denial pattern: CPT 99214 · UnitedHealthcare".' },
+        message: { type: 'string', description: 'What the biller should know when this rule fires.' },
+        payer_name: { type: 'string', description: 'Payer the rule is scoped to, if any. Optional.' },
+        cpt_code: { type: 'string', description: 'CPT code the rule matches, if any. Required for append_modifier.' },
+        action_type: { type: 'string', enum: ['flag', 'append_modifier'], description: 'Defaults to flag.' },
+        action_value: { type: 'string', description: 'The modifier to append (e.g. "25") when action_type is append_modifier.' },
+      },
+      required: ['name', 'message'],
+    },
+  },
+  {
     name: 'era_exceptions',
     description: 'List the current ERA exceptions (pending remittance lines that did not auto-post) with claim, payer, amounts, the remittance CAS adjustments, and a deterministic recommended disposition for each, with the arithmetic shown.',
     input_schema: { type: 'object', properties: {} },
@@ -697,6 +713,63 @@ async function resolveExceptionTool(ctx, input) {
   }
 }
 
+async function proposeRule(ctx, input) {
+  const name = typeof input?.name === 'string' ? input.name.trim() : '';
+  const message = typeof input?.message === 'string' ? input.message.trim() : '';
+  if (!name || !message) {
+    return {
+      output: { error: 'A rule needs a name and a message explaining what the biller should know.' },
+      isError: true,
+      event: { tool: 'propose_rule', label: 'Propose rule — missing name or message' },
+    };
+  }
+  const actionType = input.action_type === 'append_modifier' ? 'append_modifier' : 'flag';
+  const actionValue = actionType === 'append_modifier' ? String(input.action_value || '').trim().toUpperCase() : null;
+  if (actionType === 'append_modifier' && (!/^[A-Z0-9]{2}$/.test(actionValue || '') || !input.cpt_code)) {
+    return {
+      output: { error: 'An append_modifier rule needs a cpt_code and a 2-character action_value (the modifier, e.g. "25").' },
+      isError: true,
+      event: { tool: 'propose_rule', label: 'Propose rule — invalid auto-correct fields' },
+    };
+  }
+  let payerId = null;
+  let payerName = null;
+  if (typeof input.payer_name === 'string' && input.payer_name.trim()) {
+    const payer = db.prepare('SELECT id, name FROM payers WHERE LOWER(name) = LOWER(?)').get(input.payer_name.trim());
+    if (payer) { payerId = payer.id; payerName = payer.name; }
+  }
+  const preview = [
+    `Rule: ${name}`,
+    payerName ? `Payer: ${payerName}` : 'Payer: all',
+    input.cpt_code ? `CPT: ${input.cpt_code}` : null,
+    actionType === 'append_modifier' ? `Auto-correct: append modifier ${actionValue} at scrub time` : 'Action: flag at scrub time',
+    '',
+    message,
+  ].filter((x) => x !== null).join('\n');
+  const action = createAction({
+    orgId: ctx.orgId,
+    userId: ctx.user.id,
+    convoId: ctx.convoId,
+    kind: 'propose_rule',
+    payload: {
+      name, message,
+      payer_id: payerId, payer: payerName,
+      cpt_code: input.cpt_code || null,
+      action_type: actionType, action_value: actionValue,
+    },
+    preview,
+  });
+  return {
+    output: {
+      action_id: action.id,
+      status: 'pending',
+      note: 'The proposed rule is now shown to the user as an approval card. NO rule exists yet. It is created, active, only if the user approves.',
+    },
+    event: { tool: 'propose_rule', label: `Proposed rule · ${name} — awaiting approval` },
+    action: serializeAction(action),
+  };
+}
+
 const EXECUTORS = {
   get_worklist: getWorklist,
   get_claim: getClaim,
@@ -708,6 +781,7 @@ const EXECUTORS = {
   suggest_codes: suggestCodes,
   era_exceptions: eraExceptions,
   resolve_exception: resolveExceptionTool,
+  propose_rule: proposeRule,
 };
 
 function createExecutor(ctx) {

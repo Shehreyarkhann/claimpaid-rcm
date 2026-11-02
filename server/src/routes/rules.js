@@ -9,6 +9,20 @@ function splitFirst(s) {
   return String(s || '').split(/[,\s;]+/).map((c) => c.trim()).filter(Boolean)[0] || null;
 }
 
+// Denial Copilot actions (Phase B): 'flag' only warns (the original
+// behavior); 'append_modifier' auto-corrects future claims at scrub time.
+// Returns { action_type, action_value } or { error }.
+function parseAction(body) {
+  const t = (body?.action_type || 'flag').trim();
+  if (!['flag', 'append_modifier'].includes(t)) return { error: "action_type must be 'flag' or 'append_modifier'" };
+  if (t === 'append_modifier') {
+    const v = (body?.action_value || '').trim().toUpperCase();
+    if (!/^[A-Z0-9]{2}$/.test(v)) return { error: 'action_value must be a 2-character modifier (e.g. 25, 59, LT)' };
+    return { action_type: t, action_value: v };
+  }
+  return { action_type: 'flag', action_value: null };
+}
+
 // --- Pending suggestions (with payer name) ---
 router.get('/suggestions', (req, res) => {
   const rows = db.prepare(`
@@ -79,15 +93,21 @@ router.post('/suggestions/:id/accept', roleRequired('owner', 'biller'), (req, re
   if (!s) return res.status(404).json({ error: 'Suggestion not found' });
   if (s.status !== 'pending') return res.status(400).json({ error: 'Suggestion already handled' });
 
+  const act = parseAction(req.body || {});
+  if (act.error) return res.status(400).json({ error: act.error });
+  if (act.action_type === 'append_modifier' && !s.cpt_code) {
+    return res.status(400).json({ error: 'Auto-append needs a CPT code on the pattern — this suggestion has none.' });
+  }
+
   const payer = s.payer_id ? db.prepare('SELECT name FROM payers WHERE id = ?').get(s.payer_id) : null;
   const bits = [s.cpt_code ? `CPT ${s.cpt_code}` : null, payer?.name || null, s.denial_reason ? `"${s.denial_reason}"` : null].filter(Boolean);
   const name = `Denial pattern: ${bits.join(' · ') || 'recurring denial'}`;
   const message = `Detected ${s.occurrences} denials for ${s.denial_reason ? `"${s.denial_reason}"` : 'this pattern'}${payer ? ` with ${payer.name}` : ''}${s.cpt_code ? ` on CPT ${s.cpt_code}` : ''} in the last 90 days — review before submitting.`;
 
   const info = db.prepare(`
-    INSERT INTO custom_scrub_rules (org_id, name, severity, payer_id, cpt_code, icd_code, message, source, is_active, created_by)
-    VALUES (?, ?, 'warning', ?, ?, ?, ?, 'suggestion', 1, ?)
-  `).run(req.orgId, name, s.payer_id, s.cpt_code, s.icd_code, message, req.user.id);
+    INSERT INTO custom_scrub_rules (org_id, name, severity, payer_id, cpt_code, icd_code, message, source, is_active, created_by, action_type, action_value)
+    VALUES (?, ?, 'warning', ?, ?, ?, ?, 'suggestion', 1, ?, ?, ?)
+  `).run(req.orgId, name, s.payer_id, s.cpt_code, s.icd_code, message, req.user.id, act.action_type, act.action_value);
   db.prepare("UPDATE rule_suggestions SET status = 'accepted' WHERE id = ?").run(s.id);
   res.json({ id: info.lastInsertRowid, name });
 });
@@ -115,16 +135,81 @@ router.post('/custom', roleRequired('owner', 'biller'), (req, res) => {
   if (!name?.trim()) return res.status(400).json({ error: 'Rule name is required' });
   if (!message?.trim()) return res.status(400).json({ error: 'Message is required' });
   if (!['error', 'warning'].includes(severity)) return res.status(400).json({ error: 'Severity must be error or warning' });
+  const act = parseAction(req.body || {});
+  if (act.error) return res.status(400).json({ error: act.error });
+  if (act.action_type === 'append_modifier' && !cpt_code?.trim()) {
+    return res.status(400).json({ error: 'Auto-append needs a CPT code to attach the modifier to.' });
+  }
   const info = db.prepare(`
-    INSERT INTO custom_scrub_rules (org_id, name, severity, payer_id, cpt_code, icd_code, message, source, is_active, created_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'manual', ?, ?)
+    INSERT INTO custom_scrub_rules (org_id, name, severity, payer_id, cpt_code, icd_code, message, source, is_active, created_by, action_type, action_value)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'manual', ?, ?, ?, ?)
   `).run(
     req.orgId, name.trim(), severity,
     payer_id ? Number(payer_id) : null,
     cpt_code?.trim() || null, icd_code?.trim() || null,
-    message.trim(), is_active === false ? 0 : 1, req.user.id
+    message.trim(), is_active === false ? 0 : 1, req.user.id,
+    act.action_type, act.action_value
   );
   res.status(201).json({ id: info.lastInsertRowid });
+});
+
+// --- One-click rule from a single denial (Denial Copilot) ---
+// Creates an ACTIVE rule scoped to the denied claim's payer + first CPT so
+// the pattern is caught (or auto-corrected) on every future claim. If an
+// identical active rule already exists, returns it instead of duplicating.
+router.post('/from-denial/:claimId', roleRequired('owner', 'biller'), (req, res) => {
+  const claim = db.prepare(`
+    SELECT c.*, p.name AS payer_name FROM claims c LEFT JOIN payers p ON p.id = c.payer_id
+    WHERE c.id = ? AND c.org_id = ?
+  `).get(req.params.claimId, req.orgId);
+  if (!claim) return res.status(404).json({ error: 'Claim not found' });
+  if (claim.status !== 'denied') return res.status(400).json({ error: 'Rules are created from denied claims' });
+  const act = parseAction(req.body || {});
+  if (act.error) return res.status(400).json({ error: act.error });
+  const cpt = splitFirst(claim.cpt_codes);
+  if (act.action_type === 'append_modifier' && !cpt) {
+    return res.status(400).json({ error: 'This claim has no CPT code to attach a modifier to.' });
+  }
+  const existing = db.prepare(`
+    SELECT id FROM custom_scrub_rules
+    WHERE org_id = ? AND COALESCE(payer_id, -1) = COALESCE(?, -1)
+      AND COALESCE(cpt_code, '') = COALESCE(?, '')
+      AND action_type = ? AND COALESCE(action_value, '') = COALESCE(?, '')
+      AND is_active = 1
+  `).get(req.orgId, claim.payer_id, cpt, act.action_type, act.action_value);
+  if (existing) return res.json({ id: existing.id, deduped: true });
+
+  const bits = [cpt ? `CPT ${cpt}` : null, claim.payer_name || null, claim.denial_reason ? `"${claim.denial_reason}"` : null].filter(Boolean);
+  const name = `Denial pattern: ${bits.join(' · ') || 'recurring denial'}`;
+  const message = act.action_type === 'append_modifier'
+    ? `${claim.claim_number} was denied${claim.denial_reason ? ` (${claim.denial_reason})` : ''} — modifier ${act.action_value} is auto-appended to CPT ${cpt} before submission.`
+    : `${claim.claim_number} was denied${claim.denial_reason ? ` (${claim.denial_reason})` : ''} — review claims matching this pattern before submitting.`;
+  const info = db.prepare(`
+    INSERT INTO custom_scrub_rules (org_id, name, severity, payer_id, cpt_code, icd_code, message, source, is_active, created_by, action_type, action_value)
+    VALUES (?, ?, 'warning', ?, ?, ?, ?, 'manual', 1, ?, ?, ?)
+  `).run(req.orgId, name, claim.payer_id, cpt, null, message, req.user.id, act.action_type, act.action_value);
+  res.status(201).json({ id: info.lastInsertRowid, name });
+});
+
+// --- Toggle a rule on/off ---
+router.post('/custom/:id/toggle', roleRequired('owner', 'biller'), (req, res) => {
+  const r = db.prepare('UPDATE custom_scrub_rules SET is_active = CASE WHEN is_active = 1 THEN 0 ELSE 1 END WHERE id = ? AND org_id = ?')
+    .run(req.params.id, req.orgId);
+  if (!r.changes) return res.status(404).json({ error: 'Rule not found' });
+  const row = db.prepare('SELECT is_active FROM custom_scrub_rules WHERE id = ?').get(req.params.id);
+  res.json({ ok: true, is_active: row.is_active });
+});
+
+// --- Recent auto-corrections applied by rules ---
+router.get('/applications', (req, res) => {
+  const rows = db.prepare(`
+    SELECT a.*, r.name AS rule_name, c.claim_number
+    FROM rule_applications a
+    JOIN custom_scrub_rules r ON r.id = a.rule_id
+    JOIN claims c ON c.id = a.claim_id
+    WHERE a.org_id = ? ORDER BY a.created_at DESC, a.id DESC LIMIT 50
+  `).all(req.orgId);
+  res.json(rows);
 });
 
 // --- Manual custom rules: delete ---

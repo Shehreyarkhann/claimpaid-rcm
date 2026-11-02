@@ -13,6 +13,7 @@ export default function TransmitSettings() {
     vendor: 'manual', sftp_host: '', sftp_port: '22', sftp_user: '', sftp_auth: 'password',
     sftp_secret: '', sftp_dir: '/', rest_endpoint: '', rest_api_key: '', rest_auth_scheme: 'Bearer',
   });
+  const [stedi, setStedi] = useState(null);
   const [secretSet, setSecretSet] = useState(false);
   const [keySet, setKeySet] = useState(false);
   const [customHeader, setCustomHeader] = useState('');
@@ -31,6 +32,7 @@ export default function TransmitSettings() {
         rest_endpoint: c.rest?.endpoint || '', rest_api_key: '',
         rest_auth_scheme: preset,
       });
+      setStedi(c.stedi || null);
       if (preset === 'custom') setCustomHeader(c.rest.auth_scheme);
       setSecretSet(!!(c.sftp?.host && true)); // placeholder: backend doesn't echo secrets
       setKeySet(!!(c.rest?.endpoint && true));
@@ -85,8 +87,33 @@ export default function TransmitSettings() {
             <option value="manual">Manual — I upload to my clearinghouse portal</option>
             <option value="sftp">SFTP — drop file in clearinghouse inbox</option>
             <option value="rest">REST API — POST file to vendor endpoint</option>
+            <option value="stedi">Stedi — direct API submission</option>
           </select>
         </div>
+        {form.vendor === 'stedi' && (
+          <div className="rounded-lg border border-stone-200 bg-stone-50 p-4 text-sm text-stone-600 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-stone-800">Direct submission through Stedi</span>
+              {stedi && !stedi.configured && <span className="badge badge-slate">NOT CONFIGURED</span>}
+              {stedi?.mode === 'test' && <span className="badge badge-amber">TEST MODE</span>}
+              {stedi?.mode === 'production' && <span className="badge badge-green">PRODUCTION</span>}
+            </div>
+            <p>
+              Batches are submitted straight from ClaimPaid to Stedi, which routes them to the payer.
+              Stedi's own claim edits come back instantly on the batch; the payer's acknowledgment (277CA)
+              follows. No files to download or upload.
+            </p>
+            {stedi && !stedi.configured && (
+              <p className="text-amber-700">Stedi isn't configured on this server yet — submissions will fail until the platform key is installed.</p>
+            )}
+            {stedi?.mode === 'test' && (
+              <p className="text-amber-700">The server is running with a Stedi <strong>test key</strong>: submissions reach Stedi's test flow only, and real-time claim status checks are unavailable (Stedi doesn't support them on test keys). Everything else — batching, edits, acknowledgments — works the same.</p>
+            )}
+            {stedi?.mode === 'production' && (
+              <p>Live: submissions go to real payers, and transmitted claims can be status-checked in real time from the Transmission page.</p>
+            )}
+          </div>
+        )}
         {form.vendor === 'sftp' && (
           <>
             <div>

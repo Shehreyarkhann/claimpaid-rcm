@@ -102,10 +102,21 @@ export const api = {
   ruleSuggestions: () => get('/api/rules/suggestions'),
   analyzeDenials: () =>
     authFetch('/api/rules/analyze', { method: 'POST' }).then(handle),
-  acceptSuggestion: (id) =>
-    authFetch(`/api/rules/suggestions/${id}/accept`, { method: 'POST' }).then(handle),
+  acceptSuggestion: (id, data) =>
+    authFetch(`/api/rules/suggestions/${id}/accept`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data || {}),
+    }).then(handle),
   dismissSuggestion: (id) =>
     authFetch(`/api/rules/suggestions/${id}/dismiss`, { method: 'POST' }).then(handle),
+  ruleFromDenial: (claimId, data) =>
+    authFetch(`/api/rules/from-denial/${claimId}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data || {}),
+    }).then(handle),
+  toggleCustomRule: (id) =>
+    authFetch(`/api/rules/custom/${id}/toggle`, { method: 'POST' }).then(handle),
+  ruleApplications: () => get('/api/rules/applications'),
   customRules: () => get('/api/rules/custom'),
   createCustomRule: (data) =>
     authFetch('/api/rules/custom', {
@@ -376,6 +387,9 @@ export const api = {
     getConfig: () => get('/api/transmission/config'),
     saveConfig: (data) =>
       authFetch('/api/transmission/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(handle),
+    claimStatusCheck: (claimId) =>
+      authFetch(`/api/transmission/claims/${claimId}/status-check`, { method: 'POST' }).then(handle),
+    claimStatusChecks: (claimId) => get(`/api/transmission/claims/${claimId}/status-checks`),
     outbox: () => get('/api/transmission/outbox'),
     requeueOutbox: (id) =>
       authFetch(`/api/transmission/outbox/${id}/requeue`, { method: 'POST' }).then(handle),
