@@ -68,6 +68,10 @@ STRIPE_CONNECT_WEBHOOK_SECRET="${STRIPE_CONNECT_WEBHOOK_SECRET:-}"
 # Stedi clearinghouse platform key (empty = stedi eligibility vendor unconfigured;
 # empty top-level default so a hand-set prod value survives .env regeneration)
 STEDI_API_KEY="${STEDI_API_KEY:-}"
+# Stedi 278 (prior auth) trading-partner route path — deploy #106 Phase F.
+# EMPTY default on purpose: unset until the 278 route is provisioned on
+# the Stedi account; keep_or() must preserve a hand-set prod value.
+STEDI_278_PATH="${STEDI_278_PATH:-}"
 # ClaimPaid Agent (Anthropic). EMPTY defaults on purpose: the key is set on
 # the server by deploy/set-agent-key.sh and keep_or() must preserve all three
 # across .env regeneration — deploy #84 dropped them and the agent answered
@@ -206,6 +210,7 @@ if [[ -f "${APP_DIR}/server/.env" ]]; then
   STRIPE_WEBHOOK_SECRET="$(keep_or STRIPE_WEBHOOK_SECRET "$(_get STRIPE_WEBHOOK_SECRET)")"
   STRIPE_CONNECT_WEBHOOK_SECRET="$(keep_or STRIPE_CONNECT_WEBHOOK_SECRET "$(_get STRIPE_CONNECT_WEBHOOK_SECRET)")"
   STEDI_API_KEY="$(keep_or STEDI_API_KEY "$(_get STEDI_API_KEY)")"
+  STEDI_278_PATH="$(keep_or STEDI_278_PATH "$(_get STEDI_278_PATH)")"
   ANTHROPIC_API_KEY="$(keep_or ANTHROPIC_API_KEY "$(_get ANTHROPIC_API_KEY)")"
   AGENT_ENABLED="$(keep_or AGENT_ENABLED "$(_get AGENT_ENABLED)")"
   AGENT_MODEL="$(keep_or AGENT_MODEL "$(_get AGENT_MODEL)")"
@@ -235,6 +240,7 @@ STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
 STRIPE_CONNECT_WEBHOOK_SECRET=${STRIPE_CONNECT_WEBHOOK_SECRET}
 # Stedi clearinghouse
 STEDI_API_KEY=${STEDI_API_KEY}
+STEDI_278_PATH=${STEDI_278_PATH}
 # ClaimPaid Agent (Anthropic)
 ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
 AGENT_ENABLED=${AGENT_ENABLED}
