@@ -3,6 +3,9 @@ const { db } = require('../db');
 const { authRequired, roleRequired, requireProduct } = require('../auth');
 const { logActivity } = require('../activity');
 const { auditLog } = require('../audit');
+const paAutomation = require('../pa-automation');
+const pa278 = require('../pa278');
+const stedi = require('../edi/stedi');
 
 const router = express.Router();
 router.use(authRequired, requireProduct('rcm'));
@@ -41,6 +44,156 @@ const AUTH_SELECT = `
     ELSE NULL
   END AS days_waiting
 `;
+
+// =====================================================================
+// Prior auth automation (deploy #106, Phase F). Declared before /:id so
+// 'pa-rules' is not read as an auth id.
+// =====================================================================
+router.get('/pa-rules', (req, res) => {
+  const rows = db.prepare(`
+    SELECT r.*, p.name AS payer_name FROM pa_requirement_rules r
+    LEFT JOIN payers p ON p.id = r.payer_id
+    WHERE r.org_id = ? ORDER BY r.id DESC
+  `).all(req.orgId);
+  res.json({ rules: rows });
+});
+
+router.post('/pa-rules', canWrite, (req, res) => {
+  const b = req.body || {};
+  const payerId = b.payer_id ? Number(b.payer_id) : null;
+  const cpt = b.cpt_code ? String(b.cpt_code).trim().toUpperCase().split(':')[0] : null;
+  if (!payerId && !cpt) return res.status(400).json({ error: 'A rule needs a payer, a CPT code, or both' });
+  if (cpt && !/^[A-Z0-9]{5}$/.test(cpt)) return res.status(400).json({ error: 'CPT code must be 5 characters' });
+  if (payerId) {
+    const p = db.prepare('SELECT id FROM payers WHERE id = ? AND org_id = ?').get(payerId, req.orgId);
+    if (!p) return res.status(400).json({ error: 'Payer not found' });
+  }
+  const existing = db.prepare(`
+    SELECT id FROM pa_requirement_rules WHERE org_id = ?
+      AND payer_id IS ? AND cpt_code IS ?
+  `).get(req.orgId, payerId, cpt);
+  const requiresAuth = b.requires_auth === false || b.requires_auth === 0 ? 0 : 1;
+  if (existing) {
+    db.prepare('UPDATE pa_requirement_rules SET requires_auth = ?, notes = ? WHERE id = ?')
+      .run(requiresAuth, b.notes ? String(b.notes).trim() : null, existing.id);
+    return res.json(db.prepare('SELECT * FROM pa_requirement_rules WHERE id = ?').get(existing.id));
+  }
+  const info = db.prepare(`
+    INSERT INTO pa_requirement_rules (org_id, payer_id, cpt_code, requires_auth, source, notes, created_by)
+    VALUES (?, ?, ?, ?, 'manual', ?, ?)
+  `).run(req.orgId, payerId, cpt, requiresAuth, b.notes ? String(b.notes).trim() : null, req.user.id);
+  res.status(201).json(db.prepare('SELECT * FROM pa_requirement_rules WHERE id = ?').get(Number(info.lastInsertRowid)));
+});
+
+router.delete('/pa-rules/:ruleId', canWrite, (req, res) => {
+  const r = db.prepare('DELETE FROM pa_requirement_rules WHERE id = ? AND org_id = ?')
+    .run(Number(req.params.ruleId), req.orgId);
+  if (!r.changes) return res.status(404).json({ error: 'Rule not found' });
+  res.json({ deleted: true });
+});
+
+function loadAuth(req, res) {
+  const auth = db.prepare('SELECT * FROM auth_requests WHERE id = ? AND org_id = ?')
+    .get(Number(req.params.id), req.orgId);
+  if (!auth) { res.status(404).json({ error: 'Authorization not found' }); return null; }
+  return auth;
+}
+
+// Requirement check: workspace rules first, then workspace history,
+// else an honest "unknown" — recorded on the auth record either way.
+router.post('/:id/check-requirement', canWrite, (req, res) => {
+  const auth = loadAuth(req, res);
+  if (!auth) return;
+  const result = paAutomation.recordRequirementCheck(db, req.orgId, auth);
+  res.json({ ...result, auth: db.prepare('SELECT * FROM auth_requests WHERE id = ?').get(auth.id) });
+});
+
+// 278 submission prep: builds + stores the payload on the record.
+router.post('/:id/prepare-278', canWrite, (req, res) => {
+  const auth = loadAuth(req, res);
+  if (!auth) return;
+  const { payload, x12 } = pa278.buildForAuth(db, req.orgId, auth);
+  db.prepare('UPDATE auth_requests SET pa_payload = ? WHERE id = ? AND org_id = ?')
+    .run(JSON.stringify({ payload, x12 }), auth.id, req.orgId);
+  res.json({ payload, x12, mode: stedi.stediMode() });
+});
+
+// 278 submit via the Stedi client — mode-honest: test mode prepares and
+// records locally (labeled TEST MODE, status untouched); a production
+// transmit moves draft -> submitted like a manual submission.
+router.post('/:id/submit-278', canWrite, async (req, res) => {
+  const auth = loadAuth(req, res);
+  if (!auth) return;
+  const { payload, x12 } = pa278.buildForAuth(db, req.orgId, auth);
+  db.prepare('UPDATE auth_requests SET pa_payload = ? WHERE id = ? AND org_id = ?')
+    .run(JSON.stringify({ payload, x12 }), auth.id, req.orgId);
+  try {
+    const out = await stedi.submitHealthServiceReview(x12, `claimpaid-auth-${auth.id}`);
+    db.prepare(`
+      UPDATE auth_requests SET pa_vendor_mode = ?, pa_submitted_via = ?, pa_submission_ref = ?
+      WHERE id = ? AND org_id = ?
+    `).run(out.mode, out.transmitted ? 'stedi' : 'stedi_test_prep', out.controlNumber || null, auth.id, req.orgId);
+    if (out.transmitted && auth.status === 'draft') {
+      db.prepare(`
+        UPDATE auth_requests SET status = 'submitted',
+          requested_date = COALESCE(requested_date, date('now')), updated_at = datetime('now')
+        WHERE id = ? AND org_id = ?
+      `).run(auth.id, req.orgId);
+    }
+    logActivity(req.orgId, auth.linked_claim_id, req.user.id, 'auth_278_prepared',
+      out.transmitted ? `278 transmitted via Stedi for authorization #${auth.id}` : `278 prepared in ${out.mode} mode for authorization #${auth.id} (not sent)`);
+    res.json({
+      transmitted: out.transmitted, mode: out.mode, note: out.note,
+      control_number: out.controlNumber || null,
+      auth: db.prepare('SELECT * FROM auth_requests WHERE id = ?').get(auth.id),
+    });
+  } catch (e) {
+    if (e.code === 'STEDI_278_NOT_PROVISIONED') {
+      db.prepare('UPDATE auth_requests SET pa_vendor_mode = ? WHERE id = ? AND org_id = ?')
+        .run(stedi.stediMode(), auth.id, req.orgId);
+      return res.status(409).json({ code: e.code, error: e.message, prepared: true });
+    }
+    res.status(502).json({ error: e.message });
+  }
+});
+
+// Status check: logs the check on the record and reports the recorded
+// payer status + waiting time. In test mode it says plainly that no
+// live payer status exists — it never dresses a local read up as one.
+router.post('/:id/status-check', canWrite, (req, res) => {
+  const auth = loadAuth(req, res);
+  if (!auth) return;
+  const mode = stedi.stediMode();
+  const daysWaiting = auth.requested_date
+    ? Math.max(0, Math.floor((Date.now() - new Date(`${String(auth.requested_date).slice(0, 10)}T00:00:00Z`).getTime()) / 86400000))
+    : null;
+  const daysWaitingSafe = Number.isNaN(daysWaiting) ? null : daysWaiting;
+  const detail = mode === 'production'
+    ? `Recorded status: ${auth.status}${auth.auth_number ? ` (auth # ${auth.auth_number})` : ''}. Stedi exposes no 278 status endpoint, so payer status changes are recorded here as the payer communicates them.`
+    : `TEST MODE — no live payer status is available with a test key. Recorded status: ${auth.status}.`;
+  db.prepare(`
+    INSERT INTO auth_status_checks (org_id, auth_id, mode, outcome, detail, created_by)
+    VALUES (?, ?, ?, 'recorded', ?, ?)
+  `).run(req.orgId, auth.id, mode, detail, req.user.id);
+  db.prepare("UPDATE auth_requests SET pa_status_checked_at = datetime('now') WHERE id = ? AND org_id = ?")
+    .run(auth.id, req.orgId);
+  const checks = db.prepare(
+    'SELECT * FROM auth_status_checks WHERE auth_id = ? AND org_id = ? ORDER BY id DESC LIMIT 10'
+  ).all(auth.id, req.orgId);
+  res.json({
+    auth_id: auth.id, mode, status: auth.status, days_waiting: daysWaitingSafe,
+    auth_number: auth.auth_number || null, note: detail, checks,
+  });
+});
+
+router.get('/:id/status-checks', (req, res) => {
+  const auth = loadAuth(req, res);
+  if (!auth) return;
+  const checks = db.prepare(
+    'SELECT * FROM auth_status_checks WHERE auth_id = ? AND org_id = ? ORDER BY id DESC LIMIT 50'
+  ).all(auth.id, req.orgId);
+  res.json({ checks });
+});
 
 // --- List with filters ---
 router.get('/', (req, res) => {
@@ -120,6 +273,9 @@ router.get('/stats', (req, res) => {
     FROM auth_requests WHERE org_id = ?
   `).get(req.orgId);
 
+  // Phase F (#106): stale submitted PAs needing follow-up (> 14 days).
+  const stale = paAutomation.staleAuths(db, req.orgId);
+
   res.json({
     byStatus: Object.fromEntries(byStatus.map((r) => [r.status, r.n])),
     expiringSoon: expiring,
@@ -127,6 +283,8 @@ router.get('/stats', (req, res) => {
     turnaround,
     approvalRate: totals.decided ? Math.round((totals.approved / totals.decided) * 100) : 0,
     total: totals.total,
+    staleSubmitted: stale,
+    staleCount: stale.length,
   });
 });
 

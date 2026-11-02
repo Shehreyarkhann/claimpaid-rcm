@@ -50,6 +50,13 @@ async function handle(res) {
 }
 
 function get(path) { return authFetch(path).then(handle); }
+function post(path, body) {
+  return authFetch(path, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body ?? {}),
+  }).then(handle);
+}
+function del(path) { return authFetch(path, { method: 'DELETE' }).then(handle); }
 
 export const api = {
   kpis: () => get('/api/analytics/kpis'),
@@ -203,6 +210,15 @@ export const api = {
   authzStats: () => get('/api/authz/stats'),
   authzDetail: (id) => get(`/api/authz/${id}`),
   authzFindForClaim: (claimId) => get(`/api/authz/find-for-claim/${claimId}`),
+  // Prior auth automation (#106 Phase F).
+  authzPaRules: () => get('/api/authz/pa-rules'),
+  authzCreatePaRule: (body) => post('/api/authz/pa-rules', body),
+  authzDeletePaRule: (id) => del(`/api/authz/pa-rules/${id}`),
+  authzCheckRequirement: (id) => post(`/api/authz/${id}/check-requirement`, {}),
+  authzPrepare278: (id) => post(`/api/authz/${id}/prepare-278`, {}),
+  authzSubmit278: (id) => post(`/api/authz/${id}/submit-278`, {}),
+  authzStatusCheck: (id) => post(`/api/authz/${id}/status-check`, {}),
+  authzStatusChecks: (id) => get(`/api/authz/${id}/status-checks`),
   billingStatus: () => get('/api/billing/status'),
   billingUsage: () => get('/api/billing/usage'),
   billingCheckout: (plan) =>

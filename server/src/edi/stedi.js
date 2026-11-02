@@ -110,6 +110,53 @@ async function claimStatusCheck(payload) {
   return json;
 }
 
+// Prior-auth 278 transmit (deploy #106, Phase F). HONEST VENDOR STATE:
+// Stedi's healthcare API catalog has no dedicated 278 endpoint today
+// (eligibility, claims, claim status, ERA — 278 exists as EDI guides
+// only). So this mirrors the eligibility posture exactly:
+//   - test/unconfigured key: NO network call. The payload was prepared
+//     and recorded locally; the result says TEST MODE, never "sent".
+//   - production key + STEDI_278_PATH set (the trading-partner 278 route
+//     provisioned on the account): POST the raw X12 to {base}{path} with
+//     the same auth + idempotency pattern as claim submission.
+//   - production key without the path: a precise, honest error — the
+//     code path exists; the vendor route is the missing piece.
+async function submitHealthServiceReview(x12, idempotencyKey) {
+  const mode = stediMode();
+  if (mode !== 'production') {
+    return {
+      mode,
+      transmitted: false,
+      controlNumber: null,
+      note: mode === 'test'
+        ? 'TEST MODE — the 278 was prepared and recorded locally. Test keys do not reach payers; nothing was sent.'
+        : 'Stedi is not configured on this server (STEDI_API_KEY missing) — the 278 was prepared and recorded locally only.',
+    };
+  }
+  const path = (process.env.STEDI_278_PATH || '').trim();
+  if (!path) {
+    const err = new Error('Stedi does not offer a dedicated 278 endpoint in its healthcare API catalog, and no trading-partner 278 route is provisioned on this account yet (STEDI_278_PATH unset). The 278 payload is prepared and saved on the record; submit it through the payer portal or fax until the route is provisioned.');
+    err.code = 'STEDI_278_NOT_PROVISIONED';
+    throw err;
+  }
+  const { res, text, json } = await stediFetch(`${STEDI_BASE}${path.startsWith('/') ? path : `/${path}`}`, {
+    body: { x12 },
+    idempotencyKey,
+  });
+  if (!res.ok) {
+    const msg = json?.message || json?.error || text.slice(0, 300);
+    throw new Error(`Stedi 278 submission failed (HTTP ${res.status})${msg ? `: ${msg}` : ''}`);
+  }
+  return {
+    mode,
+    transmitted: true,
+    controlNumber: json?.meta?.controlNumber || json?.controlNumber || null,
+    status: json?.status || null,
+    note: 'Transmitted to Stedi for routing to the payer.',
+    raw: json,
+  };
+}
+
 // Map one Stedi 277 JSON claim entry onto a compact, UI-ready shape.
 function mapStatusResult(json) {
   const claims = Array.isArray(json?.claims) ? json.claims : [];
@@ -129,4 +176,4 @@ function mapStatusResult(json) {
   });
 }
 
-module.exports = { stediApiKey, stediMode, submitRawX12, claimStatusCheck, mapStatusResult, SUBMIT_URL, STATUS_URL };
+module.exports = { stediApiKey, stediMode, submitRawX12, claimStatusCheck, mapStatusResult, submitHealthServiceReview, SUBMIT_URL, STATUS_URL };

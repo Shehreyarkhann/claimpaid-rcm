@@ -954,6 +954,44 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_plans_org ON payment_plans(org_id, status);
     CREATE INDEX IF NOT EXISTS idx_plan_inst_plan ON payment_plan_installments(plan_id, seq);
   `);
+  // ---- Prior auth automation (deploy #106, Phase F) -----------------------
+  // Requirement checks resolve from the workspace's OWN rules first, then
+  // its own auth history — never from invented payer policy. The vendor
+  // columns record what Stedi was asked to do and in which mode (test /
+  // production, derived from the server key, same as claims/eligibility).
+  if (!columnExists('auth_requests', 'pa_required')) db.exec('ALTER TABLE auth_requests ADD COLUMN pa_required INTEGER');
+  if (!columnExists('auth_requests', 'pa_requirement_basis')) db.exec('ALTER TABLE auth_requests ADD COLUMN pa_requirement_basis TEXT');
+  if (!columnExists('auth_requests', 'pa_requirement_checked_at')) db.exec('ALTER TABLE auth_requests ADD COLUMN pa_requirement_checked_at TEXT');
+  if (!columnExists('auth_requests', 'pa_vendor_mode')) db.exec('ALTER TABLE auth_requests ADD COLUMN pa_vendor_mode TEXT');
+  if (!columnExists('auth_requests', 'pa_submitted_via')) db.exec('ALTER TABLE auth_requests ADD COLUMN pa_submitted_via TEXT');
+  if (!columnExists('auth_requests', 'pa_submission_ref')) db.exec('ALTER TABLE auth_requests ADD COLUMN pa_submission_ref TEXT');
+  if (!columnExists('auth_requests', 'pa_payload')) db.exec('ALTER TABLE auth_requests ADD COLUMN pa_payload TEXT');
+  if (!columnExists('auth_requests', 'pa_status_checked_at')) db.exec('ALTER TABLE auth_requests ADD COLUMN pa_status_checked_at TEXT');
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS pa_requirement_rules (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      payer_id INTEGER REFERENCES payers(id),
+      cpt_code TEXT,
+      requires_auth INTEGER NOT NULL DEFAULT 1,
+      source TEXT NOT NULL DEFAULT 'manual',
+      notes TEXT,
+      created_by INTEGER REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS auth_status_checks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      auth_id INTEGER NOT NULL REFERENCES auth_requests(id),
+      mode TEXT,
+      outcome TEXT,
+      detail TEXT,
+      created_by INTEGER REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_pa_rules_org ON pa_requirement_rules(org_id, payer_id, cpt_code);
+    CREATE INDEX IF NOT EXISTS idx_auth_checks_auth ON auth_status_checks(auth_id, created_at);
+  `);
   // ---- In-app agent (Phase 1) ----
   // Conversations + messages are per-user within an org; actions are the
   // human-approval queue (the agent proposes, a person decides). Tables are

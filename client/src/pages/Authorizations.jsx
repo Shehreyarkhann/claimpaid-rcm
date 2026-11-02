@@ -142,9 +142,15 @@ function AuthDrawer({ authId, payers, team, onClose, onChanged }) {
   const [linking, setLinking] = useState(false);
   const [claimSearch, setClaimSearch] = useState('');
   const [claimResults, setClaimResults] = useState([]);
+  const [paMsg, setPaMsg] = useState(null);
+  const [paBusy, setPaBusy] = useState(false);
+  const [paChecks, setPaChecks] = useState([]);
   const canWrite = ['owner', 'biller'].includes(user?.role);
 
-  const load = () => api.authzDetail(authId).then(setAuth).catch((e) => toast.error(e.message));
+  const load = () => {
+    api.authzDetail(authId).then(setAuth).catch((e) => toast.error(e.message));
+    api.authzStatusChecks(authId).then((r) => setPaChecks(r.checks || [])).catch(() => {});
+  };
   useEffect(() => { load(); }, [authId]);
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -199,6 +205,25 @@ function AuthDrawer({ authId, payers, team, onClose, onChanged }) {
       setLinking(false); setClaimSearch(''); setClaimResults([]);
       load(); onChanged();
     } catch (e) { toast.error(e.message); }
+  };
+
+  // Phase F automation actions.
+  const paAct = async (fn, okMsg) => {
+    setPaBusy(true); setPaMsg(null);
+    try {
+      const r = await fn();
+      setPaMsg(r.note || r.basis || okMsg);
+      load(); onChanged();
+      return r;
+    } catch (e) { setPaMsg(e.message); toast.error(e.message); return null; }
+    finally { setPaBusy(false); }
+  };
+  const checkRequirement = () => paAct(() => api.authzCheckRequirement(authId), 'Requirement checked');
+  const prepare278 = () => paAct(() => api.authzPrepare278(authId), '278 payload prepared and saved on this record');
+  const submit278 = () => paAct(() => api.authzSubmit278(authId), '278 submitted');
+  const statusCheck = async () => {
+    const r = await paAct(() => api.authzStatusCheck(authId), 'Status checked');
+    if (r) setPaChecks(r.checks || []);
   };
 
   const unlinkClaim = async () => {
@@ -318,6 +343,50 @@ function AuthDrawer({ authId, payers, team, onClose, onChanged }) {
               ))}
             </div>
 
+            {/* Automation (Phase F) */}
+            <div className="mb-7 border-t border-stone-100 pt-5">
+              <div className="text-xs font-semibold uppercase tracking-wide text-stone-400 mb-2.5">Automation</div>
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                {auth.pa_required === 1 && <span className="badge badge-amber">PA required</span>}
+                {auth.pa_required === 0 && <span className="badge badge-slate">No PA needed</span>}
+                {auth.pa_required === null && <span className="badge badge-slate">Requirement unknown</span>}
+                {auth.pa_submitted_via && (
+                  <span className="badge badge-blue">
+                    278 {auth.pa_submitted_via === 'stedi' ? 'transmitted via Stedi' : `prepared (${auth.pa_vendor_mode || 'test'} mode)`}
+                  </span>
+                )}
+                {auth.pa_status_checked_at && <span className="text-[11px] text-stone-400">Status checked {String(auth.pa_status_checked_at).slice(0, 10)}</span>}
+              </div>
+              {auth.pa_requirement_basis && (
+                <div className="text-[13px] text-stone-600 mb-3">
+                  {auth.pa_requirement_basis}
+                  {auth.pa_requirement_checked_at && <span className="text-stone-400"> · checked {String(auth.pa_requirement_checked_at).slice(0, 10)}</span>}
+                </div>
+              )}
+              {canWrite && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <button className="btn btn-outline !py-2 !text-[13px]" disabled={paBusy} onClick={checkRequirement}>Check requirement</button>
+                  <button className="btn btn-outline !py-2 !text-[13px]" disabled={paBusy} onClick={prepare278}>Prepare 278</button>
+                  <button className="btn btn-outline !py-2 !text-[13px]" disabled={paBusy} onClick={submit278}>Submit 278 via Stedi</button>
+                  <button className="btn btn-outline !py-2 !text-[13px]" disabled={paBusy} onClick={statusCheck}>Check status</button>
+                </div>
+              )}
+              {paMsg && <div className="text-[13px] text-stone-700 bg-stone-50 border border-stone-200 rounded-xl px-4 py-2.5 mb-3">{paMsg}</div>}
+              {paChecks.length > 0 && (
+                <div className="space-y-1.5">
+                  {paChecks.slice(0, 4).map((c) => (
+                    <div key={c.id} className="text-[12px] text-stone-500 flex gap-2">
+                      <span className="font-mono text-stone-400 shrink-0">{String(c.created_at).slice(0, 10)}</span>
+                      <span>{c.mode === 'test' ? 'TEST MODE — ' : ''}{c.detail}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="text-[11px] text-stone-400 mt-2">
+                Requirement checks read your workspace's rules and auth history only. 278 transmittal runs in Stedi TEST MODE until the production key and trading-partner route are provisioned — test mode never reaches a payer.
+              </div>
+            </div>
+
             {/* Linked claim */}
             <div className="mb-7">
               <div className="text-xs font-semibold uppercase tracking-wide text-stone-400 mb-2.5">Linked claim</div>
@@ -373,6 +442,87 @@ function AuthDrawer({ authId, payers, team, onClose, onChanged }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ---------------- Requirement rules manager (Phase F) ----------------
+function PaRulesCard({ payers, canWrite }) {
+  const toast = useToast();
+  const [rules, setRules] = useState(null);
+  const [form, setForm] = useState({ payer_id: '', cpt_code: '', requires_auth: '1', notes: '' });
+  const [busy, setBusy] = useState(false);
+
+  const load = () => api.authzPaRules().then((r) => setRules(r.rules || [])).catch(() => setRules([]));
+  useEffect(() => { load(); }, []);
+
+  const add = async () => {
+    if (!form.payer_id && !form.cpt_code.trim()) { toast.error('Give the rule a payer, a CPT code, or both'); return; }
+    setBusy(true);
+    try {
+      await api.authzCreatePaRule({
+        payer_id: form.payer_id ? Number(form.payer_id) : null,
+        cpt_code: form.cpt_code.trim() || null,
+        requires_auth: form.requires_auth === '1',
+        notes: form.notes.trim() || null,
+      });
+      setForm({ payer_id: '', cpt_code: '', requires_auth: '1', notes: '' });
+      toast.success('Rule saved');
+      load();
+    } catch (e) { toast.error(e.message); }
+    finally { setBusy(false); }
+  };
+
+  const removeRule = async (id) => {
+    try { await api.authzDeletePaRule(id); load(); }
+    catch (e) { toast.error(e.message); }
+  };
+
+  return (
+    <div className="card p-5 mb-6">
+      <div className="flex items-baseline justify-between mb-1">
+        <h3 className="font-display text-lg font-semibold">PA requirement rules</h3>
+        <span className="text-[11px] text-stone-400">Your workspace's own payer knowledge</span>
+      </div>
+      <p className="text-[13px] text-stone-500 mb-4">
+        "Check requirement" answers from these rules first, then your auth history — never from a guess.
+        Record what each payer actually requires as you learn it.
+      </p>
+      {rules === null ? <Skeleton className="h-10" /> : rules.length === 0 ? (
+        <div className="text-sm text-stone-400 mb-4">No rules yet.</div>
+      ) : (
+        <div className="space-y-2 mb-4">
+          {rules.map((r) => (
+            <div key={r.id} className="flex flex-wrap items-center gap-2 text-sm border border-stone-100 rounded-xl px-3 py-2">
+              <span className={`badge ${r.requires_auth ? 'badge-amber' : 'badge-slate'}`}>{r.requires_auth ? 'PA required' : 'No PA needed'}</span>
+              <span className="font-medium text-stone-800">{r.payer_name || 'Any payer'}</span>
+              {r.cpt_code && <span className="font-mono text-[13px] text-stone-600">CPT {r.cpt_code}</span>}
+              {!r.cpt_code && <span className="text-stone-400 text-[13px]">any service</span>}
+              {r.notes && <span className="text-stone-500 text-[13px]">— {r.notes}</span>}
+              {canWrite && <button onClick={() => removeRule(r.id)} className="ml-auto text-rose-600 hover:text-rose-800 text-xs font-semibold">Delete</button>}
+            </div>
+          ))}
+        </div>
+      )}
+      {canWrite && (
+        <div className="flex flex-wrap gap-2 items-end">
+          <div><label className="label">Payer</label>
+            <select className="input !w-auto" value={form.payer_id} onChange={(e) => setForm({ ...form, payer_id: e.target.value })}>
+              <option value="">Any payer</option>
+              {payers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select></div>
+          <div><label className="label">CPT (optional)</label>
+            <input className="input !w-28 font-mono" placeholder="99214" value={form.cpt_code} onChange={(e) => setForm({ ...form, cpt_code: e.target.value })} /></div>
+          <div><label className="label">Requirement</label>
+            <select className="input !w-auto" value={form.requires_auth} onChange={(e) => setForm({ ...form, requires_auth: e.target.value })}>
+              <option value="1">PA required</option>
+              <option value="0">No PA needed</option>
+            </select></div>
+          <div className="flex-1 min-w-[160px]"><label className="label">Note</label>
+            <input className="input" placeholder="e.g. Confirmed on payer portal, Oct 2026" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+          <button className="btn btn-dark" disabled={busy} onClick={add}>Add rule</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -464,6 +614,24 @@ export default function Authorizations() {
         ))}
       </div>
 
+      {/* Stale follow-ups (Phase F) */}
+      {(stats?.staleSubmitted?.length || 0) > 0 && (
+        <div className="card p-5 mb-6 border-amber-200 bg-amber-50/60">
+          <h3 className="font-display text-lg font-semibold mb-1">Follow up — waiting over 14 days</h3>
+          <p className="text-[13px] text-stone-500 mb-3">Submitted authorizations with no decision yet. Open one and use Check status to log the follow-up.</p>
+          <div className="flex flex-wrap gap-2">
+            {stats.staleSubmitted.map((s) => (
+              <button key={s.id} onClick={() => setDrawerId(s.id)}
+                className="text-[13px] font-medium bg-white border border-amber-200 rounded-xl px-3 py-1.5 hover:border-amber-300">
+                {s.patient_name} · {s.payer_name || 'payer?'} · <span className="text-amber-700 font-semibold">{s.days_waiting}d waiting</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <PaRulesCard payers={payers} canWrite={canWrite} />
+
       {/* Tabs */}
       <div className="flex flex-wrap gap-2 mb-4">
         {TABS.map((t) => (
@@ -525,7 +693,11 @@ export default function Authorizations() {
                       <div className="font-mono text-[13px] text-stone-700">{a.cpt_codes || '—'}</div>
                       <div className="text-[11px] text-stone-400 truncate max-w-[180px]">{a.provider || ''}</div>
                     </td>
-                    <td><StatusPill status={a.effective_status} /></td>
+                    <td>
+                      <StatusPill status={a.effective_status} />
+                      {a.pa_required === 1 && <span className="badge badge-amber ml-1.5">PA req</span>}
+                      {a.pa_required === 0 && <span className="badge badge-slate ml-1.5">No PA</span>}
+                    </td>
                     <td><ExpiryBadge auth={a} /></td>
                     <td className="text-stone-600 text-[13px]">{a.assignee_name || <span className="text-stone-300">Unassigned</span>}</td>
                     <td className="text-stone-600 text-[13px]">{a.needed_by_date || '—'}</td>
