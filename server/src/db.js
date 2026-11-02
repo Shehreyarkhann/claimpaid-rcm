@@ -897,6 +897,63 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_stmt_lines_stmt ON statement_lines(statement_id);
     CREATE INDEX IF NOT EXISTS idx_stmt_pay_stmt ON statement_payments(statement_id);
   `);
+  // ---- Patient payment automation (deploy #106, Phase C) ------------------
+  // Reminder cadences + payment plans on top of statements. The patient's
+  // email lives on the statement (set by staff — claims carry no email);
+  // reminders NEVER fire without one. Autodebit stays behind the existing
+  // statementPaymentsHeld() flag — these tables only track plan state.
+  if (!columnExists('patient_statements', 'patient_email')) db.exec('ALTER TABLE patient_statements ADD COLUMN patient_email TEXT');
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS statement_reminder_settings (
+      org_id INTEGER PRIMARY KEY REFERENCES orgs(id),
+      enabled INTEGER NOT NULL DEFAULT 0,
+      cadence_days TEXT NOT NULL DEFAULT '0,7,14,28',
+      channel TEXT NOT NULL DEFAULT 'email',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS statement_reminders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      statement_id INTEGER NOT NULL REFERENCES patient_statements(id),
+      step_index INTEGER NOT NULL,
+      cadence_day INTEGER NOT NULL,
+      channel TEXT NOT NULL DEFAULT 'email',
+      recipient TEXT,
+      status TEXT NOT NULL DEFAULT 'sent',
+      detail TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(statement_id, step_index)
+    );
+    CREATE TABLE IF NOT EXISTS payment_plans (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      statement_id INTEGER NOT NULL REFERENCES patient_statements(id),
+      total_amount REAL NOT NULL DEFAULT 0,
+      installments_count INTEGER NOT NULL,
+      installment_amount REAL NOT NULL DEFAULT 0,
+      frequency_days INTEGER NOT NULL DEFAULT 30,
+      start_date TEXT,
+      status TEXT NOT NULL DEFAULT 'active',
+      autodebit INTEGER NOT NULL DEFAULT 0,
+      created_by INTEGER REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS payment_plan_installments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      plan_id INTEGER NOT NULL REFERENCES payment_plans(id),
+      org_id INTEGER NOT NULL REFERENCES orgs(id),
+      seq INTEGER NOT NULL,
+      due_date TEXT,
+      amount REAL NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'scheduled',
+      paid_at TEXT,
+      statement_payment_id INTEGER,
+      UNIQUE(plan_id, seq)
+    );
+    CREATE INDEX IF NOT EXISTS idx_reminders_org ON statement_reminders(org_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_plans_org ON payment_plans(org_id, status);
+    CREATE INDEX IF NOT EXISTS idx_plan_inst_plan ON payment_plan_installments(plan_id, seq);
+  `);
   // ---- In-app agent (Phase 1) ----
   // Conversations + messages are per-user within an org; actions are the
   // human-approval queue (the agent proposes, a person decides). Tables are

@@ -79,7 +79,11 @@ function DetailModal({ id, onClose, refresh }) {
   const toast = useToast();
   const [stmt, setStmt] = useState(null);
   const [paying, setPaying] = useState(false);
+  const [emailDraft, setEmailDraft] = useState('');
+  const [planCount, setPlanCount] = useState(4);
+  const [planFreq, setPlanFreq] = useState(30);
   useEffect(() => { api.statements.detail(id).then(setStmt).catch((e) => toast.error(e.message)); }, [id]);
+  useEffect(() => { if (stmt) setEmailDraft(stmt.patient_email || ''); }, [stmt?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!stmt) return (
     <Modal onClose={onClose}>
       <div className="p-7 space-y-3">
@@ -91,6 +95,23 @@ function DetailModal({ id, onClose, refresh }) {
     </Modal>
   );
   const [label, badge] = STATUS[stmt.status] || [stmt.status, 'badge-slate'];
+  const reload = () => api.statements.detail(id).then(setStmt).catch((e) => toast.error(e.message));
+  const saveEmail = () => {
+    api.statements.setPatientEmail(id, emailDraft)
+      .then(() => { toast.success('Patient email saved'); reload(); refresh(); })
+      .catch((e) => toast.error(e.message));
+  };
+  const makePlan = () => {
+    api.statements.createPlan(id, { installments: Number(planCount), frequency_days: Number(planFreq) })
+      .then(() => { toast.success('Payment plan created'); reload(); refresh(); })
+      .catch((e) => toast.error(e.message));
+  };
+  const cancelPlan = (planId) => {
+    api.statements.cancelPlan(planId)
+      .then(() => { toast.success('Plan cancelled'); reload(); refresh(); })
+      .catch((e) => toast.error(e.message));
+  };
+  const activePlan = (stmt.payment_plans || []).find((p) => p.status === 'active');
   return (
     <Modal onClose={onClose} wide>
       <div className="p-7">
@@ -122,6 +143,67 @@ function DetailModal({ id, onClose, refresh }) {
               ))}
             </div>
           )}
+          {/* Payment automation (deploy #106, Phase C) */}
+          <div className="border border-stone-200 rounded-xl p-4 space-y-3">
+            <p className="label !mb-0">Payment automation</p>
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="grow min-w-[220px]">
+                <label className="label">Patient email (for reminders)</label>
+                <input className="input" type="email" placeholder="patient@example.com" value={emailDraft} onChange={(e) => setEmailDraft(e.target.value)} />
+              </div>
+              <button className="btn btn-outline btn-sm" onClick={saveEmail}>Save email</button>
+            </div>
+            <p className="text-xs text-stone-500">Reminder emails carry only the statement number, balance, due date and pay link — no medical information.</p>
+            {stmt.reminders?.length > 0 && (
+              <div>
+                <p className="label mb-1">Reminders</p>
+                {stmt.reminders.map((r) => (
+                  <p key={r.id} className="text-sm text-stone-600">
+                    Day {r.cadence_day} — {r.status}{r.status === 'sent' ? ` to ${r.recipient}` : r.detail ? ` (${r.detail})` : ''} · {fmtDate(r.created_at)}
+                  </p>
+                ))}
+              </div>
+            )}
+            {(stmt.payment_plans || []).map((p) => (
+              <div key={p.id} className="bg-stone-50 border border-stone-200 rounded-xl px-4 py-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium text-stone-800">Payment plan — {p.installments_count} × {fmtMoney(p.installment_amount)} every {p.frequency_days} days</span>
+                  <span className={`badge ${p.status === 'active' ? 'badge-blue' : p.status === 'completed' ? 'badge-green' : 'badge-slate'}`}>{p.status}</span>
+                  <span className="text-xs text-stone-500">{p.paid_installments}/{p.installments_count} installments paid</span>
+                  {p.status === 'active' && (
+                    <button className="btn btn-ghost !py-1 !text-xs ml-auto" onClick={() => cancelPlan(p.id)}>Cancel plan</button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {p.installments.map((i) => (
+                    <span key={i.id} className={`badge ${i.status === 'paid' ? 'badge-green' : i.status === 'scheduled' ? 'badge-slate' : 'badge-amber'}`}>
+                      #{i.seq} {fmtMoney(i.amount)} · {fmtDate(i.due_date)} · {i.status}
+                    </span>
+                  ))}
+                </div>
+                {/* FEATURE HOLD: autodebit rides Stripe Connect (held since
+                    2026-10-27, server-enforced 403 FEATURE_HELD). Renders
+                    disabled until the hold is lifted — same as pay links. */}
+                <button className="btn btn-ghost !py-1.5 !text-xs mt-2" disabled title="Restricted access — saved-card autodebit is on hold.">
+                  Autodebit (saved card) — on hold
+                </button>
+              </div>
+            ))}
+            {stmt.status !== 'paid' && stmt.status !== 'void' && !activePlan && (
+              <div className="flex flex-wrap items-end gap-2">
+                <div>
+                  <label className="label">Split balance into</label>
+                  <input className="input !w-24" type="number" min="2" max="24" value={planCount} onChange={(e) => setPlanCount(e.target.value)} />
+                </div>
+                <span className="text-sm text-stone-500 pb-2">installments, every</span>
+                <div>
+                  <label className="label">Days apart</label>
+                  <input className="input !w-24" type="number" min="7" max="90" value={planFreq} onChange={(e) => setPlanFreq(e.target.value)} />
+                </div>
+                <button className="btn btn-outline btn-sm" onClick={makePlan}>Create payment plan</button>
+              </div>
+            )}
+          </div>
           {stmt.payment_link_url && stmt.status !== 'paid' && (
             <div className="flex flex-wrap items-center gap-2 bg-stone-50 border border-stone-200 rounded-xl px-4 py-3">
               <span className="text-sm font-medium text-stone-700 mr-auto">Online pay link is live on this statement</span>
@@ -161,10 +243,15 @@ export default function Statements({ onConnectStripe } = {}) {
   const [payStmt, setPayStmt] = useState(null);
   const [needConnect, setNeedConnect] = useState(false);
   const [busyId, setBusyId] = useState(null);
+  const [reminderCfg, setReminderCfg] = useState(null);
+  const [cadenceDraft, setCadenceDraft] = useState('0,7,14,28');
+  const [allPlans, setAllPlans] = useState([]);
 
   const load = () => {
     api.statements.balances().then((d) => setBalances(d.patients)).catch((e) => toast.error(e.message));
     api.statements.list().then(setList).catch((e) => toast.error(e.message));
+    api.statements.reminderSettings().then((s) => { setReminderCfg(s); setCadenceDraft(s.cadence_days); }).catch(() => {});
+    api.statements.plans().then((d) => setAllPlans(d.plans || [])).catch(() => {});
   };
   useEffect(load, []);
 
@@ -231,6 +318,62 @@ export default function Statements({ onConnectStripe } = {}) {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+      </section>
+
+      <section className="card p-4 sm:p-5">
+        <h3 className="font-semibold mb-3">Payment automation</h3>
+        {reminderCfg === null ? <LoadingRows n={1} /> : (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-end gap-3">
+              <label className="flex items-center gap-2 text-sm font-medium text-stone-700 pb-2">
+                <input type="checkbox" className="w-4 h-4 accent-emerald-600" checked={!!reminderCfg.enabled}
+                  onChange={(e) => setReminderCfg({ ...reminderCfg, enabled: e.target.checked ? 1 : 0 })} />
+                Email payment reminders
+              </label>
+              <div>
+                <label className="label">Reminder days (after the statement is sent)</label>
+                <input className="input !w-44" value={cadenceDraft} onChange={(e) => setCadenceDraft(e.target.value)} placeholder="0,7,14,28" />
+              </div>
+              {canWrite && (
+                <button className="btn btn-outline btn-sm" onClick={() => {
+                  api.statements.updateReminderSettings({ enabled: !!reminderCfg.enabled, cadence_days: cadenceDraft })
+                    .then((s) => { setReminderCfg(s); setCadenceDraft(s.cadence_days); toast.success('Reminder settings saved'); })
+                    .catch((e) => toast.error(e.message));
+                }}>Save</button>
+              )}
+              {canWrite && (
+                <button className="btn btn-ghost btn-sm" onClick={() => {
+                  api.statements.runReminders()
+                    .then((s) => { toast.success(`Reminder sweep: ${s.sent} sent, ${s.skipped} skipped, ${s.failed} failed`); load(); })
+                    .catch((e) => toast.error(e.message));
+                }}>Send due reminders now</button>
+              )}
+            </div>
+            <p className="text-xs text-stone-500">
+              Reminders go out by email only, stop the moment a statement is paid, and carry just the statement
+              number, balance, due date and pay link. Statements need a patient email (open a statement to add one).
+              Saved-card autodebit is on hold — it rides the same Stripe Connect gate as pay links.
+            </p>
+            {allPlans.length > 0 && (
+              <div className="overflow-x-auto">
+                <table className="w-full tbl">
+                  <thead><tr><th>Statement</th><th>Patient</th><th>Plan</th><th>Progress</th><th>Status</th></tr></thead>
+                  <tbody>
+                    {allPlans.map((p) => (
+                      <tr key={p.id}>
+                        <td className="font-medium">{p.statement_number}</td>
+                        <td>{p.patient_name}</td>
+                        <td>{p.installments_count} × {fmtMoney(p.installment_amount)} / {p.frequency_days}d</td>
+                        <td>{p.paid_installments}/{p.installments_count} paid</td>
+                        <td><span className={`badge ${p.status === 'active' ? 'badge-blue' : p.status === 'completed' ? 'badge-green' : 'badge-slate'}`}>{p.status}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </section>

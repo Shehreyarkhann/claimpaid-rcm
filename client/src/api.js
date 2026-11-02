@@ -176,6 +176,26 @@ export const api = {
         body: JSON.stringify(data),
       }).then(handle),
     void: (id) => authFetch(`/api/statements/${id}/void`, { method: 'POST' }).then(handle),
+    // Payment automation (deploy #106, Phase C): reminder cadences + plans.
+    reminderSettings: () => get('/api/statements/reminder-settings'),
+    updateReminderSettings: (data) =>
+      authFetch('/api/statements/reminder-settings', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      }).then(handle),
+    runReminders: () => authFetch('/api/statements/reminders/run', { method: 'POST' }).then(handle),
+    setPatientEmail: (id, email) =>
+      authFetch(`/api/statements/${id}/patient-email`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      }).then(handle),
+    createPlan: (id, data) =>
+      authFetch(`/api/statements/${id}/plans`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      }).then(handle),
+    plans: () => get('/api/statements/plans'),
+    cancelPlan: (planId) => authFetch(`/api/statements/plans/${planId}/cancel`, { method: 'POST' }).then(handle),
   },
   claimDetail: (id) => get(`/api/claims/${id}`),
   // Prior authorizations

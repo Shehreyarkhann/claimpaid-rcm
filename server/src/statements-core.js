@@ -108,7 +108,10 @@ function recordPayment(db, { orgId, statementId, amount, method, externalId }) {
   // statement is a duplicate, not an error.
   if (externalId) {
     const dup = db.prepare('SELECT id FROM statement_payments WHERE external_id = ?').get(externalId);
-    if (dup) return { duplicate: true, statement: getStatement(db, orgId, statementId) };
+    if (dup) {
+      syncPlans(db, statementId);
+      return { duplicate: true, statement: getStatement(db, orgId, statementId) };
+    }
   }
   if (stmt.status === 'void') throw new Error('Statement is void');
   if (stmt.status === 'paid') throw new Error('Statement is already paid in full');
@@ -140,7 +143,20 @@ function recordPayment(db, { orgId, statementId, amount, method, externalId }) {
     db.exec('ROLLBACK');
     throw e;
   }
+  syncPlans(db, statementId);
   return { duplicate: false, statement: getStatement(db, orgId, statementId) };
+}
+
+// Payment plans (deploy #106, Phase C) derive installment state from
+// recorded payments. Lazy require: statements-automation imports the
+// email service only, and this keeps the module graph one-directional.
+// A plan-sync failure must never fail the payment that triggered it.
+function syncPlans(db, statementId) {
+  try {
+    require('./statements-automation').syncPlanWithStatement(db, statementId);
+  } catch (e) {
+    console.error('[statements] payment-plan sync failed:', e.message);
+  }
 }
 
 // Stripe Payment Link for the statement's remaining balance. A one-off

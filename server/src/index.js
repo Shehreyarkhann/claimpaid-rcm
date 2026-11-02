@@ -218,3 +218,29 @@ if (process.env.AGENT_WATCHDOG !== 'off') {
   setInterval(runWatchdog, 60 * 60 * 1000).unref();
   console.log('Agent watchdog: hourly digest sweep (AGENT_WATCHDOG=off to disable)');
 }
+
+// ---- Statement reminder sweep (deploy #106, Phase C) ----
+// Hourly; the engine enforces everything itself — per-workspace on/off,
+// cadence dedupe (one row per statement+step), at most one reminder per
+// statement per sweep, stop-on-paid via the status filter. Email only.
+// Disable with STATEMENT_REMINDERS=off.
+if (process.env.STATEMENT_REMINDERS !== 'off') {
+  const { runReminderSweep } = require('./statements-automation');
+  const { db: reminderDb } = require('./db');
+  let reminderRunning = false;
+  const runReminders = async () => {
+    if (reminderRunning) return;
+    reminderRunning = true;
+    try {
+      const s = await runReminderSweep(reminderDb, {});
+      if (s.sent || s.failed) console.log(`[statement-reminders] sent ${s.sent}, failed ${s.failed}, skipped ${s.skipped}`);
+    } catch (e) {
+      console.log(`[statement-reminders] sweep failed: ${e.message}`);
+    } finally {
+      reminderRunning = false;
+    }
+  };
+  setTimeout(runReminders, 15 * 60 * 1000).unref();
+  setInterval(runReminders, 60 * 60 * 1000).unref();
+  console.log('Statement reminders: hourly cadence sweep (STATEMENT_REMINDERS=off to disable)');
+}

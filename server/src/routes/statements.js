@@ -2,6 +2,7 @@ const express = require('express');
 const { db } = require('../db');
 const { authRequired, roleRequired, requireProduct } = require('../auth');
 const core = require('../statements-core');
+const automation = require('../statements-automation');
 const { statementPaymentsHeld, FEATURE_HELD_BODY } = require('../featureFlags');
 
 // Patient statements (deploy #50): balances from ERA patient
@@ -48,10 +49,122 @@ router.get('/', (req, res) => {
   res.json(rows);
 });
 
+// ---- Payment automation (deploy #106, Phase C) ---------------------------
+// Declared BEFORE /:id so 'plans' and 'reminder-settings' are not read as
+// statement ids.
+router.get('/reminder-settings', (req, res) => {
+  res.json({
+    ...automation.getReminderSettings(db, orgId(req)),
+    // Autodebit rides Stripe Connect — report the hold truthfully so the
+    // UI can render its state from the server, not from a guess.
+    autodebit: { available: !statementPaymentsHeld(), held: statementPaymentsHeld() },
+  });
+});
+
+router.put('/reminder-settings', canWrite, (req, res) => {
+  try {
+    const saved = automation.saveReminderSettings(db, orgId(req), {
+      enabled: !!(req.body && req.body.enabled),
+      cadenceDays: req.body && req.body.cadence_days,
+    });
+    res.json(saved);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// Manual sweep for THIS workspace (the hourly scheduler covers all orgs).
+router.post('/reminders/run', canWrite, async (req, res) => {
+  try {
+    const summary = await automation.runReminderSweep(db, { orgOnly: orgId(req) });
+    res.json(summary);
+  } catch (e) {
+    res.status(500).json({ error: `Reminder sweep failed: ${e.message}` });
+  }
+});
+
+router.get('/plans', (req, res) => {
+  res.json({ plans: automation.listPlans(db, orgId(req)) });
+});
+
+router.post('/plans/:planId/cancel', canWrite, (req, res) => {
+  try {
+    res.json(automation.cancelPlan(db, orgId(req), Number(req.params.planId)));
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// Autodebit enrollment for a whole plan — same FEATURE_HELD gate as every
+// other Connect surface. While held, this refuses before any Stripe call;
+// un-holding is the flag flip in featureFlags.js and nothing else.
+router.post('/plans/:planId/autodebit', canWrite, (req, res) => {
+  if (statementPaymentsHeld()) return res.status(403).json(FEATURE_HELD_BODY);
+  const plan = automation.getPlan(db, orgId(req), Number(req.params.planId));
+  if (!plan) return res.status(404).json({ error: 'Payment plan not found' });
+  return res.status(409).json({
+    code: 'AUTODEBIT_NOT_CONFIGURED',
+    error: 'Saved-card autodebit needs the practice\'s Stripe Connect onboarding completed first (Settings → Payments).',
+  });
+});
+
 router.get('/:id', (req, res) => {
   const stmt = core.getStatement(db, orgId(req), Number(req.params.id));
   if (!stmt) return res.status(404).json({ error: 'Statement not found' });
-  res.json(stmt);
+  res.json({
+    ...stmt,
+    payment_plans: automation.listPlans(db, orgId(req), stmt.id),
+    reminders: automation.listReminders(db, orgId(req), stmt.id),
+  });
+});
+
+router.post('/:id/patient-email', canWrite, (req, res) => {
+  const stmt = core.getStatement(db, orgId(req), Number(req.params.id));
+  if (!stmt) return res.status(404).json({ error: 'Statement not found' });
+  const email = String((req.body && req.body.email) || '').trim();
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'That does not look like an email address' });
+  }
+  db.prepare('UPDATE patient_statements SET patient_email = ? WHERE id = ? AND org_id = ?')
+    .run(email || null, stmt.id, orgId(req));
+  res.json(core.getStatement(db, orgId(req), stmt.id));
+});
+
+router.get('/:id/reminders', (req, res) => {
+  const stmt = core.getStatement(db, orgId(req), Number(req.params.id));
+  if (!stmt) return res.status(404).json({ error: 'Statement not found' });
+  res.json({ reminders: automation.listReminders(db, orgId(req), stmt.id) });
+});
+
+router.post('/:id/plans', canWrite, (req, res) => {
+  try {
+    const plan = automation.createPaymentPlan(db, {
+      orgId: orgId(req), userId: req.user.id, statementId: Number(req.params.id),
+      installments: req.body && req.body.installments,
+      frequencyDays: req.body && req.body.frequency_days,
+      startDate: req.body && req.body.start_date,
+    });
+    res.status(201).json(plan);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.get('/:id/plans', (req, res) => {
+  const stmt = core.getStatement(db, orgId(req), Number(req.params.id));
+  if (!stmt) return res.status(404).json({ error: 'Statement not found' });
+  res.json({ plans: automation.listPlans(db, orgId(req), stmt.id) });
+});
+
+// Autodebit enrollment for a statement balance (no plan) — same hold.
+router.post('/:id/autodebit', canWrite, (req, res) => {
+  if (statementPaymentsHeld()) return res.status(403).json(FEATURE_HELD_BODY);
+  const stmt = core.getStatement(db, orgId(req), Number(req.params.id));
+  if (!stmt) return res.status(404).json({ error: 'Statement not found' });
+  return res.status(409).json({
+    code: 'AUTODEBIT_NOT_CONFIGURED',
+    error: 'Saved-card autodebit needs the practice\'s Stripe Connect onboarding completed first (Settings → Payments).',
+  });
 });
 
 router.post('/generate', canWrite, (req, res) => {
