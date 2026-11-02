@@ -486,6 +486,14 @@ export const api = {
     checklist: () => get('/api/agent/checklist'),
     dismissChecklist: () =>
       authFetch('/api/agent/checklist/dismiss', { method: 'PUT' }).then(handle),
+    // AI data analyst (deploy #106, Phase D): deterministic analyses over
+    // the org's own claims/A/R — computed answers, never model arithmetic.
+    analystSuggestions: () => get('/api/agent/analyst/suggestions'),
+    analystAsk: (data) =>
+      authFetch('/api/agent/analyst/ask', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      }).then(handle),
     importMappings: () => get('/api/agent/import/mappings'),
     saveImportMapping: (data) =>
       authFetch('/api/agent/import/mappings', {

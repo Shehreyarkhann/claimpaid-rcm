@@ -192,6 +192,7 @@ export default function Shell({ page, setPage, children, dueCount, authzAlertCou
     { id: 'playbook', label: 'Playbook', icon: ICONS.playbook },
     { id: 'ai', label: 'AI Assistant', icon: ICONS.ai },
     { id: 'agent', label: 'Agent', icon: ICONS.agent },
+    { id: 'analyst', label: 'Data Analyst', icon: ICONS.ai },
   ];
   const settingsTabs = [
     { id: 'org', label: 'Organization', icon: ICONS.org },

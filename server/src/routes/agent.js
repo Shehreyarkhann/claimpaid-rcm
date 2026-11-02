@@ -23,6 +23,7 @@ const callCopilot = require('../agent/callCopilot');
 const teamInsights = require('../agent/teamInsights');
 const importWizard = require('../agent/importWizard');
 const auditWizard = require('../agent/audit');
+const analyst = require('../agent/analyst');
 
 const router = express.Router();
 router.use(authRequired, requireProduct('rcm'));
@@ -134,6 +135,40 @@ router.post('/actions/batch-decide', canDecide, (req, res) => {
     }
   }
   res.json({ results, summary });
+});
+
+// --- AI data analyst (deploy #106, Phase D): deterministic analyses
+// over the org's own claims/A/R data. Free-text questions are matched to
+// a fixed analysis set; answers are computed by hand-written queries,
+// carry their scope (workspace, period, basis, n), and are READ-ONLY —
+// the analyst never writes. Counted as an AI use, like a chat turn. ---
+router.get('/analyst/suggestions', (req, res) => {
+  res.json({ suggestions: analyst.SUGGESTIONS });
+});
+
+router.post('/analyst/ask', (req, res) => {
+  const { question, analysis, period } = req.body || {};
+  let pick = null;
+  if (analysis && analyst.ANALYSES[analysis]) {
+    pick = { analysis, period: analyst.PERIODS[period] ? period : 'all' };
+  } else if (question) {
+    pick = analyst.matchQuestion(question);
+  }
+  if (!pick) {
+    return res.json({
+      matched: false,
+      message: 'I can only answer from this workspace\'s real claims and A/R data, and that question doesn\'t map to an analysis I run. Try one of the suggested questions.',
+      supported: analyst.SUGGESTIONS,
+    });
+  }
+  try {
+    const result = analyst.runAnalysis(req.orgId, pick);
+    recordAgentTurn(req.orgId, {});
+    res.json({ matched: true, question: question || null, ...result });
+  } catch (e) {
+    console.error('[analyst] ask failed:', e.message);
+    res.status(500).json({ error: 'That analysis could not be computed right now.' });
+  }
 });
 
 // --- Insights (Phase 3): dashboard-level predictions from predict.js ---
