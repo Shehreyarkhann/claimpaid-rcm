@@ -51,7 +51,8 @@ function staticSweep() {
   console.log('== static sweep ==');
   const pages = [...walkHtml(SRC), AI_PAGE];
   // Deploy #103: +34 pages (audit tool, denial-code index, 31 code pages, deadlines hub)
-  check('landing page count is 67 (66 claimpilot pages + AI landing)', pages.length === 67, 'got ' + pages.length);
+  // Deploy #108: +7 payer timely-filing pages under /deadlines/<payer>/
+  check('landing page count is 74 (73 claimpilot pages + AI landing)', pages.length === 74, 'got ' + pages.length);
   for (const p of pages) {
     const rel = path.relative(SRC, p).startsWith('..') ? 'AI landing' : path.relative(SRC, p);
     const html = fs.readFileSync(p, 'utf8');

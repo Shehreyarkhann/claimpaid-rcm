@@ -488,7 +488,7 @@ function deadlinesPage() {
       { '@type': 'Question', name: 'Do these limits apply to corrected claims and appeals?', acceptedAnswer: { '@type': 'Answer', text: 'Corrected claims and appeals have their own windows, which vary by payer and contract and often run from the remittance date rather than the date of service. The standard limits on this page are initial filing limits — verify appeal and corrected-claim windows in your payer contract.' } },
     ],
   });
-  const rows = deadlinesData.payers.map((p) => `        <tr><td><strong>${esc(p.name)}</strong></td><td><strong>${p.days} days</strong></td><td>${esc(p.note)}</td></tr>`).join('\n');
+  const rows = deadlinesData.payers.map((p) => `        <tr><td>${p.slug && p.slug !== 'other' ? `<a href="/deadlines/${p.slug}/"><strong>${esc(p.name)}</strong></a>` : `<strong>${esc(p.name)}</strong>`}</td><td><strong>${p.days} days</strong></td><td>${esc(p.note)}</td></tr>`).join('\n');
   return headOpen({ title, description, canonical: url, extraLd: faqLd + '\n' + crumbLd }) + '\n' + NAV + `
 
 <article><div class="wrap">

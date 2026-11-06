@@ -53,6 +53,13 @@ In-depth, practical guides for medical billing teams (also at https://claimpaid.
 
 - **How to Appeal a Denied Medical Claim: Step-by-Step** — https://claimpaid.io/blog/how-to-appeal-denied-claim/ — denial reason codes, appeal deadlines, documentation, letter structure, follow-up cadence.
 - **Timely Filing Limits by Payer 2026** — https://claimpaid.io/blog/timely-filing-limits-by-payer-2026/ — submission deadlines for Aetna, Cigna, UHC, Anthem, Medicare, Humana, NY Medicaid (verify against your payer contract).
+- **What is UnitedHealthcare's timely filing limit?** — https://claimpaid.io/deadlines/unitedhealthcare/ — initial, corrected-claim and appeal windows, and how the clock is counted.
+- **What is Aetna's timely filing limit?** — https://claimpaid.io/deadlines/aetna/ — initial, corrected-claim and appeal windows, and how the clock is counted.
+- **What is Cigna's timely filing limit?** — https://claimpaid.io/deadlines/cigna/ — initial, corrected-claim and appeal windows, and how the clock is counted.
+- **What is Anthem's timely filing limit?** — https://claimpaid.io/deadlines/anthem/ — initial, corrected-claim and appeal windows, and how the clock is counted.
+- **What is Medicare's timely filing limit?** — https://claimpaid.io/deadlines/medicare/ — initial, corrected-claim and appeal windows, and how the clock is counted.
+- **What is NY Medicaid's timely filing limit?** — https://claimpaid.io/deadlines/ny-medicaid/ — initial, corrected-claim and appeal windows, and how the clock is counted.
+- **What is Humana's timely filing limit?** — https://claimpaid.io/deadlines/humana/ — initial, corrected-claim and appeal windows, and how the clock is counted.
 - **7 Most Common Claim Denial Reasons & How to Fix Each** — https://claimpaid.io/blog/top-claim-denial-reasons-fixes/ — CO-16, eligibility, CO-197, CO-96, CO-97, coding errors, CO-29, with fixes and prevention.
 - **837P vs 835 Explained** — https://claimpaid.io/blog/837p-vs-835-explained/ — the claim submission file vs the remittance advice file, plus 999 and 277CA acknowledgments.
 - **How to Write a Prior Authorization Appeal Letter** — https://claimpaid.io/blog/prior-authorization-appeal-letter/ — template outline, medical-necessity documentation, peer-to-peer review.
