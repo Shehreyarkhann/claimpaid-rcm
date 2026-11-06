@@ -37,7 +37,7 @@
 {"@type":"Question","name":"What does the agent do each morning?","acceptedAnswer":{"@type":"Answer","text":"It opens the day with a brief: what changed while you were away, a ranked work plan (deadline pressure times dollars at stake), and appeal drafts already written for the claims that need them — waiting for your approval. A watchdog digest emails the same picture when you're away from the app."}},
 {"@type":"Question","name":"Is my data encrypted?","acceptedAnswer":{"@type":"Answer","text":"Database backups are encrypted with age (X25519) the moment they are written, and each backup is decrypt-verified before its plaintext is deleted. All traffic uses TLS. No HIPAA certification claims are made: no such certification exists."}},
 {"@type":"Question","name":"Does ClaimPaid write appeal letters automatically?","acceptedAnswer":{"@type":"Answer","text":"The agent drafts payer-specific appeal letters from the denial reason code — using the letter engine's categories, your letterhead, and, once your workspace has decided appeals, the argument angles that have actually won against that payer. Every draft waits for a human to approve it; approving saves the appeal, and your team submits it. The coding assistant suggests codes from a 370-code library only when the documentation supports them — unverified codes are never applied on the AI's say-so."}},
-{"@type":"Question","name":"Which payers' timely-filing deadlines does ClaimPaid track?","acceptedAnswer":{"@type":"Answer","text":"Aetna (120 days), Cigna (180), UnitedHealthcare (90), Anthem (180), Medicare (365), NY Medicaid (90), and Humana (180) — with custom payers and deadlines configurable per organization."}},
+{"@type":"Question","name":"Which payers' timely-filing deadlines does ClaimPaid track?","acceptedAnswer":{"@type":"Answer","text":"Aetna (120 days), Cigna (90 days participating, 180 out-of-network), UnitedHealthcare (90), Anthem (90 in most state plans), Medicare (365), NY Medicaid (90), and Humana (365 for Medicare Advantage) — with custom payers and deadlines configurable per organization."}},
 {"@type":"Question","name":"Can I use ClaimPaid AI without the RCM platform?","acceptedAnswer":{"@type":"Answer","text":"Yes — ClaimPaid AI standalone is $99/month at claimpaid.io/ai/: cited answers from the Payer Policy Handbook, the quote-verified coding assistant, and cited answers over your own documents, without the full RCM platform. RCM Pro includes it with one shared login. Support is handled through a two-way helpdesk with a 24-hour response SLA."}},
 {"@type":"Question","name":"How long does implementation take?","acceptedAnswer":{"@type":"Answer","text":"Most teams are live within 24 hours — a 5-step onboarding wizard gets your workspace set up on a real 30-day trial, no implementation project required."}},
 {"@type":"Question","name":"When is ClaimPaid not the right fit?","acceptedAnswer":{"@type":"Answer","text":"ClaimPaid is software, not a billing service — if you want a company to do the billing work for you rather than software for your team, we're not that. It's web-based SaaS (not on-premise), and its payer content is built around US billing workflows."}}
@@ -53,322 +53,62 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&family=Playfair+Display:wght@800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-
 <style>
 :root{
-  --paper:#FAF5EB; --paper2:#F4EDDD; --card:#FFFDF8;
+  --paper:#FAF5EB; --paper2:#F3ECDC; --card:#FFFDF8;
   --ink:#211A13; --ink2:#453B2F; --mut:#7C7060;
   --line:#E4D9C3; --line2:#D8CBAE;
-  --green:#0E9F6E; --green-dk:#0A7A54; --green-lt:#0E9F6E; --green-tint:#E7F4EC;
+  --green:#0E9F6E; --green-dk:#0A7A54; --tint:#E7F4EC;
   --amber:#B45309; --amber-lt:#D97706;
-  --violet:#B45309; --violet-lt:#D97706;
-  --rust:#C2410C;
-  --txt:#211A13;
-  --navy:#17251F;
+  --rust:#C2410C; --dark:#17251F; --dark2:#0D1A14;
+  --lime:#B7F34A; --paid:#0B7A4B;
+  --ctx:#F0E9D8; --cmut:#B9AE97; --dline:rgba(240,233,216,.16);
+  --ease:cubic-bezier(.22,.61,.21,1);
+  --dur-1:120ms; --dur-2:180ms; --dur-3:240ms;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{background:var(--paper);color:var(--ink);font-family:'Inter',system-ui,sans-serif;overflow-x:hidden}
+body{background:var(--paper);color:var(--ink);font-family:'Inter',system-ui,sans-serif;overflow-x:hidden;-webkit-font-smoothing:antialiased}
 h1,h2,h3,.disp{font-family:'Fraunces',Georgia,serif}
-::selection{background:var(--green);color:#fff}
+::selection{background:var(--lime);color:var(--dark2)}
 :focus-visible{outline:3px solid rgba(14,159,110,.55);outline-offset:2px}
 .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
 .grad{color:var(--green-dk)}
+section{padding:110px 0;position:relative;scroll-margin-top:76px}
+.sec-tag{display:inline-flex;align-items:center;gap:12px;font-size:12px;font-weight:700;letter-spacing:2.5px;color:var(--amber);margin-bottom:18px;text-transform:uppercase}
+.sec-tag::before{content:'';width:34px;height:2px;background:currentColor;flex-shrink:0}
+h2{font-size:clamp(33px,4.6vw,54px);font-weight:900;letter-spacing:-1px;line-height:1.06;margin-bottom:18px;color:var(--ink)}
+.sec-sub{color:var(--ink2);font-size:17px;max-width:640px;line-height:1.65;margin-bottom:56px}
+.sec-note{color:var(--ink2);font-size:14px;max-width:760px;line-height:1.7;margin-top:30px;padding:18px 22px;border:1px dashed var(--line2);border-radius:14px;background:var(--card)}
+.glink{display:inline-block;font-size:13.5px;font-weight:700;color:var(--green-dk);text-decoration:none;transition:color var(--dur-2) var(--ease)}
+.glink:hover{color:var(--ink);text-decoration:underline}
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:15px;border-radius:10px;padding:13px 26px;text-decoration:none;cursor:pointer;border:none;transition:transform var(--dur-3) var(--ease),box-shadow var(--dur-3) var(--ease),background-color var(--dur-3) var(--ease),border-color var(--dur-3) var(--ease);font-family:'Inter',sans-serif}
+.btn-green{background:var(--green-dk);color:#fff;box-shadow:0 8px 22px rgba(10,122,84,.28)}
+.btn-green:hover{transform:translateY(-1px);background:var(--green);box-shadow:0 14px 30px rgba(10,122,84,.34)}
+.btn-green:active{box-shadow:0 4px 12px rgba(10,122,84,.25)}
+.btn-ghost{background:var(--card);color:var(--ink);border:1.5px solid var(--line2)}
+.btn-ghost:hover{transform:translateY(-1px);border-color:var(--ink);background:#fff}
+.btn:active{transform:translateY(0)}
+.btn-sm{padding:10px 20px;font-size:14px}
 /* ---------- nav ---------- */
-nav{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(14px);background:rgba(250,245,235,.85);border-bottom:1px solid var(--line);transition:box-shadow .3s}
+nav{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(14px);background:rgba(250,245,235,.88);border-bottom:1px solid var(--line);transition:box-shadow var(--dur-3) var(--ease)}
 nav.scrolled{box-shadow:0 8px 30px rgba(33,26,19,.10)}
 .nav-in{display:flex;align-items:center;justify-content:space-between;height:68px}
 .logo{display:flex;align-items:center;gap:10px;font-family:'Playfair Display',Georgia,serif;font-weight:800;font-size:22px;letter-spacing:-.4px;text-decoration:none;color:var(--ink)}
-.logo img{width:34px;height:34px;border-radius:9px;transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
+.logo img{width:34px;height:34px;border-radius:9px;transition:transform var(--dur-3) var(--ease)}
 .logo:hover img{transform:rotate(-12deg) scale(1.1)}
 .logo .wm{color:var(--ink)} .logo em{font-style:normal;color:var(--green-dk)}
 .nav-links{display:flex;gap:30px;align-items:center}
-.nav-links a{color:var(--ink2);text-decoration:none;font-size:14.5px;font-weight:500;position:relative;transition:color .25s}
-.nav-links a::after{content:'';position:absolute;left:0;bottom:-5px;height:2px;width:0;background:var(--green);border-radius:2px;transition:width .3s}
+.nav-links a{color:var(--ink2);text-decoration:none;font-size:14.5px;font-weight:500;position:relative;transition:color var(--dur-2) var(--ease)}
+.nav-links a::after{content:'';position:absolute;left:0;bottom:-5px;height:2px;width:0;background:var(--green);border-radius:2px;transition:width var(--dur-3) var(--ease)}
 .nav-links a:hover{color:var(--ink)}
 .nav-links a:hover::after{width:100%}
 .nav-links a.btn{color:#fff}
 .nav-links a.btn::after{display:none}
 .nav-links a.btn:hover{color:#fff}
-.btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:15px;border-radius:12px;padding:13px 26px;text-decoration:none;cursor:pointer;border:none;transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s,filter .25s;position:relative;font-family:'Inter',sans-serif}
-.btn-green{background:linear-gradient(135deg,#10b981,#0A7A54);color:#fff;box-shadow:0 8px 24px rgba(14,159,110,.32)}
-.btn-green:hover{transform:translateY(-3px) scale(1.03);box-shadow:0 14px 34px rgba(14,159,110,.42);filter:brightness(1.05)}
-.btn-ghost{background:var(--card);color:var(--ink);border:1px solid var(--line2)}
-.btn-ghost:hover{transform:translateY(-3px);border-color:var(--green);box-shadow:0 10px 26px rgba(33,26,19,.10)}
-.btn-sm{padding:10px 20px;font-size:14px}
-/* ---------- hero ---------- */
-#hero{position:relative;display:flex;align-items:center;overflow:hidden;padding:130px 0 80px;background:radial-gradient(1100px 520px at 85% -10%,rgba(217,119,6,.10),transparent 60%),radial-gradient(900px 500px at -10% 20%,rgba(14,159,110,.08),transparent 55%),var(--paper)}
-#hero .wrap{position:relative;z-index:2;width:100%}
-.hero-stamp{position:absolute;top:44px;right:-84px;width:min(600px,62vw);height:auto;opacity:.06;pointer-events:none;z-index:1}
-@media (prefers-reduced-motion: no-preference){.hero-stamp{animation:stampFloat 16s ease-in-out infinite}}
-@keyframes stampFloat{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-14px) rotate(1.5deg)}}
-.hero-badge{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--green-dk);border:1px solid rgba(14,159,110,.4);background:var(--green-tint);padding:8px 16px;border-radius:100px;margin-bottom:26px;animation:fadeDown .8s ease both}
-.hero-badge .dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 1.8s infinite}
-@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.5}}
-@keyframes fadeDown{from{opacity:0;transform:translateY(-18px)}to{opacity:1;transform:none}}
-h1{font-size:clamp(48px,7.2vw,92px);font-weight:900;letter-spacing:-1.5px;line-height:1.0;margin-bottom:22px;color:var(--ink)}
-h1 .w{display:inline-block;opacity:0;animation:wordUp .7s cubic-bezier(.22,1,.36,1) forwards}
-@keyframes wordUp{from{opacity:0;transform:translateY(46px) rotate(3deg)}to{opacity:1;transform:none}}
-.hero-sub{font-size:clamp(16px,2vw,20px);color:var(--ink2);max-width:660px;line-height:1.65;margin-bottom:36px;animation:fadeDown .8s .5s ease both}
-.hero-sub b{color:var(--ink)}
-.hero-ctas{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:60px;animation:fadeDown .8s .65s ease both}
-.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;max-width:900px;animation:fadeDown .8s .8s ease both}
-@media(max-width:1080px){.stats{max-width:100%}}
-.stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;transition:transform .3s,border-color .3s,box-shadow .3s;position:relative;overflow:hidden}
-.stat::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--green),var(--amber-lt));opacity:.85}
-.stat:hover{transform:translateY(-6px);border-color:rgba(14,159,110,.5);box-shadow:0 16px 36px rgba(33,26,19,.10)}
-.stat .s-ico{display:none}
-.stat b{font-family:'Fraunces',serif;font-size:34px;font-weight:900;color:var(--ink);display:block;letter-spacing:-1px;line-height:1;margin-bottom:6px}
-.stat b .hl{color:var(--green-dk)}
-.stat .count{font-size:34px;font-weight:900;letter-spacing:-1px}
-.stat>span{font-size:12.5px;color:var(--mut);font-weight:500;line-height:1.4;display:block}
-/* hero product shot */
-.hero-shot{margin-top:44px;background:var(--card);border:1px solid var(--line2);border-radius:20px;overflow:hidden;box-shadow:0 30px 70px rgba(33,26,19,.14);max-width:980px}
-.hero-shot .shot-bar{display:flex;align-items:center;gap:7px;padding:11px 16px;border-bottom:1px solid var(--line);background:var(--paper2)}
-.hero-shot .shot-bar i{width:11px;height:11px;border-radius:50%;background:#D8CBAE;display:block}
-.hero-shot .shot-bar i:first-child{background:#E8A09A}.hero-shot .shot-bar i:nth-child(2){background:#EDCE9A}.hero-shot .shot-bar i:nth-child(3){background:#A9D6BC}
-.hero-shot .shot-bar span{margin-left:10px;font-size:12.5px;color:var(--mut);font-weight:600;letter-spacing:.3px}
-.hero-shot img{display:block;width:100%;height:auto}
-/* agent detail crops */
-
-/* floating claim cards */
-.float-cards{position:absolute;right:4%;top:120px;z-index:2;display:flex;flex-direction:column;gap:30px;width:250px}
-@media(max-width:1080px){.float-cards{display:none}}
-.fcard{background:rgba(255,253,248,.92);backdrop-filter:blur(12px);border:1px solid var(--line2);border-radius:16px;padding:16px 18px;box-shadow:0 20px 50px rgba(33,26,19,.14);animation:floaty 7s ease-in-out infinite}
-@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-.fcard .row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px}
-.fcard .cid{font-size:11px;color:var(--mut);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.fcard .amt{font-family:'Fraunces',serif;font-size:21px;font-weight:900;color:var(--ink)}
-.pill{font-size:11px;font-weight:700;padding:5px 12px;border-radius:100px;letter-spacing:.6px}
-.pill.denied{background:rgba(194,65,12,.10);color:var(--rust);border:1px solid rgba(194,65,12,.35)}
-.pill.paid{background:var(--green-tint);color:var(--green-dk);border:1px solid rgba(14,159,110,.4)}
-.fcard .bar{height:6px;border-radius:4px;background:#EFE7D2;overflow:hidden;margin-top:12px}
-.fcard .bar i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--green),#34d399);width:0;animation:fillbar 3.2s ease-in-out infinite}
-@keyframes fillbar{0%{width:8%}55%{width:100%}100%{width:100%}}
-.fcard .lbl{font-size:11px;color:var(--mut);margin-top:8px}
-/* ---------- marquee ---------- */
-.marquee{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:20px 0;overflow:hidden;background:var(--paper2)}
-.marquee .track{display:flex;width:max-content;animation:scroll 48s linear infinite}
-.mq-half{display:flex;gap:30px;padding-right:30px;align-items:center}
-.marquee span.mq-sep{font-family:'Inter',sans-serif;font-size:13px;color:var(--green);letter-spacing:0}
-@media (prefers-reduced-motion: reduce){.marquee .track,.ticker .track{animation:none}}
-.marquee:hover .track{animation-play-state:paused}
-.marquee span{font-family:'Fraunces',serif;font-weight:700;font-size:15px;color:var(--mut);white-space:nowrap;letter-spacing:.5px;transition:color .25s}
-.marquee span:hover{color:var(--green-dk)}
-@keyframes scroll{to{transform:translateX(-50%)}}
-.mq-label{text-align:center;font-size:12px;letter-spacing:2.5px;color:var(--mut);margin-bottom:14px;font-weight:600}
-/* ---------- sections ---------- */
-section{padding:110px 0;position:relative}
-.sec-tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:2.5px;color:var(--amber);margin-bottom:16px}
-.faq{max-width:800px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
-.faq details{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
-.faq summary{cursor:pointer;padding:20px 24px;font-weight:700;font-size:16px;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:16px;color:var(--ink)}
-.faq summary::-webkit-details-marker{display:none}
-.faq summary::after{content:'+';font-size:22px;color:var(--green-dk);flex-shrink:0}
-.faq details[open] summary::after{content:'−'}
-.faq details p{padding:0 24px 22px;color:var(--ink2);line-height:1.7;font-size:15px}
-.faq a,.sec-note a{color:var(--green-dk);font-weight:600}
-h2{font-size:clamp(32px,4.4vw,52px);font-weight:900;letter-spacing:-1px;line-height:1.08;margin-bottom:18px;color:var(--ink)}
-.sec-sub{color:var(--ink2);font-size:17px;max-width:620px;line-height:1.65;margin-bottom:56px}
-.sec-note{color:var(--ink2);font-size:14px;max-width:720px;line-height:1.7;margin-top:28px;padding:18px 22px;border:1px dashed var(--line2);border-radius:14px;background:var(--card)}
-.reveal{opacity:0;transform:translateY(36px);transition:opacity .8s ease,transform .8s cubic-bezier(.22,1,.36,1)}
-.reveal.in{opacity:1;transform:none}
-/* problem */
-.prob-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-@media(max-width:860px){.prob-grid{grid-template-columns:1fr}}
-.prob{background:#FBEEE3;border:1px solid #EFCDB4;border-radius:20px;padding:32px;transition:transform .35s,box-shadow .35s}
-.prob:hover{transform:translateY(-8px) rotate(-.5deg);box-shadow:0 24px 50px rgba(194,65,12,.12)}
-.prob .big{font-family:'Fraunces',serif;font-size:44px;font-weight:900;color:var(--rust);letter-spacing:-1px;margin-bottom:10px}
-.prob h3{font-size:18px;margin-bottom:10px}
-.prob p{color:var(--ink2);font-size:14.5px;line-height:1.65}
-/* bento */
-.bento{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-@media(max-width:900px){.bento{grid-template-columns:1fr 1fr}}
-@media(max-width:600px){.bento{grid-template-columns:1fr}}
-.bcard{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:32px;position:relative;overflow:hidden;transition:transform .35s cubic-bezier(.22,1,.36,1),border-color .35s,box-shadow .35s}
-.bcard::before{content:'';position:absolute;inset:0;background:radial-gradient(420px circle at var(--mx,50%) var(--my,50%),rgba(14,159,110,.08),transparent 65%);opacity:0;transition:opacity .35s;pointer-events:none}
-.bcard:hover{transform:translateY(-8px);border-color:rgba(14,159,110,.45);box-shadow:0 26px 60px rgba(33,26,19,.10)}
-.bcard:hover::before{opacity:1}
-.bcard.v::before{background:radial-gradient(420px circle at var(--mx,50%) var(--my,50%),rgba(217,119,6,.10),transparent 65%)}
-.bcard.v:hover{border-color:rgba(217,119,6,.5)}
-.bcard .ico{width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:20px;background:var(--green-tint);border:1px solid rgba(14,159,110,.3);position:relative;z-index:1;transition:transform .45s cubic-bezier(.34,1.56,.64,1),box-shadow .45s,border-color .45s}
-.bcard.v .ico{background:#FBF0DC;border-color:rgba(217,119,6,.35)}
-.bcard:hover .ico{transform:translateY(-8px) scale(1.08);border-color:rgba(14,159,110,.6);box-shadow:0 18px 40px rgba(14,159,110,.22)}
-.bcard.v:hover .ico{border-color:rgba(217,119,6,.6);box-shadow:0 18px 40px rgba(217,119,6,.25)}
-.bcard h3{font-size:19px;margin-bottom:10px}
-.bcard p{color:var(--ink2);font-size:14.5px;line-height:1.65}
-.bcard .tag{position:absolute;top:22px;right:22px;font-size:10.5px;font-weight:700;letter-spacing:1px;padding:5px 11px;border-radius:100px;background:var(--green-tint);color:var(--green-dk);border:1px solid rgba(14,159,110,.3)}
-.bcard .tag.ai{background:#FBF0DC;color:var(--amber);border-color:rgba(217,119,6,.35)}
-.glink{display:inline-block;margin-top:12px;font-size:13px;font-weight:700;color:var(--green-dk);text-decoration:none;transition:color .25s}
-.glink:hover{color:var(--ink);text-decoration:underline}
-.bcard.wide{grid-column:span 2}
-@media(max-width:600px){.bcard.wide{grid-column:span 1}}
-/* ---------- platform accordion ---------- */
-.acc{display:flex;flex-direction:column;gap:14px}
-.acc-panel{background:var(--card);border:1px solid var(--line);border-radius:22px;overflow:hidden;transition:border-color .3s,box-shadow .3s}
-.acc-panel:hover{border-color:rgba(14,159,110,.4)}
-.acc-panel.open{border-color:rgba(14,159,110,.55);box-shadow:0 24px 54px rgba(33,26,19,.09)}
-.acc-h{margin:0}
-.acc-btn{display:flex;align-items:center;gap:18px;width:100%;min-height:44px;text-align:left;background:none;border:none;cursor:pointer;padding:24px 28px;color:var(--ink);font-family:'Inter',sans-serif;-webkit-tap-highlight-color:transparent}
-.acc-idx{font-family:'Fraunces',serif;font-weight:900;font-size:14px;letter-spacing:.5px;color:var(--green-dk);background:var(--green-tint);border:1px solid rgba(14,159,110,.4);border-radius:100px;padding:6px 12px;flex-shrink:0}
-.acc-titles{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
-.acc-title{font-family:'Fraunces',serif;font-size:23px;font-weight:700;letter-spacing:-.3px;line-height:1.15}
-.acc-lead{font-size:14.5px;font-weight:500;color:var(--mut);line-height:1.5}
-.acc-ico{width:38px;height:38px;flex-shrink:0;border-radius:50%;border:1px solid var(--line2);position:relative;transition:transform .45s cubic-bezier(.22,1,.36,1),background .3s,border-color .3s}
-.acc-ico::before,.acc-ico::after{content:'';position:absolute;left:50%;top:50%;background:var(--green-dk);border-radius:2px}
-.acc-ico::before{width:14px;height:2.5px;transform:translate(-50%,-50%)}
-.acc-ico::after{width:2.5px;height:14px;transform:translate(-50%,-50%)}
-.acc-panel.open .acc-ico{transform:rotate(135deg);background:var(--green-tint);border-color:rgba(14,159,110,.45)}
-.acc-body{display:block}
-.js .acc-body{display:grid;grid-template-rows:0fr}
-.js .acc-panel.open .acc-body{grid-template-rows:1fr}
-.acc-inner{overflow:hidden;min-height:0;padding:0 28px}
-.acc-inner .flist{padding-bottom:16px}
-@media(min-width:900px){.acc-inner .flist{display:grid;grid-template-columns:1fr 1fr;column-gap:40px}}
-@media(max-width:640px){.acc-btn{padding:20px;gap:12px}.acc-title{font-size:20px}.acc-inner{padding:0 20px}.acc-idx{font-size:12px;padding:5px 10px}}
-@media (prefers-reduced-motion: no-preference){
-  .js .acc-body{transition:grid-template-rows .55s cubic-bezier(.22,1,.36,1)}
-  .js .acc-panel.open .flist li{animation:accRow .5s cubic-bezier(.22,1,.36,1) both}
-  .js .acc-panel.open .flist li:nth-child(2){animation-delay:.05s}
-  .js .acc-panel.open .flist li:nth-child(3){animation-delay:.1s}
-  .js .acc-panel.open .flist li:nth-child(4){animation-delay:.15s}
-  .js .acc-panel.open .flist li:nth-child(5){animation-delay:.2s}
-  .js .acc-panel.open .flist li:nth-child(6){animation-delay:.25s}
-  .js .acc-panel.open .flist li:nth-child(7){animation-delay:.3s}
-}
-@keyframes accRow{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-.flist{list-style:none;position:relative;z-index:1}
-.flist li{padding:10px 0;border-top:1px solid var(--line);font-size:14.5px;line-height:1.6;color:var(--mut)}
-.flist li:first-child{margin-top:6px}
-.flist strong{color:var(--ink);font-weight:600}
-.flist .glink{margin-top:0}
-/* ---------- dark bands: agent + audit ---------- */
-#agent{background:radial-gradient(1000px 520px at 12% -5%,rgba(14,159,110,.14),transparent 60%),var(--navy);color:#F0E9D8}
-#agent h2{color:#FBF7EC}
-#agent .grad{color:#34D399}
-#agent .sec-sub{color:#B9AE97}
-#agent .sec-tag{color:#E8B04B}
-#agent .bcard{background:rgba(255,253,248,.05);border-color:rgba(240,233,216,.22)}
-#agent .bcard h3{color:#FBF7EC}
-#agent .bcard p{color:#B9AE97}
-#agent .bcard .ico{background:rgba(14,159,110,.16);border-color:rgba(14,159,110,.45)}
-#agent .bcard .tag{background:rgba(217,119,6,.16);color:#E8B04B;border-color:rgba(217,119,6,.45)}
-#agent .bcard:hover{border-color:rgba(14,159,110,.55);box-shadow:0 26px 60px rgba(0,0,0,.35)}
-#audit{background:radial-gradient(900px 480px at 88% 110%,rgba(14,159,110,.12),transparent 60%),var(--navy);color:#F0E9D8}
-#audit h2{color:#FBF7EC}
-#audit .grad{color:#34D399}
-#audit .sec-sub{color:#B9AE97}
-#audit .sec-tag{color:#E8B04B}
-#audit .glink{color:#34D399}
-#audit .glink:hover{color:#FBF7EC}
-#audit .sec-note{background:rgba(255,253,248,.05);border-color:rgba(240,233,216,.3);color:#B9AE97}
-/* ---------- trust band ---------- */
-.trustband{background:var(--paper2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:34px 0}
-.trust-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-@media(max-width:860px){.trust-grid{grid-template-columns:1fr 1fr}}
-@media(max-width:560px){.trust-grid{grid-template-columns:1fr}}
-.trust{display:flex;align-items:center;gap:14px;padding:16px 20px;background:var(--card);border:1px solid var(--line);border-radius:16px;transition:transform .3s,border-color .3s}
-.trust:hover{transform:translateY(-4px);border-color:rgba(14,159,110,.45)}
-.trust .tk{width:42px;height:42px;flex-shrink:0;border-radius:12px;background:var(--green-tint);border:1px solid rgba(14,159,110,.3);display:flex;align-items:center;justify-content:center;font-size:20px}
-.trust b{display:block;font-size:14.5px;margin-bottom:2px;color:var(--ink)}
-.trust small{color:var(--mut);font-size:12.5px}
-.badge-no1{display:inline-flex;align-items:center;gap:10px;background:#FBF0DC;border:1px solid rgba(217,119,6,.45);color:var(--amber);font-weight:800;font-size:13px;letter-spacing:1px;padding:10px 22px;border-radius:100px;margin-bottom:26px;animation:fadeDown .8s .4s ease both}
-/* ---------- proof slot ---------- */
-#proof{padding:84px 0}
-.proof-box{border:1.5px dashed var(--line2);border-radius:24px;padding:52px 44px;text-align:center;background:var(--card)}
-.proof-box h2{margin-bottom:12px}
-.proof-box p{color:var(--ink2);font-size:16.5px;line-height:1.65;max-width:600px;margin:0 auto 28px}
-/* ---------- AI section (the one dark band) ---------- */
-#ai-sec{background:radial-gradient(1000px 500px at 80% 10%,rgba(217,119,6,.10),transparent 60%),#17251F;color:#F0E9D8}
-#ai-sec h2{color:#FBF7EC}
-#ai-sec .sec-sub{color:#B9AE97}
-#ai-sec .sec-tag{color:#E8B04B}
-.ai-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
-@media(max-width:900px){.ai-grid{grid-template-columns:1fr}}
-.chatmock{background:rgba(255,253,248,.05);border:1px solid rgba(240,233,216,.22);border-radius:24px;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.35);transition:transform .4s,box-shadow .4s}
-.chatmock:hover{transform:translateY(-6px) rotate(.4deg);box-shadow:0 40px 110px rgba(0,0,0,.45)}
-.chatmock .chead{padding:18px 22px;background:linear-gradient(135deg,#0A7A54,#0E9F6E);display:flex;align-items:center;gap:12px;color:#fff}
-.chatmock .chead .av{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:20px}
-.chatmock .chead b{font-size:15px}
-.chatmock .chead small{display:block;font-weight:400;opacity:.8;font-size:12px}
-.chatmock .cbody{padding:24px;min-height:300px;display:flex;flex-direction:column;gap:14px}
-.msg{max-width:88%;padding:14px 18px;border-radius:16px;font-size:14.5px;line-height:1.6;animation:msgIn .5s cubic-bezier(.22,1,.36,1) both}
-@keyframes msgIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
-.msg.q{align-self:flex-end;background:linear-gradient(135deg,#10b981,#0A7A54);color:#fff;font-weight:600;border-bottom-right-radius:6px}
-.msg.a{align-self:flex-start;background:rgba(255,253,248,.07);border:1px solid rgba(240,233,216,.18);border-bottom-left-radius:6px;color:#F0E9D8}
-.msg.a .cite{display:inline-block;margin:6px 6px 0 0;font-size:11px;font-weight:700;color:#E8B04B;background:rgba(217,119,6,.14);border:1px solid rgba(217,119,6,.4);padding:3px 10px;border-radius:100px}
-.typing{display:inline-flex;gap:5px;padding:16px 20px}
-.typing i{width:8px;height:8px;border-radius:50%;background:#E8B04B;animation:tp 1.2s infinite}
-.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
-@keyframes tp{0%,60%,100%{transform:none;opacity:.4}30%{transform:translateY(-6px);opacity:1}}
-.ai-feats{display:flex;flex-direction:column;gap:18px;margin-top:34px}
-.ai-feat{display:flex;gap:16px;align-items:flex-start;padding:18px;border-radius:16px;border:1px solid transparent;transition:background .3s,border-color .3s,transform .3s}
-.ai-feat:hover{background:rgba(255,253,248,.05);border-color:rgba(240,233,216,.2);transform:translateX(8px)}
-.ai-feat .e{width:52px;height:52px;flex-shrink:0;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;background:rgba(217,119,6,.14);border:1px solid rgba(217,119,6,.4);transition:transform .45s cubic-bezier(.34,1.56,.64,1),box-shadow .45s,border-color .45s}
-.ai-feat:hover .e{transform:translateY(-6px) scale(1.1);border-color:rgba(217,119,6,.7);box-shadow:0 14px 34px rgba(217,119,6,.3)}
-.ai-feat b{display:block;margin-bottom:4px;color:#FBF7EC}
-.ai-feat p{color:#B9AE97;font-size:14px;line-height:1.6}
-/* ---------- steps ---------- */
-.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;counter-reset:st}
-@media(max-width:860px){.steps{grid-template-columns:1fr}}
-.step{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:36px 30px;position:relative;overflow:hidden;transition:transform .35s,border-color .35s}
-.step:hover{transform:translateY(-8px);border-color:rgba(14,159,110,.45)}
-.step::before{counter-increment:st;content:"0" counter(st);position:absolute;top:14px;right:24px;font-family:'Fraunces',serif;font-size:64px;font-weight:900;color:rgba(33,26,19,.05);transition:color .35s}
-.step:hover::before{color:rgba(14,159,110,.16)}
-.step h3{font-size:20px;margin-bottom:12px}
-.step p{color:var(--ink2);font-size:14.5px;line-height:1.7}
-/* ---------- pricing ---------- */
-.price-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;align-items:stretch}
-@media(max-width:1080px){.price-grid{grid-template-columns:repeat(2,1fr);max-width:760px;margin:0 auto}}
-@media(max-width:640px){.price-grid{grid-template-columns:1fr;max-width:440px;margin:0 auto}}
-.price{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:34px 26px;display:flex;flex-direction:column;position:relative;transition:transform .35s cubic-bezier(.22,1,.36,1),box-shadow .35s,border-color .35s}
-.price:hover{transform:translateY(-10px) scale(1.015);box-shadow:0 30px 70px rgba(33,26,19,.12)}
-.price.hot{border:2px solid var(--green-dk);background:linear-gradient(var(--card),var(--card)) padding-box,linear-gradient(135deg,var(--green),var(--amber-lt)) border-box;box-shadow:0 20px 60px rgba(14,159,110,.14)}
-.price.hot:hover{box-shadow:0 30px 80px rgba(14,159,110,.22)}
-.price .pop{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:800;letter-spacing:1.5px;background:linear-gradient(135deg,var(--green),var(--green-dk));color:#fff;padding:7px 18px;border-radius:100px;white-space:nowrap}
-.price h3{font-size:19px;margin-bottom:6px}
-.price .pd{color:var(--mut);font-size:13.5px;margin-bottom:22px}
-.price .amt{font-family:'Fraunces',serif;font-size:44px;font-weight:900;letter-spacing:-1.5px;margin-bottom:4px;color:var(--ink)}
-.price .per{color:var(--mut);font-size:13px;margin-bottom:26px}
-.price ul{list-style:none;margin-bottom:30px;flex:1}
-.price li{font-size:13.5px;color:var(--ink2);padding:8px 0 8px 24px;border-bottom:1px solid var(--line);position:relative;line-height:1.5}
-.price li::before{content:'✓';color:var(--green-dk);font-weight:800;position:absolute;left:2px;top:8px}
-.price li b{color:var(--ink);font-weight:600}
-.trial-note{text-align:center;margin-top:14px;font-size:13px;font-weight:600;color:var(--green-dk);letter-spacing:.2px}
-.price li.no{color:var(--mut)}
-.price li.no::before{content:'—';color:var(--mut)}
-/* ---------- plan comparison table ---------- */
-.ptable-wrap{margin-top:44px;overflow-x:auto;border:1px solid var(--line);border-radius:20px;background:var(--card)}
-table.ptable{width:100%;border-collapse:collapse;min-width:660px;font-size:14px}
-.ptable th,.ptable td{padding:13px 18px;text-align:center;border-bottom:1px solid var(--line)}
-.ptable th:first-child,.ptable td:first-child{text-align:left;font-weight:600;color:var(--ink)}
-.ptable thead th{font-family:'Fraunces',serif;font-size:15.5px;color:var(--ink);background:var(--paper2)}
-.ptable tbody tr:last-child th,.ptable tbody tr:last-child td{border-bottom:none}
-.ptable .y{color:var(--green-dk);font-weight:800}
-.ptable .n{color:var(--mut)}
-.ptable td{color:var(--ink2)}
-.pnote{margin-top:16px;color:var(--mut);font-size:13.5px;text-align:center}
-/* ---------- final CTA ---------- */
-#cta .box{position:relative;overflow:hidden;background:linear-gradient(140deg,#0C2B20,#17251F 60%,#2A2118);border:1px solid rgba(14,159,110,.35);border-radius:32px;padding:90px 40px;text-align:center;color:#F0E9D8}
-#cta .box::before{content:'';position:absolute;width:600px;height:600px;left:50%;top:50%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(16,185,129,.16),transparent 65%);animation:breathe 5s ease-in-out infinite;pointer-events:none}
-@keyframes breathe{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.25)}}
-#cta h2{position:relative;color:#FBF7EC}
-#cta .grad{color:#34D399}
-#cta p{position:relative;color:#B9AE97;font-size:18px;max-width:560px;margin:0 auto 38px;line-height:1.65}
-#cta .btn{position:relative;font-size:17px;padding:17px 44px}
-/* ---------- footer ---------- */
-footer{border-top:1px solid var(--line);padding:54px 0;color:var(--mut);font-size:13.5px;background:var(--paper2)}
-.foot{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px 28px}
-.foot .logo{margin-left:0}
-.foot a{color:var(--mut);text-decoration:none;margin-left:22px;transition:color .25s}
-@media(max-width:640px){.foot{flex-direction:column;align-items:flex-start;gap:14px}.foot a{margin-left:0;margin-right:20px}.foot .logo{margin-right:0}}
-.foot a:hover{color:var(--green-dk)}
-.ticker{border-top:1px solid #EFCDB4;border-bottom:1px solid #EFCDB4;background:#FBEEE3;overflow:hidden;padding:14px 0;margin-bottom:0}
-.ticker .track{display:flex;gap:48px;width:max-content;animation:scroll 30s linear infinite}
-.ticker span{font-size:13px;font-weight:600;color:var(--rust);white-space:nowrap;letter-spacing:.4px}
-/* ---------- mobile nav ---------- */
 .burger{display:none;background:none;border:none;cursor:pointer;padding:10px;margin:-10px -10px -10px 0;z-index:60}
-.burger span{display:block;width:24px;height:2.5px;background:var(--ink);border-radius:2px;margin:5.5px 0;transition:transform .3s,opacity .3s}
+.burger span{display:block;width:24px;height:2.5px;background:var(--ink);border-radius:2px;margin:5.5px 0;transition:transform var(--dur-3) var(--ease),opacity var(--dur-2) var(--ease)}
 @media(max-width:760px){
   .nav-links{position:fixed;top:68px;left:0;right:0;flex-direction:column;align-items:stretch;gap:0;background:rgba(250,245,235,.98);border-bottom:1px solid var(--line);padding:8px 24px 22px;display:none;backdrop-filter:blur(14px)}
   .nav-links.open{display:flex}
@@ -379,26 +119,310 @@ footer{border-top:1px solid var(--line);padding:54px 0;color:var(--mut);font-siz
   .burger.open span:nth-child(1){transform:translateY(8px) rotate(45deg)}
   .burger.open span:nth-child(2){opacity:0}
   .burger.open span:nth-child(3){transform:translateY(-8px) rotate(-45deg)}
-  .stats{grid-template-columns:1fr 1fr}
-  .float-cards{display:none}
-  section{padding:72px 0}
+  section{padding:74px 0}
 }
+/* ---------- hero ---------- */
+#hero{position:relative;overflow:hidden;padding:146px 0 74px;background:repeating-linear-gradient(180deg,rgba(33,26,19,.045) 0 1px,transparent 1px 34px),radial-gradient(1000px 480px at 88% -10%,rgba(183,243,74,.16),transparent 55%),radial-gradient(820px 460px at -8% 30%,rgba(14,159,110,.07),transparent 55%),var(--paper)}
+#hero .wrap{position:relative;z-index:2}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--green-dk);border:1.5px solid var(--ink);background:var(--card);padding:8px 16px;border-radius:100px;margin-bottom:28px;box-shadow:3px 3px 0 var(--ink)}
+.hero-badge .dot{width:8px;height:8px;border-radius:50%;background:var(--green)}
+.hero-type{position:relative}
+h1{font-size:clamp(54px,9.2vw,126px);font-weight:900;letter-spacing:-2.5px;line-height:.97;color:var(--ink);max-width:1000px}
+h1 em{font-style:italic;color:var(--paid);background-image:linear-gradient(transparent 64%,rgba(183,243,74,.6) 64%,rgba(183,243,74,.6) 95%,transparent 95%);padding:0 .04em}
+.hero-stamp{position:absolute;right:1%;top:-30px;width:clamp(168px,21vw,264px);height:auto;z-index:3;transform:rotate(-12deg);filter:drop-shadow(0 18px 28px rgba(13,26,20,.25));transition:transform var(--dur-3) var(--ease)}
+.hero-stamp:hover{transform:rotate(-15deg) scale(1.025)}
+@media (prefers-reduced-motion: no-preference){.hero-stamp{animation:pressIn .55s var(--ease) .35s backwards}}
+@keyframes pressIn{0%{transform:scale(1.55) rotate(-5deg);opacity:0}60%{opacity:1}100%{transform:scale(1) rotate(-12deg);opacity:1}}
+.hero-sub{font-size:clamp(16.5px,2vw,20px);color:var(--ink2);max-width:660px;line-height:1.65;margin:30px 0 36px}
+.hero-sub b{color:var(--ink)}
+.hero-ctas{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.hero-note{font-size:13.5px;font-weight:600;color:var(--green-dk)}
+.hero-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:26px;border-top:2.5px solid var(--ink);margin-top:58px;padding-top:20px;max-width:1020px}
+.hero-stats .hs b{font-family:'Fraunces',serif;font-size:32px;font-weight:900;letter-spacing:-1px;color:var(--ink);display:block;line-height:1;margin-bottom:6px}
+.hero-stats .hs b i{font-style:normal;color:var(--paid)}
+.hero-stats .hs span{font-size:12.5px;color:var(--mut);font-weight:500;line-height:1.45;display:block}
+@media(max-width:900px){.hero-stats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:760px){.hero-stamp{width:118px;top:-58px;right:2px}h1{letter-spacing:-1.5px}}
+/* ledger slip (print artifact, not a UI window) */
+.ledger{margin:58px 0 6px;background:var(--card);transform:rotate(-1.1deg);border:1px solid var(--line2);box-shadow:0 1px 0 var(--line2),0 26px 54px rgba(33,26,19,.12);padding:8px 28px 18px;max-width:900px;position:relative;transition:transform var(--dur-3) var(--ease),box-shadow var(--dur-3) var(--ease)}
+.ledger:hover{transform:rotate(-.55deg) translateY(-2px);box-shadow:0 1px 0 var(--line2),0 34px 64px rgba(33,26,19,.16)}
+.ledger::before{content:'';position:absolute;left:0;right:0;top:0;height:8px;background:repeating-linear-gradient(90deg,var(--line2) 0 10px,transparent 10px 20px);opacity:.6}
+.ledger-head{display:flex;justify-content:space-between;gap:14px;border-bottom:2.5px solid var(--ink);padding:14px 0 9px;font-size:11.5px;letter-spacing:2.2px;font-weight:700;color:var(--ink)}
+.ledger-head span:last-child{color:var(--mut);letter-spacing:1.6px}
+.lrow{display:flex;align-items:baseline;gap:16px;padding:14px 0;border-bottom:1px dashed var(--line2)}
+.lrow .cid{font-weight:700;letter-spacing:.3px;white-space:nowrap;font-size:15px}
+.lrow .lp{color:var(--ink2);font-size:14.5px;white-space:nowrap}
+.lrow .ld{color:var(--mut);font-size:13.5px}
+.lrow .dots{flex:1;border-bottom:2px dotted var(--line2);transform:translateY(-4px);min-width:20px}
+.lrow .amt{font-family:'Fraunces',serif;font-weight:900;font-size:20px;letter-spacing:-.5px;white-space:nowrap}
+.paid-chip{display:inline-block;transform:rotate(-7deg);border:2.5px solid var(--paid);color:var(--paid);font-family:'Fraunces',serif;font-weight:900;font-size:14px;letter-spacing:2.5px;padding:3px 12px 4px;border-radius:5px;white-space:nowrap;background:rgba(183,243,74,.14)}
+.ledger-foot{padding-top:12px;font-size:12.5px;color:var(--mut);line-height:1.6}
+@media(max-width:640px){.lrow{flex-wrap:wrap;gap:6px 12px}.lrow .dots{display:none}.ledger{padding:8px 18px 14px}}
+/* ---------- marquee ---------- */
+.marquee{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:20px 0;overflow:hidden;background:var(--paper2)}
+.marquee .track{display:flex;width:max-content;animation:scroll 48s linear infinite}
+.mq-half{display:flex;gap:30px;padding-right:30px;align-items:center}
+.marquee span.mq-sep{font-family:'Inter',sans-serif;font-size:13px;color:var(--green);letter-spacing:0}
+.marquee:hover .track{animation-play-state:paused}
+.marquee span{font-family:'Fraunces',serif;font-weight:700;font-size:15px;color:var(--mut);white-space:nowrap;letter-spacing:.5px}
+@keyframes scroll{to{transform:translateX(-50%)}}
+.mq-label{text-align:center;font-size:12px;letter-spacing:2.5px;color:var(--mut);margin-bottom:14px;font-weight:600}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  .marquee .track,.ticker .track{animation:none}
+}
+/* ---------- trust band ---------- */
+.trustband{background:var(--paper2);border-bottom:1px solid var(--line);padding:36px 0}
+.trust-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:860px){.trust-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.trust-grid{grid-template-columns:1fr}}
+.trust{display:flex;align-items:center;gap:14px;padding:16px 20px;background:var(--card);border:1px solid var(--line);border-radius:14px;transition:border-color var(--dur-2) var(--ease),transform var(--dur-2) var(--ease)}
+.trust:hover{border-color:rgba(14,159,110,.45);transform:translateY(-2px)}
+.trust .tk{width:42px;height:42px;flex-shrink:0;border-radius:12px;background:var(--tint);border:1px solid rgba(14,159,110,.3);display:flex;align-items:center;justify-content:center;font-size:19px}
+.trust b{display:block;font-size:14.5px;margin-bottom:2px;color:var(--ink)}
+.trust small{color:var(--mut);font-size:12.5px;line-height:1.45;display:block}
+/* ---------- proof slot ---------- */
+#proof{padding:84px 0}
+.proof-box{border:2px dashed var(--line2);border-radius:20px;padding:52px 44px;text-align:center;background:var(--card)}
+.proof-box .sec-tag{justify-content:center}
+.proof-box h2{margin-bottom:12px}
+.proof-box p{color:var(--ink2);font-size:16.5px;line-height:1.65;max-width:600px;margin:0 auto 28px}
+/* ---------- problem (dark) ---------- */
+#problem{background:var(--dark);color:var(--ctx);overflow:hidden}
+#problem::after{content:'DENIED';position:absolute;right:-30px;bottom:-4vw;font-family:'Fraunces',serif;font-weight:900;font-size:19vw;line-height:1;color:transparent;-webkit-text-stroke:1.5px rgba(240,233,216,.06);pointer-events:none}
+#problem .wrap{position:relative;z-index:1}
+#problem h2{color:#FBF7EC}
+#problem .grad{color:var(--lime);font-style:italic}
+#problem .sec-tag{color:var(--lime)}
+#problem .sec-sub{color:var(--cmut)}
+.clocks{display:grid;grid-template-columns:repeat(4,1fr);border-top:2px solid rgba(240,233,216,.3);border-left:1px solid var(--dline);margin-bottom:14px}
+.clock{padding:24px 20px 28px;border-right:1px solid var(--dline);border-bottom:1px solid var(--dline);transition:background-color var(--dur-2) var(--ease)}
+.clock:hover{background:rgba(240,233,216,.045)}
+.clock .cp{font-size:12px;letter-spacing:1.8px;font-weight:700;color:var(--cmut);text-transform:uppercase;margin-bottom:10px}
+.clock .cn{font-family:'Fraunces',serif;font-size:clamp(46px,5.4vw,68px);font-weight:900;color:#FBF7EC;line-height:.95;letter-spacing:-1.5px;font-variant-numeric:tabular-nums}
+.clock .cn small{font-size:.4em;color:var(--lime);font-weight:700;letter-spacing:0;margin-left:4px}
+.clock .cd{font-size:12.5px;color:var(--cmut);margin-top:9px;line-height:1.5}
+.clock.custom{display:flex;flex-direction:column;justify-content:center}
+.clock.custom .cn{color:var(--lime)}
+.clock.custom .cd{font-size:13.5px;color:var(--ctx)}
+@media(max-width:900px){.clocks{grid-template-columns:repeat(2,1fr)}}
+.prow{display:grid;grid-template-columns:210px 1fr 1.6fr;gap:28px;padding:28px 0;border-top:1px solid var(--dline);align-items:start;transition:background-color var(--dur-2) var(--ease)}
+.prow:hover{background:rgba(240,233,216,.03)}
+.prow:last-child{border-bottom:1px solid var(--dline)}
+.prow .pbig{font-family:'Fraunces',serif;font-size:42px;font-weight:900;color:#E8B04B;letter-spacing:-1px;line-height:1}
+.prow h3{font-size:19px;color:#FBF7EC;padding-top:6px}
+.prow p{color:var(--cmut);font-size:14.5px;line-height:1.65;padding-top:6px}
+@media(max-width:860px){.prow{grid-template-columns:1fr;gap:8px}}
+/* ---------- ticker ---------- */
+.ticker{border-top:1px solid #EFCDB4;border-bottom:1px solid #EFCDB4;background:#FBEEE3;overflow:hidden;padding:14px 0}
+.ticker .track{display:flex;gap:48px;width:max-content;animation:scroll 30s linear infinite}
+.ticker span{font-size:13px;font-weight:600;color:var(--rust);white-space:nowrap;letter-spacing:.4px}
+.ticker:hover .track{animation-play-state:paused}
+/* ---------- agent (dark) ---------- */
+#agent{background:radial-gradient(900px 480px at 10% -5%,rgba(183,243,74,.07),transparent 55%),var(--dark2);color:var(--ctx);overflow:hidden}
+#agent::after{content:'PAID';position:absolute;right:-20px;top:2vw;font-family:'Fraunces',serif;font-weight:900;font-size:17vw;line-height:1;color:transparent;-webkit-text-stroke:1.5px rgba(183,243,74,.07);pointer-events:none}
+#agent .wrap{position:relative;z-index:1}
+#agent h2{color:#FBF7EC}
+#agent .grad{color:var(--lime);font-style:italic}
+#agent .sec-tag{color:var(--lime)}
+#agent .sec-sub{color:var(--cmut)}
+.tl{border-bottom:1px solid var(--dline)}
+.tl-item{display:grid;grid-template-columns:128px 1fr;gap:30px;padding:26px 0;border-top:1px solid var(--dline);align-items:start;transition:background-color var(--dur-2) var(--ease)}
+.tl-item:hover{background:rgba(240,233,216,.03)}
+.tl-item .tt{font-family:'Fraunces',serif;font-weight:900;font-size:22px;color:var(--lime);letter-spacing:-.3px;line-height:1.15}
+.tl-item .tt small{display:block;font-family:'Inter',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;color:var(--cmut);margin-top:5px}
+.tl-item h3{font-size:21px;color:#FBF7EC;margin-bottom:7px}
+.tl-item p{color:var(--cmut);font-size:15px;line-height:1.65;max-width:680px}
+@media(max-width:640px){.tl-item{grid-template-columns:1fr;gap:8px}}
+/* agent showcase: capability ledger + honesty locks */
+.agent-sub{font-size:clamp(28px,3.6vw,42px);font-weight:900;letter-spacing:-.8px;line-height:1.1;color:#FBF7EC;margin:66px 0 14px}
+.agent-lead{color:var(--cmut);font-size:16px;line-height:1.65;max-width:660px}
+.duties{display:grid;grid-template-columns:1fr 1fr;column-gap:56px;border-bottom:1px solid var(--dline);margin-top:28px}
+@media(max-width:860px){.duties{grid-template-columns:1fr}}
+.duty{display:flex;gap:16px;align-items:flex-start;padding:18px 6px;border-top:1px solid var(--dline);transition:background-color var(--dur-2) var(--ease)}
+.duty:hover{background:rgba(240,233,216,.03)}
+.duty .dk{width:30px;height:30px;flex-shrink:0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:900;font-size:14px;color:var(--lime);border:1.5px solid rgba(183,243,74,.45);transform:rotate(-6deg)}
+.duty b{display:block;color:#FBF7EC;font-size:15.5px;margin-bottom:3px}
+.duty p{color:var(--cmut);font-size:13.5px;line-height:1.6}
+.agent-locks{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:34px}
+@media(max-width:860px){.agent-locks{grid-template-columns:1fr}}
+.agent-locks .lk{border:1px dashed rgba(183,243,74,.4);border-radius:14px;padding:18px 20px;font-size:13.5px;line-height:1.6;color:var(--ctx);transition:border-color var(--dur-2) var(--ease),background-color var(--dur-2) var(--ease)}
+.agent-locks .lk:hover{border-color:rgba(183,243,74,.75);background:rgba(183,243,74,.04)}
+.agent-locks .lk b{display:block;color:var(--lime);font-size:12px;letter-spacing:1.8px;margin-bottom:7px}
+/* ---------- platform accordion (editorial rows) ---------- */
+.acc{display:flex;flex-direction:column;border-bottom:2.5px solid var(--ink)}
+.acc-panel{background:transparent;border-top:2.5px solid var(--ink)}
+.acc-h{margin:0}
+.acc-btn{display:flex;align-items:center;gap:20px;width:100%;min-height:44px;text-align:left;background:none;border:none;cursor:pointer;padding:26px 4px;color:var(--ink);font-family:'Inter',sans-serif;-webkit-tap-highlight-color:transparent;transition:background-color var(--dur-2) var(--ease)}
+.acc-btn:hover{background:rgba(33,26,19,.025)}
+.acc-idx{font-family:'Fraunces',serif;font-weight:900;font-size:17px;color:var(--amber);flex-shrink:0}
+.acc-titles{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.acc-title{font-family:'Fraunces',serif;font-size:25px;font-weight:700;letter-spacing:-.3px;line-height:1.15}
+.acc-lead{font-size:14.5px;font-weight:500;color:var(--mut);line-height:1.5}
+.acc-ico{width:38px;height:38px;flex-shrink:0;border-radius:50%;border:1.5px solid var(--line2);position:relative;transition:transform var(--dur-3) var(--ease),background-color var(--dur-2) var(--ease),border-color var(--dur-2) var(--ease)}
+.acc-ico::before,.acc-ico::after{content:'';position:absolute;left:50%;top:50%;background:var(--green-dk);border-radius:2px}
+.acc-ico::before{width:14px;height:2.5px;transform:translate(-50%,-50%)}
+.acc-ico::after{width:2.5px;height:14px;transform:translate(-50%,-50%)}
+.acc-panel.open .acc-ico{transform:rotate(135deg);background:var(--tint);border-color:rgba(14,159,110,.45)}
+.acc-panel.open .acc-title{color:var(--green-dk)}
+.acc-body{display:block}
+.js .acc-body{display:grid;grid-template-rows:0fr}
+.js .acc-panel.open .acc-body{grid-template-rows:1fr}
+.acc-inner{overflow:hidden;min-height:0;padding:0 4px}
+.acc-inner .flist{padding-bottom:20px}
+@media(min-width:900px){.acc-inner .flist{display:grid;grid-template-columns:1fr 1fr;column-gap:44px}}
+@media(max-width:640px){.acc-btn{padding:20px 2px;gap:12px}.acc-title{font-size:20px}.acc-idx{font-size:14px}}
+@media (prefers-reduced-motion: no-preference){.js .acc-body{transition:grid-template-rows var(--dur-3) var(--ease)}}
+.flist{list-style:none}
+.flist li{padding:10px 0;border-top:1px solid var(--line);font-size:14.5px;line-height:1.6;color:var(--mut)}
+.flist strong{color:var(--ink);font-weight:600}
+.flist .glink{margin-top:0}
+/* ---------- editorial rows (learns / billing / security) ---------- */
+.erows{border-bottom:1px solid var(--line2)}
+.erow{display:grid;grid-template-columns:58px 1fr 1.7fr;gap:28px;padding:29px 0;border-top:1px solid var(--line2);align-items:start;transition:background-color var(--dur-2) var(--ease)}
+.erow:hover{background:rgba(33,26,19,.025)}
+.erow .n{font-family:'Fraunces',serif;font-weight:900;font-size:21px;color:var(--amber);line-height:1.2}
+.erow h3{font-size:21px;line-height:1.25;padding-top:2px}
+.erow p{color:var(--ink2);font-size:15px;line-height:1.65;padding-top:3px}
+@media(max-width:860px){.erow{grid-template-columns:1fr;gap:7px}.erow .n{font-size:16px}}
+#learns{background:var(--paper2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+#learns .erow,#security .erow{border-top-color:var(--line2)}
+#billing-companies .erows{margin-bottom:6px}
+/* ---------- AI section (dark) ---------- */
+#ai-sec{background:radial-gradient(900px 500px at 85% 0%,rgba(183,243,74,.06),transparent 55%),var(--dark);color:var(--ctx)}
+#ai-sec h2{color:#FBF7EC}
+#ai-sec .grad{color:var(--lime);font-style:italic}
+#ai-sec .sec-tag{color:var(--lime)}
+#ai-sec .sec-sub{color:var(--cmut);margin-bottom:0}
+.ai-grid{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center}
+@media(max-width:900px){.ai-grid{grid-template-columns:1fr}}
+.ai-feats{display:flex;flex-direction:column;margin-top:36px;border-bottom:1px solid var(--dline)}
+.ai-feat{display:flex;gap:18px;align-items:flex-start;padding:19px 0;border-top:1px solid var(--dline);transition:background-color var(--dur-2) var(--ease)}
+.ai-feat:hover{background:rgba(240,233,216,.03)}
+.ai-feat .e{width:38px;height:38px;flex-shrink:0;border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:900;font-size:17px;color:var(--lime);border:1.5px solid rgba(183,243,74,.45);transform:rotate(-6deg)}
+.ai-feat b{display:block;margin-bottom:4px;color:#FBF7EC;font-size:16px}
+.ai-feat p{color:var(--cmut);font-size:14px;line-height:1.6}
+.slip{background:var(--card);color:var(--ink);transform:rotate(1.2deg);border:1px solid var(--line2);box-shadow:0 30px 70px rgba(0,0,0,.35);padding:10px 30px 22px;position:relative;transition:transform var(--dur-3) var(--ease),box-shadow var(--dur-3) var(--ease)}
+.slip:hover{transform:rotate(.6deg) translateY(-2px);box-shadow:0 38px 80px rgba(0,0,0,.4)}
+.slip::before{content:'';position:absolute;left:0;right:0;top:0;height:8px;background:repeating-linear-gradient(90deg,var(--line2) 0 10px,transparent 10px 20px);opacity:.6}
+.slip .ledger-head{padding-top:16px}
+.slip .qa{padding:15px 0;border-bottom:1px dashed var(--line2)}
+.slip .qa:last-of-type{border-bottom:none}
+.slip .qq{font-size:12px;font-weight:700;letter-spacing:1.8px;color:var(--amber);margin-bottom:7px}
+.slip .q{font-family:'Fraunces',serif;font-size:19px;font-weight:700;line-height:1.3;margin-bottom:9px}
+.slip .a{font-size:14.5px;color:var(--ink2);line-height:1.65}
+.slip .a b{color:var(--ink)}
+.slip .cite{display:inline-block;margin-top:9px;font-size:11px;font-weight:700;letter-spacing:.6px;color:var(--green-dk);background:var(--tint);border:1px solid rgba(14,159,110,.4);padding:3px 10px;border-radius:100px}
+@media(max-width:640px){.slip{padding:10px 20px 18px}}
+/* ---------- how it works ---------- */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;counter-reset:st}
+@media(max-width:860px){.steps{grid-template-columns:1fr}}
+.step{border-top:2.5px solid var(--ink);padding:24px 4px 0;position:relative;transition:border-color var(--dur-2) var(--ease)}
+.step:hover{border-top-color:var(--green-dk)}
+.step::before{counter-increment:st;content:"0" counter(st);display:block;font-family:'Fraunces',serif;font-size:54px;font-weight:900;color:transparent;-webkit-text-stroke:1.5px rgba(33,26,19,.35);line-height:1;margin-bottom:16px}
+.step h3{font-size:20px;margin-bottom:11px}
+.step p{color:var(--ink2);font-size:14.5px;line-height:1.7}
+/* ---------- security ---------- */
+#security{background:var(--paper2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+/* ---------- audit (lime block) ---------- */
+#audit{background:var(--lime);color:var(--dark2)}
+#audit .sec-tag{color:var(--dark2)}
+#audit h2{color:var(--dark2)}
+#audit .grad{color:var(--dark2);font-style:italic;text-decoration:underline;text-decoration-thickness:3px;text-underline-offset:6px}
+#audit .sec-sub{color:rgba(13,26,20,.78)}
+#audit .glink{color:var(--dark2);text-decoration:underline}
+#audit .sec-note{background:rgba(255,253,248,.4);border-color:rgba(13,26,20,.45);color:rgba(13,26,20,.82)}
+/* ---------- pricing ---------- */
+.badge-no1{display:inline-flex;align-items:center;gap:10px;background:#FBF0DC;border:1px solid rgba(217,119,6,.45);color:var(--amber);font-weight:800;font-size:13px;letter-spacing:1px;padding:10px 22px;border-radius:100px;margin-bottom:26px}
+.price-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;align-items:stretch}
+@media(max-width:1080px){.price-grid{grid-template-columns:repeat(2,1fr);max-width:760px;margin:0 auto}}
+@media(max-width:640px){.price-grid{grid-template-columns:1fr;max-width:440px;margin:0 auto}}
+.price{background:var(--card);border:1.5px solid var(--line2);border-radius:16px;padding:32px 26px;display:flex;flex-direction:column;position:relative;transition:transform var(--dur-3) var(--ease),box-shadow var(--dur-3) var(--ease),border-color var(--dur-3) var(--ease)}
+.price:hover{transform:translateY(-4px);border-color:rgba(33,26,19,.3);box-shadow:0 22px 44px rgba(33,26,19,.10)}
+.price h3{font-size:19px;margin-bottom:6px}
+.price .pd{color:var(--mut);font-size:13.5px;margin-bottom:22px;line-height:1.5}
+.price .amt{font-family:'Fraunces',serif;font-size:46px;font-weight:900;letter-spacing:-1.5px;margin-bottom:4px;color:var(--ink);font-variant-numeric:tabular-nums}
+.price .per{color:var(--mut);font-size:13px;margin-bottom:26px}
+.price ul{list-style:none;margin-bottom:30px;flex:1}
+.price li{font-size:13.5px;color:var(--ink2);padding:8px 0 8px 24px;border-bottom:1px solid var(--line);position:relative;line-height:1.5}
+.price li::before{content:'✓';color:var(--green-dk);font-weight:800;position:absolute;left:2px;top:8px}
+.price li b{color:var(--ink);font-weight:600}
+.price li.no{color:var(--mut)}
+.price li.no::before{content:'—';color:var(--mut)}
+.price.hot{background:var(--dark);border-color:var(--dark);color:var(--ctx);box-shadow:0 26px 60px rgba(23,37,31,.28)}
+.price.hot:hover{transform:translateY(-2px);border-color:var(--dark);box-shadow:0 32px 70px rgba(23,37,31,.36)}
+.price.hot h3{color:#FBF7EC}
+.price.hot .pd{color:var(--cmut)}
+.price.hot .amt{color:#FBF7EC}
+.price.hot .per{color:var(--cmut)}
+.price.hot li{color:var(--ctx);border-bottom-color:var(--dline)}
+.price.hot li::before{color:var(--lime)}
+.price.hot li b{color:#FBF7EC}
+.price.hot li.no{color:var(--cmut)}
+.price.hot .btn-ghost{background:transparent;color:#FBF7EC;border-color:rgba(240,233,216,.4)}
+.price.hot .btn-ghost:hover{border-color:var(--lime);background:rgba(240,233,216,.07)}
+.price .pop{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:800;letter-spacing:1.5px;background:var(--lime);color:var(--dark2);padding:7px 18px;border-radius:100px;white-space:nowrap}
+.trial-note{text-align:center;margin-top:14px;font-size:13px;font-weight:600;color:var(--green-dk);letter-spacing:.2px}
+.price.hot .trial-note{color:var(--lime)}
+.ptable-wrap{margin-top:44px;overflow-x:auto;border:1.5px solid var(--line2);border-radius:16px;background:var(--card)}
+table.ptable{width:100%;border-collapse:collapse;min-width:660px;font-size:14px}
+.ptable th,.ptable td{padding:13px 18px;text-align:center;border-bottom:1px solid var(--line)}
+.ptable tbody tr{transition:background-color var(--dur-1) var(--ease)}
+.ptable tbody tr:hover{background:rgba(33,26,19,.025)}
+.ptable th:first-child,.ptable td:first-child{text-align:left;font-weight:600;color:var(--ink)}
+.ptable thead th{font-family:'Fraunces',serif;font-size:15.5px;color:var(--ink);background:var(--paper2)}
+.ptable tbody tr:last-child th,.ptable tbody tr:last-child td{border-bottom:none}
+.ptable .y{color:var(--green-dk);font-weight:800}
+.ptable .n{color:var(--mut)}
+.ptable td{color:var(--ink2)}
+.pnote{margin-top:16px;color:var(--mut);font-size:13.5px;text-align:center}
+/* ---------- FAQ ---------- */
+.faq{max-width:800px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.faq details{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;transition:border-color var(--dur-2) var(--ease)}
+.faq details:hover{border-color:var(--line2)}
+.faq summary{cursor:pointer;padding:20px 24px;font-weight:700;font-size:16px;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:16px;color:var(--ink);transition:background-color var(--dur-2) var(--ease)}
+.faq summary:hover{background:rgba(33,26,19,.03)}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:'+';font-size:22px;color:var(--green-dk);flex-shrink:0;transition:transform var(--dur-3) var(--ease)}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq details.is-closing summary::after{transform:rotate(0deg)}
+.faq details p{padding:0 24px 22px;color:var(--ink2);line-height:1.7;font-size:15px}
+.faq a{color:var(--green-dk);font-weight:600}
+/* ---------- support ---------- */
+#support{background:var(--paper2);border-top:1px solid var(--line)}
+/* ---------- final CTA ---------- */
+#cta .box{position:relative;overflow:hidden;background:linear-gradient(140deg,#0C2B20,var(--dark) 60%,#24382E);border:1px solid rgba(183,243,74,.3);border-radius:28px;padding:84px 40px;text-align:center;color:var(--ctx)}
+#cta .box::before{content:'';display:block;width:118px;height:118px;margin:0 auto 28px;background:url('paid-stamp.webp') center/contain no-repeat;transform:rotate(-12deg)}
+#cta h2{position:relative;color:#FBF7EC}
+#cta .grad{color:var(--lime);font-style:italic}
+#cta p{position:relative;color:var(--cmut);font-size:18px;max-width:560px;margin:0 auto 38px;line-height:1.65}
+#cta .btn{position:relative;font-size:17px;padding:17px 44px}
+/* ---------- footer ---------- */
+footer{border-top:1px solid var(--line);padding:54px 0;color:var(--mut);font-size:13.5px;background:var(--paper2)}
+.foot{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px 28px}
+.foot .logo{margin-left:0}
+.foot a{color:var(--mut);text-decoration:none;margin-left:22px;transition:color var(--dur-2) var(--ease)}
+.foot a:hover{color:var(--green-dk)}
+@media(max-width:640px){.foot{flex-direction:column;align-items:flex-start;gap:14px}.foot a{margin-left:0;margin-right:20px}}
 /* ---------- demo modal ---------- */
 .dmodal{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
 .dmodal.open{display:flex}
 .dmodal .scrim{position:absolute;inset:0;background:rgba(33,26,19,.55);backdrop-filter:blur(6px)}
 .dmodal .box{position:relative;width:100%;max-width:480px;background:var(--card);border:1px solid var(--line2);border-radius:20px;padding:32px;box-shadow:0 30px 80px rgba(33,26,19,.3);max-height:92vh;overflow-y:auto;color:var(--ink)}
+@media (prefers-reduced-motion: no-preference){.dmodal.open .box{animation:modalIn var(--dur-3) var(--ease)}}
+@keyframes modalIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
 .dmodal h3{font-size:22px;margin:0 0 6px;letter-spacing:-.4px}
 .dmodal .sub{color:var(--mut);font-size:14px;margin:0 0 20px}
 .dmodal .fld{margin-bottom:14px}
 .dmodal label{display:block;font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--mut);margin-bottom:6px}
-.dmodal input,.dmodal select,.dmodal textarea{width:100%;background:#fff;border:1px solid var(--line2);border-radius:10px;padding:11px 14px;color:var(--ink);font-size:15px;font-family:inherit}
+.dmodal input,.dmodal select,.dmodal textarea{width:100%;background:#fff;border:1px solid var(--line2);border-radius:10px;padding:11px 14px;color:var(--ink);font-size:15px;font-family:inherit;transition:border-color var(--dur-2) var(--ease),box-shadow var(--dur-2) var(--ease)}
 .dmodal input:focus,.dmodal select:focus,.dmodal textarea:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(14,159,110,.18)}
 .dmodal select option{background:#fff}
 .dmodal .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .dmodal .err{display:none;background:rgba(194,65,12,.08);border:1px solid rgba(194,65,12,.4);color:var(--rust);font-size:13px;border-radius:10px;padding:10px 14px;margin-bottom:14px}
 .dmodal .err.show{display:block}
-.dmodal .x{position:absolute;top:16px;right:18px;background:none;border:none;color:var(--mut);font-size:22px;cursor:pointer;line-height:1}
+.dmodal .x{position:absolute;top:16px;right:18px;background:none;border:none;color:var(--mut);font-size:22px;cursor:pointer;line-height:1;transition:color var(--dur-2) var(--ease)}
 .dmodal .x:hover{color:var(--ink)}
 .dmodal .hp{position:absolute;left:-9999px;opacity:0;height:0;width:0}
 .dmodal .done{text-align:center;padding:12px 0}
@@ -410,13 +434,13 @@ footer{border-top:1px solid var(--line);padding:54px 0;color:var(--mut);font-siz
 <style>
 /* ===== CP shell 104: products menu ===== */
 .np-wrap{position:relative;display:flex;align-items:center}
-.np-btn{background:none;border:none;cursor:pointer;font-family:inherit;font-size:14.5px;font-weight:500;color:#453B2F;display:inline-flex;align-items:center;gap:7px;padding:10px 4px;min-height:44px;border-radius:8px}
+.np-btn{background:none;border:none;cursor:pointer;font-family:inherit;font-size:14.5px;font-weight:500;color:#453B2F;display:inline-flex;align-items:center;gap:7px;padding:10px 4px;min-height:44px;border-radius:8px;transition:color var(--dur-2) var(--ease)}
 .np-btn:hover{color:#211A13}
-.np-caret{transition:transform .25s;flex-shrink:0}
+.np-caret{transition:transform var(--dur-3) var(--ease);flex-shrink:0}
 .np-wrap.open .np-caret{transform:rotate(180deg)}
-.np-menu{position:absolute;top:calc(100% + 10px);left:50%;transform:translate(-50%,8px);width:344px;max-width:calc(100vw - 32px);background:#FFFDF8;border:1px solid #D8CBAE;border-radius:18px;box-shadow:0 30px 70px rgba(33,26,19,.18);padding:10px;opacity:0;visibility:hidden;transition:opacity .18s ease,transform .18s ease,visibility .18s;z-index:90;text-align:left}
+.np-menu{position:absolute;top:calc(100% + 10px);left:50%;transform:translate(-50%,6px);width:344px;max-width:calc(100vw - 32px);background:#FFFDF8;border:1px solid #D8CBAE;border-radius:18px;box-shadow:0 30px 70px rgba(33,26,19,.18);padding:10px;opacity:0;visibility:hidden;transition:opacity var(--dur-2) var(--ease),transform var(--dur-2) var(--ease),visibility var(--dur-2);z-index:90;text-align:left}
 .np-wrap.open .np-menu{opacity:1;visibility:visible;transform:translate(-50%,0)}
-.np-item{display:flex;flex-direction:column;gap:2px;padding:11px 14px;border-radius:12px;text-decoration:none}
+.np-item{display:flex;flex-direction:column;gap:2px;padding:11px 14px;border-radius:12px;text-decoration:none;transition:background-color var(--dur-1) var(--ease)}
 .np-item:hover,.np-item:focus-visible{background:rgba(14,159,110,.08)}
 .nav-links .np-item::after{display:none}
 .np-t{font-weight:600;color:#211A13;font-size:15px;display:flex;align-items:center;gap:9px;line-height:1.3}
@@ -432,6 +456,7 @@ footer{border-top:1px solid var(--line);padding:54px 0;color:var(--mut);font-siz
   .np-sep{padding-left:8px;padding-right:8px}
 }
 </style>
+
 </head>
 <body>
 <nav id="nav"><div class="wrap nav-in">
@@ -456,40 +481,30 @@ footer{border-top:1px solid var(--line);padding:54px 0;color:var(--mut);font-siz
 </div></nav>
 
 <div id="hero">
-  
-  <img class="hero-stamp" src="/favicon.svg" alt="" aria-hidden="true"/>
-  <div class="float-cards">
-    <div class="fcard">
-      <div class="row"><span class="cid">CLM-100122 · Medicaid NY</span><span class="pill denied">DENIED</span></div>
-      <div class="amt">$5,183.64</div>
-      <div class="lbl">Coordination of benefits — appeal drafted, waiting for your approval</div>
-      <div class="bar"><i></i></div><div class="lbl">In this morning's brief…</div>
-    </div>
-    <div class="fcard">
-      <div class="row"><span class="cid">CLM-100091 · Aetna</span><span class="pill denied">11 DAYS LEFT</span></div>
-      <div class="amt">$8,275.36</div>
-      <div class="lbl">Filing deadline closing in — ranked #1 in today's plan</div>
-    </div>
-  </div>
   <div class="wrap">
     <div class="hero-badge"><span class="dot"></span>Revenue-cycle management, with an AI agent on the team</div>
-    <h1 id="headline"><span class="w" style="animation-delay:.15s">Get</span> <span class="w" style="animation-delay:.28s">your</span> <span class="w" style="animation-delay:.41s">claims</span> <span class="w" style="animation-delay:.54s"><span class="grad">paid.</span></span></h1>
+    <div class="hero-type">
+      <h1 id="headline">Get your claims <em>paid.</em></h1>
+      <img class="hero-stamp" src="paid-stamp.webp" alt="" aria-hidden="true"/>
+    </div>
     <p class="hero-sub">Spreadsheets track denials. Dashboards display them. <b>ClaimPaid collects them.</b> An AI agent works the queue with your team: it opens the day with a brief and a ranked plan, drafts the appeals, runs eligibility, scrubbing, and coding checks before claims go out — and nothing is written without your approval.</p>
     <div class="hero-ctas">
       <a class="btn btn-green" href="/app/" data-smart-cta>Start recovering revenue →</a>
       <a class="btn btn-ghost" href="#platform">See how it works</a>
+      <span class="hero-note">Free for 30 days · No credit card required</span>
     </div>
-    <p class="reveal" style="margin:-34px 0 40px;font-size:13.5px;font-weight:600;color:var(--green-lt);animation:fadeDown .8s .7s ease both">Free for 30 days · No credit card required</p>
-    <div class="stats">
-      <div class="stat"><span class="s-ico">🔍</span><b><span class="count hl" data-to="15">15</span></b><span>Claim-scrubber rules</span></div>
-      <div class="stat"><span class="s-ico">🧾</span><b><span class="count hl" data-to="370">370</span></b><span>AI-assisted coding library</span></div>
-      <div class="stat"><span class="s-ico">📚</span><b><span class="count hl" data-to="28">28</span><span class="hl">+</span></b><span>In-depth billing guides</span></div>
-      <div class="stat"><span class="s-ico">⏰</span><b><span class="count hl" data-to="7">7</span></b><span>Payer deadlines tracked · 7 built-in + custom</span></div>
-      <div class="stat"><span class="s-ico">🆓</span><b>30-day</b><span>Free trial, no credit card</span></div>
+    <div class="hero-stats">
+      <div class="hs"><b><i>15</i></b><span>Claim-scrubber rules</span></div>
+      <div class="hs"><b><i>370</i></b><span>AI-assisted coding library</span></div>
+      <div class="hs"><b><i>28+</i></b><span>In-depth billing guides</span></div>
+      <div class="hs"><b><i>7</i></b><span>Payer deadlines tracked · 7 built-in + custom</span></div>
+      <div class="hs"><b>30-day</b><span>Free trial, no credit card</span></div>
     </div>
-    <div class="hero-shot" style="animation:fadeDown .8s .95s ease both">
-      <div class="shot-bar"><i></i><i></i><i></i><span>claimpaid.io/app — Dashboard</span></div>
-      <img src="product-worklist.webp" alt="ClaimPaid Dashboard — real product screenshot: revenue cycle at a glance, timely-filing risk first" loading="lazy"/>
+    <div class="ledger" aria-label="Claim ledger — illustrative recovered claims">
+      <div class="ledger-head"><span>CLAIM LEDGER</span><span>WORKED TO A DECISION</span></div>
+      <div class="lrow"><span class="cid">CLM-100091</span><span class="lp">Aetna</span><span class="ld">Filing deadline — caught with 11 days left</span><span class="dots"></span><span class="amt">$8,275.36</span><span class="paid-chip">✓ PAID</span></div>
+      <div class="lrow"><span class="cid">CLM-100122</span><span class="lp">Medicaid NY</span><span class="ld">Coordination of benefits — appeal drafted, approved, submitted</span><span class="dots"></span><span class="amt">$5,183.64</span><span class="paid-chip">✓ PAID</span></div>
+      <div class="ledger-foot">Two lines from the ledger every billing team keeps. ClaimPaid works each one the same way: ranked by deadline and dollars, drafted by the agent, approved by a human — then stamped.</div>
     </div>
   </div>
 </div>
@@ -523,14 +538,22 @@ footer{border-top:1px solid var(--line);padding:54px 0;color:var(--mut);font-siz
 </div></section>
 
 <section id="problem"><div class="wrap">
-  <div class="sec-tag reveal">THE PROBLEM</div>
-  <h2 class="reveal">Payers are betting you<br/>miss the <span class="grad">deadline.</span></h2>
-  <p class="sec-sub reveal">You did the work. You saw the patient. Then a payer keeps the money over a missing modifier or a 90-day clock you never saw coming. Every denial left unworked is a write-off you chose.</p>
-  <div class="prob-grid">
-    <div class="prob reveal"><div class="big"><span class="count" data-to="90">90</span> days</div><h3>UHC's filing guillotine</h3><p>The tightest commercial window in the industry. Miss it by a day and the claim is dead — you can't even bill the patient. ClaimPaid's filing radar flags these before they expire.</p></div>
-    <div class="prob reveal"><div class="big">CO-29</div><h3>Death by timely filing</h3><p>The most painful denial code in billing. Entirely preventable, completely unrecoverable without proof of submission. ClaimPaid tracks every deadline per payer, automatically.</p></div>
-    <div class="prob reveal"><div class="big" data-countup="21">21+ days</div><h3>Appeals that stall out</h3><p>An appeal sitting untouched for three weeks is an appeal you've forgotten. The agent's morning brief and watchdog digest put stale appeals and passed follow-ups in front of your team every day.</p></div>
+  <div class="sec-tag">THE PROBLEM</div>
+  <h2>Payers are betting you<br/>miss the <span class="grad">deadline.</span></h2>
+  <p class="sec-sub">You did the work. You saw the patient. Then a payer keeps the money over a missing modifier or a 90-day clock you never saw coming. Every denial left unworked is a write-off you chose.</p>
+  <div class="clocks">
+    <div class="clock"><div class="cp">UnitedHealthcare</div><div class="cn">90<small>days</small></div><div class="cd">The tightest commercial window in the industry</div></div>
+    <div class="clock"><div class="cp">Aetna</div><div class="cn">120<small>days</small></div><div class="cd">From the date of service</div></div>
+    <div class="clock"><div class="cp">Cigna</div><div class="cn">90<small>days</small></div><div class="cd">Participating — 180 days out-of-network</div></div>
+    <div class="clock"><div class="cp">Anthem</div><div class="cn">90<small>days</small></div><div class="cd">In most state plans — no single national limit</div></div>
+    <div class="clock"><div class="cp">Medicare</div><div class="cn">365<small>days</small></div><div class="cd">The calendar-year rule</div></div>
+    <div class="clock"><div class="cp">NY Medicaid</div><div class="cn">90<small>days</small></div><div class="cd">A denial does not restart the clock</div></div>
+    <div class="clock"><div class="cp">Humana</div><div class="cn">365<small>days</small></div><div class="cd">Medicare Advantage — its live book since 2024</div></div>
+    <div class="clock custom"><div class="cn">+</div><div class="cd">Custom payers and deadlines, configurable per organization — every clock tracked against every open claim.</div></div>
   </div>
+  <div class="prow"><div class="pbig">90 days</div><h3>UHC's filing guillotine</h3><p>The tightest commercial window in the industry. Miss it by a day and the claim is dead — you can't even bill the patient. ClaimPaid's filing radar flags these before they expire.</p></div>
+  <div class="prow"><div class="pbig">CO-29</div><h3>Death by timely filing</h3><p>The most painful denial code in billing. Entirely preventable, completely unrecoverable without proof of submission. ClaimPaid tracks every deadline per payer, automatically.</p></div>
+  <div class="prow"><div class="pbig">21+ days</div><h3>Appeals that stall out</h3><p>An appeal sitting untouched for three weeks is an appeal you've forgotten. The agent's morning brief and watchdog digest put stale appeals and passed follow-ups in front of your team every day.</p></div>
 </div></section>
 
 <div class="ticker"><div class="track">
@@ -538,14 +561,36 @@ footer{border-top:1px solid var(--line);padding:54px 0;color:var(--mut);font-siz
 </div></div>
 
 <section id="agent"><div class="wrap">
-  <div class="sec-tag reveal">MEET YOUR AGENT</div>
-  <h2 class="reveal">The queue works itself.<br/><span class="grad">You make the calls.</span></h2>
-  <p class="sec-sub reveal">ClaimPaid's agent is a working member of the billing team — not a chatbot in a corner. It reads your queue, does the legwork, and brings you finished drafts. Every write waits for your click, and every decision lands in the audit log.</p>
-  <div class="bento">
-    <div class="bcard wide reveal"><span class="tag ai">AGENT</span><span class="ico">🌅</span><h3>The morning brief</h3><p>Your day starts with a brief, not a pile: what changed while you were away — new denials, ERA postings, exceptions on hold, follow-ups that slipped — and the first moves that matter, already worked out.</p></div>
-    <div class="bcard reveal"><span class="tag ai">AGENT</span><span class="ico">🎯</span><h3>A ranked queue</h3><p>The plan ranks every item by deadline pressure times dollars at stake, and says why it's ranked there — including what your own history says about the odds of winning it.</p></div>
-    <div class="bcard reveal"><span class="tag ai">AGENT</span><span class="ico">✍️</span><h3>Drafts awaiting approval</h3><p>Appeals are drafted before you ask — letter written, evidence lined up. You approve or reject. Approving saves the appeal; your team submits it through your current path. The agent never sends anything to a payer.</p></div>
-    <div class="bcard wide reveal"><span class="tag ai">AGENT</span><span class="ico">🐕</span><h3>The watchdog</h3><p>Away from the app, the watchdog watches: a morning email digest when approvals are waiting, follow-ups are overdue, or dollars are inside 14 days of a filing deadline. Nothing actionable, no email.</p></div>
+  <div class="sec-tag">MEET YOUR AGENT</div>
+  <h2>The queue works itself.<br/><span class="grad">You make the calls.</span></h2>
+  <p class="sec-sub">ClaimPaid's agent is a working member of the billing team — not a chatbot in a corner. It reads your queue, does the legwork, and brings you finished drafts. Every write waits for your click, and every decision lands in the audit log.</p>
+  <div class="tl">
+    <div class="tl-item"><div class="tt">6:00 AM<small>THE BRIEF</small></div><div><h3>The morning brief</h3><p>Your day starts with a brief, not a pile: what changed while you were away — new denials, ERA postings, exceptions on hold, follow-ups that slipped — and the first moves that matter, already worked out.</p></div></div>
+    <div class="tl-item"><div class="tt">6:05 AM<small>THE PLAN</small></div><div><h3>A ranked queue</h3><p>The plan ranks every item by deadline pressure times dollars at stake, and says why it's ranked there — including what your own history says about the odds of winning it.</p></div></div>
+    <div class="tl-item"><div class="tt">6:10 AM<small>THE DRAFTS</small></div><div><h3>Drafts awaiting approval</h3><p>Appeals are drafted before you ask — letter written, evidence lined up. You approve or reject. Approving saves the appeal; your team submits it through your current path. The agent never sends anything to a payer.</p></div></div>
+    <div class="tl-item"><div class="tt">ALL DAY<small>THE WATCHDOG</small></div><div><h3>The watchdog</h3><p>Away from the app, the watchdog watches: a morning email digest when approvals are waiting, follow-ups are overdue, or dollars are inside 14 days of a filing deadline. Nothing actionable, no email.</p></div></div>
+  </div>
+  <h3 class="agent-sub">Everything the agent <span class="grad">does for you.</span></h3>
+  <p class="agent-lead">The morning brief is just the visible part. While your team sees patients, this is the agent's full duty list — the legwork it carries so the queue never waits on a human to notice it.</p>
+  <div class="duties">
+    <div class="duty"><span class="dk">✓</span><div><b>The morning brief</b><p>What changed while you were away — new denials, ERA postings, exceptions on hold, follow-ups that slipped — and the first moves that matter, already worked out.</p></div></div>
+    <div class="duty"><span class="dk">✓</span><div><b>A ranked queue, with its reasons</b><p>Every item ranked by deadline pressure times dollars at stake — and the plan says why it's ranked there, including what your own history says about the odds of winning it.</p></div></div>
+    <div class="duty"><span class="dk">✓</span><div><b>Appeal drafts before you ask</b><p>Appeals are drafted before you ask — letter written, evidence lined up, waiting in your approval queue. You approve or reject. The agent never sends anything to a payer.</p></div></div>
+    <div class="duty"><span class="dk">✓</span><div><b>Eligibility, checked at the door</b><p>Coverage checked before claims go out — in the workspace, or ask the agent to run a check on any claim. CO-50 non-covered-service denials get stopped at the door, not after.</p></div></div>
+    <div class="duty"><span class="dk">✓</span><div><b>The scrubber, on any claim</b><p>Fifteen validation rules catch coding errors, missing modifiers, and eligibility gaps before the claim leaves the building — and the agent explains every finding.</p></div></div>
+    <div class="duty"><span class="dk">✓</span><div><b>Coding that shows its evidence</b><p>From a 370-code library: a code is Valid only when your documentation supports it, quoted back to you. Weak evidence gets Review. No evidence gets an honest Abstain — never a guess dressed up as a code.</p></div></div>
+    <div class="duty"><span class="dk">✓</span><div><b>ERA posting — exceptions held for you</b><p>Payments auto-post, CAS denial codes auto-parse and link straight into appeals. Variance holds get a disposition worked out from the remittance's own codes — arithmetic shown — and post only when you approve.</p></div></div>
+    <div class="duty"><span class="dk">✓</span><div><b>Predictions from your own record</b><p>Overturn predictions come from your workspace's decided appeals to that payer on that denial reason — and every prediction carries its sample size, labeled "early estimate" or "no data yet" when the record is thin.</p></div></div>
+    <div class="duty"><span class="dk">✓</span><div><b>The watchdog, watching the clocks</b><p>Stale appeals, passed follow-ups, approvals waiting, and dollars inside 14 days of a filing deadline — surfaced in a morning digest. Nothing actionable, no email.</p></div></div>
+    <div class="duty"><span class="dk">✓</span><div><b>Payer-call prep</b><p>The call brief built before you dial — identifiers ready, the questions for that denial family — and the rep's name, reference number, and promise logged into the claim timeline, follow-up set.</p></div></div>
+    <div class="duty"><span class="dk">✓</span><div><b>Document intake — paper, read</b><p>Paper EOBs and payer denial letters are read, matched to your claims, and turned into held remittances and draft appeals — every figure checked, anything unclear flagged for a human, never filled in.</p></div></div>
+    <div class="duty"><span class="dk">✓</span><div><b>Drafting at queue scale</b><p>Not one claim at a time: drafts are prepared for the claims that need them across the queue — each one individual, each one waiting for a human to approve it before anything is written.</p></div></div>
+    <div class="duty"><span class="dk">✓</span><div><b>The handbook, searched mid-appeal</b><p>Timely-filing limits, appeal windows, and denial-code rules for major payers — asked mid-task, mid-appeal, answered with the source cited. When the handbook doesn't say, the agent says that instead of inventing a policy.</p></div></div>
+  </div>
+  <div class="agent-locks">
+    <div class="lk"><b>APPROVAL-GATED</b>Nothing the agent proposes is written without a human approving it — every write waits for your click, and every decision lands in the audit log. The agent drafts; a person submits, through the path you already use.</div>
+    <div class="lk"><b>LABELED HONESTLY</b>Every prediction carries its sample size. Four decided appeals? It says "early estimate." None yet? It says "no data yet" — never dressed up as science.</div>
+    <div class="lk"><b>YOURS ALONE</b>What the agent learns comes from your workspace's own decided appeals and posted remittances — and trains only your workspace. Data is never pooled across customers.</div>
   </div>
 </div></section>
 
@@ -553,13 +598,14 @@ footer{border-top:1px solid var(--line);padding:54px 0;color:var(--mut);font-siz
   <div class="sec-tag reveal">THE PLATFORM</div>
   <h2 class="reveal">One workspace.<br/><span class="grad">Every dollar chased.</span></h2>
   <p class="sec-sub reveal">Not another dashboard to glance at. A work engine your billers open every morning — prioritized, drafted, and tracked to paid.</p>
-    <div class="acc">
+    
+<div class="acc">
     <div class="acc-panel open">
       <h3 class="acc-h"><button class="acc-btn" id="acc-btn-1" aria-expanded="true" aria-controls="acc-body-1"><span class="acc-idx">01</span><span class="acc-titles"><span class="acc-title">Work the queue</span><span class="acc-lead">Every denial ranked by deadline and dollars — with the next move already drafted.</span></span><span class="acc-ico" aria-hidden="true"></span></button></h3>
       <div class="acc-body" id="acc-body-1" role="region" aria-labelledby="acc-btn-1"><div class="acc-inner">
 <ul class="flist">
         <li><strong>Smart Worklist — “My Work”</strong> — Every claim, appeal, and follow-up scored by dollars at stake and days until the filing deadline — with the agent's overturn prediction on the row, from your own decided history.</li>
-        <li><strong>Timely Filing Radar</strong> — Deadlines for 7 major payers (UHC 90d, Aetna 120d, Cigna 180d, Anthem 180d, Medicare 365d, NY Medicaid 90d, Humana 180d) tracked against every open claim, plus custom deadlines for any payer. Red alerts before revenue becomes unrecoverable. <a class="glink" href="/blog/timely-filing-limits-by-payer-2026/">Timely-filing limits by payer →</a></li>
+        <li><strong>Timely Filing Radar</strong> — Deadlines for 7 major payers (UHC 90d, Aetna 120d, Cigna 90d participating / 180d out-of-network, Anthem 90d in most state plans, Medicare 365d, NY Medicaid 90d, Humana 365d for Medicare Advantage) tracked against every open claim, plus custom deadlines for any payer. Red alerts before revenue becomes unrecoverable. <a class="glink" href="/blog/timely-filing-limits-by-payer-2026/">Timely-filing limits by payer →</a></li>
         <li><strong>Denial Rescue Wizard</strong> — Pick a denied claim and walk it end to end in five steps: snapshot and odds, eligibility, scrub findings, the drafted appeal, and the submission checklist.</li>
         <li><strong>Denial Appeal Pipeline</strong> — Open → in progress → submitted → won. Win an appeal and the claim auto-marks paid. Nothing falls through.</li>
         <li><strong>Appeal Letters, Ready to Approve</strong> — One click generates a payer-ready appeal letter for 8 denial categories — your letterhead, signature block, and the right argument for the denial code. The agent pre-drafts them into your approval queue. <a class="glink" href="/blog/how-to-appeal-denied-claim/">How to appeal a denied claim →</a></li>
@@ -607,26 +653,27 @@ footer{border-top:1px solid var(--line);padding:54px 0;color:var(--mut);font-siz
     </div>
   </div>
 </div></section>
+
 <section id="learns"><div class="wrap">
-  <div class="sec-tag reveal">LEARNS YOUR PAYERS</div>
-  <h2 class="reveal">Every decided appeal<br/><span class="grad">makes the next draft smarter.</span></h2>
-  <p class="sec-sub reveal">Most AI in billing is trained on everyone's data and answers with industry averages. ClaimPaid's agent learns from one practice's evidence: yours. Every decided appeal and every posted remittance sharpens what it tells you next.</p>
-  <div class="bento">
-    <div class="bcard reveal"><span class="ico">🎲</span><h3>Odds from your own history</h3><p>Overturn predictions for a denial come from your workspace's decided appeals to that payer on that denial reason. Payment likelihood comes from your own posted remittances. Not a benchmark. Your record.</p></div>
-    <div class="bcard reveal"><span class="ico">🏹</span><h3>Angles that actually win</h3><p>Once a payer-and-reason pair has enough decided appeals behind it, drafts lead with the argument angle that has overturned most often in your workspace — and the card says so, with the record behind it.</p></div>
-    <div class="bcard reveal"><span class="ico">🔢</span><h3>Labeled honestly</h3><p>Every prediction carries its sample size. Four decided appeals? It says "early estimate." None yet? It says "no data yet" instead of dressing up a guess as science.</p></div>
+  <div class="sec-tag">LEARNS YOUR PAYERS</div>
+  <h2>Every decided appeal<br/><span class="grad">makes the next draft smarter.</span></h2>
+  <p class="sec-sub">Most AI in billing is trained on everyone's data and answers with industry averages. ClaimPaid's agent learns from one practice's evidence: yours. Every decided appeal and every posted remittance sharpens what it tells you next.</p>
+  <div class="erows">
+    <div class="erow"><div class="n">01</div><h3>Odds from your own history</h3><p>Overturn predictions for a denial come from your workspace's decided appeals to that payer on that denial reason. Payment likelihood comes from your own posted remittances. Not a benchmark. Your record.</p></div>
+    <div class="erow"><div class="n">02</div><h3>Angles that actually win</h3><p>Once a payer-and-reason pair has enough decided appeals behind it, drafts lead with the argument angle that has overturned most often in your workspace — and the card says so, with the record behind it.</p></div>
+    <div class="erow"><div class="n">03</div><h3>Labeled honestly</h3><p>Every prediction carries its sample size. Four decided appeals? It says "early estimate." None yet? It says "no data yet" instead of dressing up a guess as science.</p></div>
   </div>
-  <p class="sec-note reveal">Per-workspace isolation is the design, not a setting: your claims, documents, and outcomes train only your predictions. A billing company running ten practices gets ten separate brains — one per client, never pooled.</p>
+  <p class="sec-note">Per-workspace isolation is the design, not a setting: your claims, documents, and outcomes train only your predictions. A billing company running ten practices gets ten separate brains — one per client, never pooled.</p>
 </div></section>
 
 <section id="billing-companies"><div class="wrap">
-  <div class="sec-tag reveal">FOR BILLING COMPANIES</div>
-  <h2 class="reveal">A workspace for each client.<br/><span class="grad">One team across all of them.</span></h2>
-  <p class="sec-sub reveal">You don't bill one practice — you bill dozens. ClaimPaid gives each client its own workspace under one login, and gives you the view across your team that spreadsheets never could.</p>
-  <div class="bento">
-    <div class="bcard reveal"><span class="ico">🗂️</span><h3>Multi-workspace by design</h3><p>One login, a workspace per client practice — claims, payers, deadlines, and documents separated by client, switchable in one click. Onboard a new client through the same 5-step wizard and import wizard.</p></div>
-    <div class="bcard reveal"><span class="ico">👥</span><h3>The manager's view</h3><p>Owners see the whole floor: who is carrying what, whose follow-ups are overdue, win rates by biller, dollars stalled with nobody on them — and reassignment suggestions when the math says the load is lopsided.</p></div>
-    <div class="bcard reveal"><span class="ico">🔒</span><h3>Client isolation, provable</h3><p>Each client's data trains only that client's predictions — never pooled, never shared across workspaces. The audit log shows every action, per workspace, per person. That's a sentence you can say to a client's compliance officer.</p></div>
+  <div class="sec-tag">FOR BILLING COMPANIES</div>
+  <h2>A workspace for each client.<br/><span class="grad">One team across all of them.</span></h2>
+  <p class="sec-sub">You don't bill one practice — you bill dozens. ClaimPaid gives each client its own workspace under one login, and gives you the view across your team that spreadsheets never could.</p>
+  <div class="erows">
+    <div class="erow"><div class="n">01</div><h3>Multi-workspace by design</h3><p>One login, a workspace per client practice — claims, payers, deadlines, and documents separated by client, switchable in one click. Onboard a new client through the same 5-step wizard and import wizard.</p></div>
+    <div class="erow"><div class="n">02</div><h3>The manager's view</h3><p>Owners see the whole floor: who is carrying what, whose follow-ups are overdue, win rates by biller, dollars stalled with nobody on them — and reassignment suggestions when the math says the load is lopsided.</p></div>
+    <div class="erow"><div class="n">03</div><h3>Client isolation, provable</h3><p>Each client's data trains only that client's predictions — never pooled, never shared across workspaces. The audit log shows every action, per workspace, per person. That's a sentence you can say to a client's compliance officer.</p></div>
   </div>
   <div class="reveal" style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:28px">
     <a class="btn btn-green" href="mailto:support@claimpaid.io?subject=Demo%20request%20%E2%80%94%20billing%20company&amp;body=Company%3A%0ANumber%20of%20client%20practices%3A%0ACurrent%20billing%20system%3A%0AWhat%20we%27d%20like%20to%20see%3A">Book a demo →</a>
@@ -637,54 +684,56 @@ footer{border-top:1px solid var(--line);padding:54px 0;color:var(--mut);font-siz
 <section id="ai-sec"><div class="wrap">
   <div class="ai-grid">
     <div>
-      <div class="sec-tag reveal">THE KNOWLEDGE LAYER</div>
-      <h2 class="reveal">Ask it like you'd ask<br/>your <span class="grad">best biller.</span></h2>
-      <p class="sec-sub reveal" style="margin-bottom:0">"What's UnitedHealthcare's timely filing limit?" — answered in seconds, with the policy cited. The agent searches the Payer Policy Handbook mid-task, mid-appeal — and the coding help next to it refuses to guess.</p>
+      <div class="sec-tag">THE KNOWLEDGE LAYER</div>
+      <h2>Ask it like you'd ask<br/>your <span class="grad">best biller.</span></h2>
+      <p class="sec-sub">"What's UnitedHealthcare's timely filing limit?" — answered in seconds, with the policy cited. The agent searches the Payer Policy Handbook mid-task, mid-appeal — and the coding help next to it refuses to guess.</p>
       <div class="ai-feats">
-        <div class="ai-feat reveal"><span class="e">📚</span><div><b>The handbook, cited</b><p>Timely-filing limits, appeal windows, denial-code rules for major payers. When the handbook doesn't say, the agent says that — and points you to the payer instead of inventing a policy.</p></div></div>
-        <div class="ai-feat reveal"><span class="e">🧾</span><div><b>Coding that shows its evidence</b><p>Suggested codes come back Valid, Review, or Abstain — Valid only when your note supports the code, quoted line and all. Nothing unverified is ever applied.</p></div></div>
-        <div class="ai-feat reveal"><span class="e">✍️</span><div><b>Drafts, never sends</b><p>The agent prepares appeals, code sets, and exception resolutions for approval. A person approves, a person submits — through the path you already use.</p></div></div>
-        <div class="ai-feat reveal"><span class="e">🔢</span><div><b>Numbers from code</b><p>Deadlines, scrub findings, and exception math are computed by deterministic rules, not generated by the model. Every figure it cites can be checked — and is, in your audit log.</p></div></div>
+        <div class="ai-feat"><span class="e">✓</span><div><b>The handbook, cited</b><p>Timely-filing limits, appeal windows, denial-code rules for major payers. When the handbook doesn't say, the agent says that — and points you to the payer instead of inventing a policy.</p></div></div>
+        <div class="ai-feat"><span class="e">✓</span><div><b>Coding that shows its evidence</b><p>Suggested codes come back Valid, Review, or Abstain — Valid only when your note supports the code, quoted line and all. Nothing unverified is ever applied.</p></div></div>
+        <div class="ai-feat"><span class="e">✓</span><div><b>Drafts, never sends</b><p>The agent prepares appeals, code sets, and exception resolutions for approval. A person approves, a person submits — through the path you already use.</p></div></div>
+        <div class="ai-feat"><span class="e">✓</span><div><b>Numbers from code</b><p>Deadlines, scrub findings, and exception math are computed by deterministic rules, not generated by the model. Every figure it cites can be checked — and is, in your audit log.</p></div></div>
       </div>
     </div>
-    <div class="chatmock reveal" id="chatmock">
-      <div class="chead"><div class="av">🤖</div><div><b>ClaimPaid Agent</b><small>Payer Policy Handbook · online</small></div></div>
-      <div class="cbody" id="chatbody"></div>
+    <div class="slip" aria-label="Payer Policy Handbook — cited answer excerpt">
+      <div class="ledger-head"><span>PAYER POLICY HANDBOOK</span><span>CITED ANSWERS</span></div>
+      <div class="qa"><div class="qq">QUESTION</div><div class="q">What's UHC's timely filing limit?</div><p class="a">UnitedHealthcare requires claims within <b>90 days</b> of the date of service — the tightest commercial window. Appeals within 180 days.</p><span class="cite">[PAYER-01-TIMELY-FILING.MD]</span></div>
+      <div class="qa"><div class="qq">QUESTION</div><div class="q">What does CO-29 mean?</div><p class="a"><b>CO-29</b> = timely filing expired. Only appealable with proof of timely submission (your 999 acknowledgment). Otherwise it's a contractual write-off.</p><span class="cite">[PAYER-03-DENIAL-CODES.MD]</span></div>
     </div>
   </div>
 </div></section>
 
 <section id="how"><div class="wrap">
-  <div class="sec-tag reveal">HOW IT WORKS</div>
-  <h2 class="reveal">Live in a day.<br/><span class="grad">Paid in weeks.</span></h2>
-  <p class="sec-sub reveal">No six-month implementation. No consultants. Your billing operation, upgraded.</p>
+  <div class="sec-tag">HOW IT WORKS</div>
+  <h2>Live in a day.<br/><span class="grad">Paid in weeks.</span></h2>
+  <p class="sec-sub">No six-month implementation. No consultants. Your billing operation, upgraded.</p>
   <div class="steps">
-    <div class="step reveal"><h3>Onboard in minutes</h3><p>A 5-step wizard sets up your workspace on a real 30-day trial — no credit card, sign in with Google. Import your open A/R through the import wizard, and ClaimPaid scores everything by dollars at stake and filing-deadline urgency.</p></div>
-    <div class="step reveal"><h3>Approve the agent's work</h3><p>Each morning opens with the brief: a ranked plan, drafts already written, follow-ups that slipped. You approve or reject the drafts, work the exceptions, and let the queue reorder itself around deadlines.</p></div>
-    <div class="step reveal"><h3>Watch revenue land</h3><p>Won appeals auto-mark claims paid, and the recovered-dollars scoreboard keeps the running total. Your workspace's predictions sharpen with every decided appeal — your team gets better odds, payer by payer.</p></div>
+    <div class="step"><h3>Onboard in minutes</h3><p>A 5-step wizard sets up your workspace on a real 30-day trial — no credit card, sign in with Google. Import your open A/R through the import wizard, and ClaimPaid scores everything by dollars at stake and filing-deadline urgency.</p></div>
+    <div class="step"><h3>Approve the agent's work</h3><p>Each morning opens with the brief: a ranked plan, drafts already written, follow-ups that slipped. You approve or reject the drafts, work the exceptions, and let the queue reorder itself around deadlines.</p></div>
+    <div class="step"><h3>Watch revenue land</h3><p>Won appeals auto-mark claims paid, and the recovered-dollars scoreboard keeps the running total. Your workspace's predictions sharpen with every decided appeal — your team gets better odds, payer by payer.</p></div>
   </div>
 </div></section>
 
 <section id="security"><div class="wrap">
-  <div class="sec-tag reveal">SECURITY</div>
-  <h2 class="reveal">Plain-talk security.<br/><span class="grad">No hand-waving.</span></h2>
-  <p class="sec-sub reveal">Exactly what protects your data — and what doesn't. No "military-grade" adjectives, no certifications that don't exist.</p>
-  <div class="bento">
-    <div class="bcard reveal"><span class="ico">🔐</span><h3>Encrypted backups</h3><p>Every database backup is encrypted with age (X25519) the moment it's written — then decrypt-verified before the plaintext is deleted. A stolen backup file is useless without the key.</p></div>
-    <div class="bcard reveal"><span class="ico">🖊️</span><h3>BAA e-signing</h3><p>Sign your Business Associate Agreement electronically inside the app, before your first real claim touches the system.</p></div>
-    <div class="bcard reveal"><span class="ico">🔒</span><h3>Per-workspace isolation</h3><p>Your claims, documents, and outcomes train only your workspace's predictions and answers. Data is never pooled across customers — a structural property of the system, not a policy promise.</p></div>
-    <div class="bcard reveal"><span class="ico">📋</span><h3>Audit-logged, approval-gated</h3><p>Nothing the agent proposes is written without a human approving it — and every proposal, approval, and rejection is recorded alongside plan changes, data deletes, and MFA resets in a tamper-evident audit log.</p></div>
+  <div class="sec-tag">SECURITY</div>
+  <h2>Plain-talk security.<br/><span class="grad">No hand-waving.</span></h2>
+  <p class="sec-sub">Exactly what protects your data — and what doesn't. No "military-grade" adjectives, no certifications that don't exist.</p>
+  <div class="erows">
+    <div class="erow"><div class="n">01</div><h3>Encrypted backups</h3><p>Every database backup is encrypted with age (X25519) the moment it's written — then decrypt-verified before the plaintext is deleted. A stolen backup file is useless without the key.</p></div>
+    <div class="erow"><div class="n">02</div><h3>BAA e-signing</h3><p>Sign your Business Associate Agreement electronically inside the app, before your first real claim touches the system.</p></div>
+    <div class="erow"><div class="n">03</div><h3>Per-workspace isolation</h3><p>Your claims, documents, and outcomes train only your workspace's predictions and answers. Data is never pooled across customers — a structural property of the system, not a policy promise.</p></div>
+    <div class="erow"><div class="n">04</div><h3>Audit-logged, approval-gated</h3><p>Nothing the agent proposes is written without a human approving it — and every proposal, approval, and rejection is recorded alongside plan changes, data deletes, and MFA resets in a tamper-evident audit log.</p></div>
   </div>
 </div></section>
+
 <section id="audit"><div class="wrap">
-  <div class="sec-tag reveal">FREE DEADLINE AUDIT</div>
-  <h2 class="reveal">See what's about to expire.<br/><span class="grad">Free.</span></h2>
-  <p class="sec-sub reveal">Send us an aging report — CSV or 835 export from whatever you bill with today — and we'll send back the expiring-dollars report: every open claim ranked by days left to file, dollars at risk by payer, the already-expired called out separately. No pitch deck attached. If the number doesn't scare you, don't buy anything.</p>
-  <div class="reveal" style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+  <div class="sec-tag">FREE DEADLINE AUDIT</div>
+  <h2>See what's about to expire.<br/><span class="grad">Free.</span></h2>
+  <p class="sec-sub">Send us an aging report — CSV or 835 export from whatever you bill with today — and we'll send back the expiring-dollars report: every open claim ranked by days left to file, dollars at risk by payer, the already-expired called out separately. No pitch deck attached. If the number doesn't scare you, don't buy anything.</p>
+  <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
     <a class="btn btn-green" href="/audit/">Run the free audit →</a>
     <a class="glink" href="/app/" data-smart-cta>or run it yourself in a free trial →</a>
   </div>
-  <p class="sec-note reveal">Billing companies: run one audit per client practice. It's the fastest honest conversation you can have about their A/R — and it's the same report the agent produces inside ClaimPaid, any time, from live data.</p>
+  <p class="sec-note">Billing companies: run one audit per client practice. It's the fastest honest conversation you can have about their A/R — and it's the same report the agent produces inside ClaimPaid, any time, from live data.</p>
 </div></section>
 
 <section id="pricing"><div class="wrap">
@@ -692,7 +741,8 @@ footer{border-top:1px solid var(--line);padding:54px 0;color:var(--mut);font-siz
   <div class="reveal"><span class="badge-no1">★ PRO + AI — THE COMPLETE PACKAGE</span></div>
   <h2 class="reveal">Pays for itself with<br/><span class="grad">one won appeal.</span></h2>
   <p class="sec-sub reveal">One recovered claim can cover months of ClaimPaid. Simple tiers, no per-claim fees, cancel anytime. Evaluating vendors? <a class="glink" href="/blog/rcm-software-buyers-guide/">RCM software buyer's guide →</a></p>
-  <div class="price-grid">
+  
+<div class="price-grid">
     <div class="price reveal">
       <h3>RCM Starter</h3><div class="pd">For small billing teams getting organized</div>
       <div class="amt">$199</div><div class="per">per month</div>
@@ -723,7 +773,7 @@ footer{border-top:1px solid var(--line);padding:54px 0;color:var(--mut);font-siz
       <div class="trial-note">Free for 30 days · No credit card required</div>
     </div>
   </div>
-  <div class="ptable-wrap reveal"><table class="ptable">
+<div class="ptable-wrap reveal"><table class="ptable">
     <thead><tr><th>Compare plans</th><th>RCM Starter</th><th>RCM Pro + AI</th><th>ClaimPaid AI</th><th>Enterprise</th></tr></thead>
     <tbody>
       <tr><th>RCM app</th><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="y">✓</td></tr>
@@ -737,13 +787,14 @@ footer{border-top:1px solid var(--line);padding:54px 0;color:var(--mut);font-siz
       <tr><th>Support (replies within one business day)</th><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
     </tbody>
   </table></div>
-  <p class="pnote reveal">Every RCM plan includes every workflow feature — worklist, eligibility, ERA auto-posting, statements, document intake, deadline audit, watchdog digest. Plans differ by volume and AI uses.</p>
+<p class="pnote reveal">Every RCM plan includes every workflow feature — worklist, eligibility, ERA auto-posting, statements, document intake, deadline audit, watchdog digest. Plans differ by volume and AI uses.</p>
 </div></section>
 
 <section id="faq"><div class="wrap">
   <div class="sec-tag reveal">FAQ</div>
   <h2 class="reveal">Questions billing teams<br/><span class="grad">actually ask.</span></h2>
-  <div class="faq">
+  
+<div class="faq">
     <details class="reveal"><summary>What does ClaimPaid cost?</summary><p>RCM Starter is $199/month, RCM Pro + AI is $499/month, and ClaimPaid AI standalone is $99/month. Enterprise is custom. Every paid plan starts with a 30-day free trial — no credit card required.</p></details>
     <details class="reveal"><summary>Is the 30-day free trial really free — no credit card?</summary><p>Yes. Selecting a plan starts a real 30-day trial of the app — no credit card required. A guided 5-step onboarding wizard sets up your workspace, and you can sign in with Google. Trial days remaining sync to billing, so checkout only starts paid billing after the trial ends.</p></details>
     <details class="reveal"><summary>Can I sign a BAA with ClaimPaid?</summary><p>Yes — ClaimPaid includes built-in BAA e-signing, so the business associate agreement is executed inside the platform before any PHI flows. <a class="glink" href="/blog/hipaa-baa-billing-company/">Do billing companies need a BAA? →</a></p></details>
@@ -755,7 +806,7 @@ footer{border-top:1px solid var(--line);padding:54px 0;color:var(--mut);font-siz
     <details class="reveal"><summary>What does the agent do each morning?</summary><p>It opens the day with a brief: what changed while you were away, a ranked work plan (deadline pressure times dollars at stake), and appeal drafts already written for the claims that need them — waiting for your approval. A watchdog digest emails the same picture when you're away from the app.</p></details>
     <details class="reveal"><summary>Is my data encrypted?</summary><p>Database backups are encrypted with age (X25519) the moment they're written, and each backup is decrypt-verified before its plaintext is deleted. All traffic uses TLS. We make no HIPAA certification claims: no such certification exists.</p></details>
     <details class="reveal"><summary>Does ClaimPaid write appeal letters automatically?</summary><p>The agent drafts payer-specific appeal letters from the denial reason code — using the letter engine's categories (timely filing, medical necessity, authorization, coding, eligibility, duplicate, bundling, experimental), your letterhead, and, once your workspace has decided appeals, the argument angles that have actually won against that payer. Every draft waits for a human to approve it; approving saves the appeal, and your team submits it. The coding assistant suggests codes from a 370-code library only when the documentation supports them — unverified codes are never applied on the AI's say-so.</p></details>
-    <details class="reveal"><summary>Which payers' timely-filing deadlines does ClaimPaid track?</summary><p>Seven major payers out of the box: Aetna (120 days), Cigna (180), UnitedHealthcare (90), Anthem (180), Medicare (365), NY Medicaid (90), and Humana (180) — with custom payers and deadlines configurable per organization. Related guides: <a class="glink" href="/blog/timely-filing-limits-by-payer-2026/">timely-filing limits by payer</a>, <a class="glink" href="/blog/aetna-timely-filing-denial-appeal/">appealing an Aetna timely-filing denial</a>, <a class="glink" href="/blog/medicare-timely-filing-deadline/">Medicare's timely-filing deadline</a>.</p></details>
+    <details class="reveal"><summary>Which payers' timely-filing deadlines does ClaimPaid track?</summary><p>Seven major payers out of the box: Aetna (120 days), Cigna (90 days participating, 180 out-of-network), UnitedHealthcare (90), Anthem (90 in most state plans), Medicare (365), NY Medicaid (90), and Humana (365 for Medicare Advantage) — with custom payers and deadlines configurable per organization. Related guides: <a class="glink" href="/blog/timely-filing-limits-by-payer-2026/">timely-filing limits by payer</a>, <a class="glink" href="/blog/aetna-timely-filing-denial-appeal/">appealing an Aetna timely-filing denial</a>, <a class="glink" href="/blog/medicare-timely-filing-deadline/">Medicare's timely-filing deadline</a>.</p></details>
     <details class="reveal"><summary>Can I use ClaimPaid AI without the RCM platform?</summary><p>Yes. ClaimPaid AI is available as a standalone $99/month plan at claimpaid.io/ai/ — cited answers from the Payer Policy Handbook, the quote-verified coding assistant, and cited answers over your own documents (policies, contracts, manuals). RCM Pro customers get it included with one shared login.</p></details>
     <details class="reveal"><summary>How long does implementation take?</summary><p>Most teams are live within 24 hours — a 5-step onboarding wizard gets your workspace set up on a real 30-day trial, no implementation project required. Support is handled through a two-way helpdesk with a 24-hour response SLA.</p></details>
     <details class="reveal"><summary>When is ClaimPaid not the right fit?</summary><p>ClaimPaid is software, not a billing service — if you want a company to do the billing work for you rather than software for your team, we're not that. It's web-based SaaS (not on-premise), and its payer content is built around US billing workflows.</p></details>
@@ -1050,6 +1101,56 @@ document.querySelectorAll('.bcard').forEach(c => c.addEventListener('mousemove',
   var ticking = false;
   function upd(){ ticking = false; if(scrollY < innerHeight) fc.style.transform = 'translateY(' + (scrollY * 0.07) + 'px)'; }
   addEventListener('scroll', function(){ if(!ticking){ ticking = true; requestAnimationFrame(upd); } }, {passive:true});
+})();
+</script>
+<script>
+/* ---------- FAQ: smooth details open/close (native toggle is the fallback) ---------- */
+(function(){
+  try {
+    if (!('animate' in Element.prototype)) return;
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var EASE = 'cubic-bezier(.22,.61,.21,1)', DUR = 240;
+    document.querySelectorAll('.faq details').forEach(function (el) {
+      var summary = el.querySelector('summary');
+      var content = el.querySelector('p');
+      if (!summary || !content) return;
+      var animation = null, isClosing = false, isExpanding = false;
+      function finish(open) {
+        el.open = open;
+        animation = null; isClosing = false; isExpanding = false;
+        el.classList.remove('is-closing');
+        el.style.height = ''; el.style.overflow = '';
+      }
+      function shrink() {
+        isClosing = true;
+        el.classList.add('is-closing');
+        var startHeight = el.offsetHeight + 'px';
+        var endHeight = summary.offsetHeight + 'px';
+        if (animation) animation.cancel();
+        animation = el.animate({ height: [startHeight, endHeight] }, { duration: DUR, easing: EASE });
+        animation.onfinish = function () { finish(false); };
+      }
+      function expand() {
+        isExpanding = true;
+        var startHeight = el.offsetHeight + 'px';
+        var endHeight = (summary.offsetHeight + content.offsetHeight) + 'px';
+        if (animation) animation.cancel();
+        animation = el.animate({ height: [startHeight, endHeight] }, { duration: DUR, easing: EASE });
+        animation.onfinish = function () { finish(true); };
+      }
+      function openPanel() {
+        el.style.height = el.offsetHeight + 'px';
+        el.open = true;
+        window.requestAnimationFrame(expand);
+      }
+      summary.addEventListener('click', function (e) {
+        e.preventDefault();
+        el.style.overflow = 'hidden';
+        if (isClosing || !el.open) openPanel();
+        else if (isExpanding || el.open) shrink();
+      });
+    });
+  } catch (err) { /* native <details> behavior remains */ }
 })();
 </script>
 <script src="/consent.js" defer></script>

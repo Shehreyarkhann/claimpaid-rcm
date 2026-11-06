@@ -484,7 +484,7 @@ function deadlinesPage() {
     '@context': 'https://schema.org', '@type': 'FAQPage',
     mainEntity: [
       { '@type': 'Question', name: 'How is a timely filing deadline calculated?', acceptedAnswer: { '@type': 'Answer', text: 'Deadline = date of service + the payer\'s timely filing limit in days. The claim must be received (and accepted) by the payer by that date. Rejected claims do not count as filed, so a rejection near the deadline leaves almost no room to correct and resubmit.' } },
-      { '@type': 'Question', name: 'Which payer has the shortest timely filing limit?', acceptedAnswer: { '@type': 'Answer', text: 'Among the national payers listed here, UnitedHealthcare and NY Medicaid use 90 days from the date of service — the shortest standard windows. Aetna allows 120 days; Cigna, Anthem and Humana 180; Medicare 365.' } },
+      { '@type': 'Question', name: 'Which payer has the shortest timely filing limit?', acceptedAnswer: { '@type': 'Answer', text: 'Among the national payers listed here, UnitedHealthcare and NY Medicaid use 90 days from the date of service — the shortest standard windows. Aetna allows 120 days; Cigna 90 days for participating providers (180 out-of-network); Anthem 90 days in most state plans; Humana 365 days for Medicare Advantage; Medicare 365.' } },
       { '@type': 'Question', name: 'Do these limits apply to corrected claims and appeals?', acceptedAnswer: { '@type': 'Answer', text: 'Corrected claims and appeals have their own windows, which vary by payer and contract and often run from the remittance date rather than the date of service. The standard limits on this page are initial filing limits — verify appeal and corrected-claim windows in your payer contract.' } },
     ],
   });

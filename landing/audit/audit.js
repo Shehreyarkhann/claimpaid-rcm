@@ -15,12 +15,12 @@
    * The signed payer contract controls; verify before acting. */
   var RULES = [
     { name: 'Aetna', days: 120 },
-    { name: 'Cigna', days: 180 },
+    { name: 'Cigna', days: 90 },
     { name: 'UnitedHealthcare', days: 90 },
-    { name: 'Anthem', days: 180 },
+    { name: 'Anthem', days: 90 },
     { name: 'Medicare', days: 365 },
     { name: 'NY Medicaid', days: 90 },
-    { name: 'Humana', days: 180 },
+    { name: 'Humana', days: 365 },
     { name: 'Other payer', days: 365 }
   ];
 
