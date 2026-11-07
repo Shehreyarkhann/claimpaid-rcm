@@ -67,7 +67,7 @@
   --dur-1:120ms; --dur-2:180ms; --dur-3:240ms;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;text-size-adjust:100%;overflow-x:clip}
 body{background:var(--paper);color:var(--ink);font-family:'Inter',system-ui,sans-serif;overflow-x:hidden;-webkit-font-smoothing:antialiased}
 h1,h2,h3,.disp{font-family:'Fraunces',Georgia,serif}
 ::selection{background:var(--lime);color:var(--dark2)}
@@ -272,7 +272,7 @@ h1 em{font-style:italic;color:var(--paid);background-image:linear-gradient(trans
 .acc-inner{overflow:hidden;min-height:0;padding:0 4px}
 .acc-inner .flist{padding-bottom:20px}
 @media(min-width:900px){.acc-inner .flist{display:grid;grid-template-columns:1fr 1fr;column-gap:44px}}
-@media(max-width:640px){.acc-btn{padding:20px 2px;gap:12px}.acc-title{font-size:20px}.acc-idx{font-size:14px}}
+@media(max-width:640px){.acc-btn{padding:20px 2px;gap:14px;align-items:flex-start}.acc-title{font-size:20px}.acc-idx{font-size:15px;flex:0 0 32px;line-height:1.15;padding-top:4px}.acc-ico{align-self:center;width:36px;height:36px}}
 @media (prefers-reduced-motion: no-preference){.js .acc-body{transition:grid-template-rows var(--dur-3) var(--ease)}}
 .flist{list-style:none}
 .flist li{padding:10px 0;border-top:1px solid var(--line);font-size:14.5px;line-height:1.6;color:var(--mut)}
@@ -290,7 +290,7 @@ h1 em{font-style:italic;color:var(--paid);background-image:linear-gradient(trans
 #learns .erow,#security .erow{border-top-color:var(--line2)}
 #billing-companies .erows{margin-bottom:6px}
 /* ---------- AI section (dark) ---------- */
-#ai-sec{background:radial-gradient(900px 500px at 85% 0%,rgba(183,243,74,.06),transparent 55%),var(--dark);color:var(--ctx)}
+#ai-sec{background:radial-gradient(900px 500px at 85% 0%,rgba(183,243,74,.06),transparent 55%),var(--dark);color:var(--ctx);overflow:hidden}
 #ai-sec h2{color:#FBF7EC}
 #ai-sec .grad{color:var(--lime);font-style:italic}
 #ai-sec .sec-tag{color:var(--lime)}
@@ -365,8 +365,15 @@ h1 em{font-style:italic;color:var(--paid);background-image:linear-gradient(trans
 .price .pop{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:800;letter-spacing:1.5px;background:var(--lime);color:var(--dark2);padding:7px 18px;border-radius:100px;white-space:nowrap}
 .trial-note{text-align:center;margin-top:14px;font-size:13px;font-weight:600;color:var(--green-dk);letter-spacing:.2px}
 .price.hot .trial-note{color:var(--lime)}
-.ptable-wrap{margin-top:44px;overflow-x:auto;border:1.5px solid var(--line2);border-radius:16px;background:var(--card)}
+.ptable-outer{position:relative;margin-top:44px}
+.ptable-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1.5px solid var(--line2);border-radius:16px;background:var(--card)}
 table.ptable{width:100%;border-collapse:collapse;min-width:660px;font-size:14px}
+@media(max-width:760px){
+.ptable th:first-child,.ptable td:first-child{position:sticky;left:0;z-index:1;width:158px;min-width:158px;background:var(--card);box-shadow:1px 0 0 var(--line),10px 0 14px -10px rgba(33,26,19,.35)}
+.ptable thead th:first-child{background:var(--paper2);z-index:2}
+.ptable-outer::after{content:'';position:absolute;top:2px;right:2px;bottom:2px;width:48px;border-radius:0 14px 14px 0;background:linear-gradient(to right,rgba(255,253,248,0),var(--card) 78%);pointer-events:none;transition:opacity var(--dur-2) var(--ease)}
+.ptable-outer.at-end::after{opacity:0}
+}
 .ptable th,.ptable td{padding:13px 18px;text-align:center;border-bottom:1px solid var(--line)}
 .ptable tbody tr{transition:background-color var(--dur-1) var(--ease)}
 .ptable tbody tr:hover{background:rgba(33,26,19,.025)}
@@ -404,7 +411,7 @@ footer{border-top:1px solid var(--line);padding:54px 0;color:var(--mut);font-siz
 .foot .logo{margin-left:0}
 .foot a{color:var(--mut);text-decoration:none;margin-left:22px;transition:color var(--dur-2) var(--ease)}
 .foot a:hover{color:var(--green-dk)}
-@media(max-width:640px){.foot{flex-direction:column;align-items:flex-start;gap:14px}.foot a{margin-left:0;margin-right:20px}}
+@media(max-width:640px){.foot{flex-direction:column;align-items:flex-start;gap:14px}.foot a{margin-left:0;margin-right:20px}.foot div a{display:inline-block;padding:12px 2px}}
 /* ---------- demo modal ---------- */
 .dmodal{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
 .dmodal.open{display:flex}
@@ -773,7 +780,7 @@ footer{border-top:1px solid var(--line);padding:54px 0;color:var(--mut);font-siz
       <div class="trial-note">Free for 30 days · No credit card required</div>
     </div>
   </div>
-<div class="ptable-wrap reveal"><table class="ptable">
+<div class="ptable-outer reveal"><div class="ptable-wrap"><table class="ptable">
     <thead><tr><th>Compare plans</th><th>RCM Starter</th><th>RCM Pro + AI</th><th>ClaimPaid AI</th><th>Enterprise</th></tr></thead>
     <tbody>
       <tr><th>RCM app</th><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="y">✓</td></tr>
@@ -786,7 +793,7 @@ footer{border-top:1px solid var(--line);padding:54px 0;color:var(--mut);font-siz
       <tr><th>Eligibility checks</th><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="y">✓</td></tr>
       <tr><th>Support (replies within one business day)</th><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
     </tbody>
-  </table></div>
+  </table></div></div>
 <p class="pnote reveal">Every RCM plan includes every workflow feature — worklist, eligibility, ERA auto-posting, statements, document intake, deadline audit, watchdog digest. Plans differ by volume and AI uses.</p>
 </div></section>
 
@@ -1151,6 +1158,17 @@ document.querySelectorAll('.bcard').forEach(c => c.addEventListener('mousemove',
       });
     });
   } catch (err) { /* native <details> behavior remains */ }
+})();
+</script>
+<script>
+/* ---------- compare-plans table: fade the right-edge scroll hint once fully scrolled (mobile) ---------- */
+(function(){
+  var w = document.querySelector('.ptable-wrap'); if(!w) return;
+  var o = w.closest('.ptable-outer'); if(!o) return;
+  function f(){ o.classList.toggle('at-end', w.scrollLeft >= w.scrollWidth - w.clientWidth - 4); }
+  w.addEventListener('scroll', f, {passive:true});
+  addEventListener('resize', f);
+  f();
 })();
 </script>
 <script src="/consent.js" defer></script>
